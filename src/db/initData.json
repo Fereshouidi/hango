@@ -1,0 +1,978 @@
+{
+  "hsks": [
+    {
+      "id": 1,
+      "name": "HSK 1"
+    },
+    {
+      "id": 2,
+      "name": "HSK 2"
+    },
+    {
+      "id": 3,
+      "name": "HSK 3"
+    },
+    {
+      "id": 4,
+      "name": "HSK 4"
+    },
+    {
+      "id": 5,
+      "name": "HSK 5"
+    },
+    {
+      "id": 6,
+      "name": "HSK 6"
+    }
+  ],
+  "lessons": [
+    {
+      "id": 1,
+      "num": 1,
+      "title": "Say Nǐ hǎo",
+      "hskId": 1
+    },
+    {
+      "id": 2,
+      "num": 1,
+      "title": "I Like to Eat Apples",
+      "hskId": 2
+    },
+    {
+      "id": 3,
+      "num": 1,
+      "title": "I Am a Student",
+      "hskId": 3
+    },
+    {
+      "id": 4,
+      "num": 1,
+      "title": "How Much Money?",
+      "hskId": 4
+    },
+    {
+      "id": 5,
+      "num": 1,
+      "title": "I Can Speak English",
+      "hskId": 5
+    },
+    {
+      "id": 6,
+      "num": 1,
+      "title": "I Want to Be a Pilot",
+      "hskId": 6
+    }
+  ],
+  "texts": [
+    {
+      "id": 1,
+      "hskId": 1,
+      "lessonId": 1,
+      "title": "你好",
+      "content": "你好！我叫小明。我是学生。很高兴认识你。",
+      "pinyin": "Nǐ hǎo! Wǒ jiào Xiǎomíng. Wǒ shì xuésheng. Hěn gāoxìng rènshi nǐ.",
+      "meaning": "Hello! My name is Xiaoming. I am a student. Nice to meet you."
+    },
+    {
+      "id": 2,
+      "hskId": 2,
+      "lessonId": 2,
+      "title": "我喜欢吃苹果",
+      "content": "我喜欢吃苹果。苹果很好吃。我每天吃一个苹果。",
+      "pinyin": "Wǒ xǐhuan chī píngguǒ. Píngguǒ hěn hǎochī. Wǒ měitiān chī yí ge píngguǒ.",
+      "meaning": "I like eating apples. Apples are delicious. I eat an apple every day."
+    },
+    {
+      "id": 3,
+      "hskId": 3,
+      "lessonId": 3,
+      "title": "我是学生",
+      "content": "我是一个学生。我每天去学校学习中文和英语。我很喜欢学习新的东西。",
+      "pinyin": "Wǒ shì yí ge xuésheng. Wǒ měitiān qù xuéxiào xuéxí Zhōngwén hé Yīngyǔ. Wǒ hěn xǐhuan xuéxí xīn de dōngxi.",
+      "meaning": "I am a student. I go to school every day to study Chinese and English. I really like learning new things."
+    },
+    {
+      "id": 4,
+      "hskId": 4,
+      "lessonId": 4,
+      "title": "多少钱？",
+      "content": "我想买这个手机。请问，这个手机多少钱？如果太贵了，我可以看看别的吗？",
+      "pinyin": "Wǒ xiǎng mǎi zhège shǒujī. Qǐngwèn, zhège shǒujī duōshao qián? Rúguǒ tài guì le, wǒ kěyǐ kànkan bié de ma?",
+      "meaning": "I want to buy this phone. Excuse me, how much is this phone? If it is too expensive, can I look at another one?"
+    },
+    {
+      "id": 5,
+      "hskId": 5,
+      "lessonId": 5,
+      "title": "我会说英语",
+      "content": "我会说中文，也会说英语。虽然我的英语还不太好，但是我每天都练习。以后我希望能用英语和更多的人交流。",
+      "pinyin": "Wǒ huì shuō Zhōngwén, yě huì shuō Yīngyǔ. Suīrán wǒ de Yīngyǔ hái bú tài hǎo, dànshì wǒ měitiān dōu liànxí. Yǐhòu wǒ xīwàng néng yòng Yīngyǔ hé gèng duō de rén jiāoliú.",
+      "meaning": "I can speak Chinese and English. Although my English is not very good yet, I practice every day. In the future, I hope to use English to communicate with more people."
+    },
+    {
+      "id": 6,
+      "hskId": 6,
+      "lessonId": 6,
+      "title": "我想成为一名飞行员",
+      "content": "从小开始，我就对飞机很感兴趣。长大以后，我想成为一名飞行员。为了实现这个梦想，我需要认真学习，并且不断提高自己的能力。",
+      "pinyin": "Cóng xiǎo kāishǐ, wǒ jiù duì fēijī hěn gǎn xìngqù. Zhǎng dà yǐhòu, wǒ xiǎng chéngwéi yì míng fēixíngyuán. Wèile shíxiàn zhège mèngxiǎng, wǒ xūyào rènzhēn xuéxí, bìngqiě búduàn tígāo zìjǐ de nénglì.",
+      "meaning": "Since I was young, I have been very interested in airplanes. When I grow up, I want to become a pilot. To achieve this dream, I need to study seriously and continuously improve my abilities."
+    }
+  ],
+  "sentences": [
+    {
+      "id": 1,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "content": "你好！",
+      "pinyin": "Nǐ hǎo!",
+      "meaning": "Hello!"
+    },
+    {
+      "id": 2,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "content": "我叫小明。",
+      "pinyin": "Wǒ jiào Xiǎomíng.",
+      "meaning": "My name is Xiaoming."
+    },
+    {
+      "id": 3,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "content": "我是学生。",
+      "pinyin": "Wǒ shì xuésheng.",
+      "meaning": "I am a student."
+    },
+    {
+      "id": 4,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "content": "我喜欢吃苹果。",
+      "pinyin": "Wǒ xǐhuan chī píngguǒ.",
+      "meaning": "I like eating apples."
+    },
+    {
+      "id": 5,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "content": "苹果很好吃。",
+      "pinyin": "Píngguǒ hěn hǎochī.",
+      "meaning": "Apples are delicious."
+    },
+    {
+      "id": 6,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "content": "我每天吃一个苹果。",
+      "pinyin": "Wǒ měitiān chī yí ge píngguǒ.",
+      "meaning": "I eat an apple every day."
+    },
+    {
+      "id": 7,
+      "hskId": 3,
+      "lessonId": 3,
+      "textId": 3,
+      "content": "我是一个学生。",
+      "pinyin": "Wǒ shì yí ge xuésheng.",
+      "meaning": "I am a student."
+    },
+    {
+      "id": 8,
+      "hskId": 3,
+      "lessonId": 3,
+      "textId": 3,
+      "content": "我每天去学校学习中文和英语。",
+      "pinyin": "Wǒ měitiān qù xuéxiào xuéxí Zhōngwén hé Yīngyǔ.",
+      "meaning": "I go to school every day to study Chinese and English."
+    },
+    {
+      "id": 9,
+      "hskId": 3,
+      "lessonId": 3,
+      "textId": 3,
+      "content": "我很喜欢学习新的东西。",
+      "pinyin": "Wǒ hěn xǐhuan xuéxí xīn de dōngxi.",
+      "meaning": "I really like learning new things."
+    },
+    {
+      "id": 10,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "content": "我想买这个手机。",
+      "pinyin": "Wǒ xiǎng mǎi zhège shǒujī.",
+      "meaning": "I want to buy this phone."
+    },
+    {
+      "id": 11,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "content": "这个手机多少钱？",
+      "pinyin": "Zhège shǒujī duōshao qián?",
+      "meaning": "How much is this phone?"
+    },
+    {
+      "id": 12,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "content": "如果太贵了，我可以看看别的吗？",
+      "pinyin": "Rúguǒ tài guì le, wǒ kěyǐ kànkan bié de ma?",
+      "meaning": "If it is too expensive, can I look at another one?"
+    },
+    {
+      "id": 13,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "content": "我会说中文，也会说英语。",
+      "pinyin": "Wǒ huì shuō Zhōngwén, yě huì shuō Yīngyǔ.",
+      "meaning": "I can speak Chinese and English."
+    },
+    {
+      "id": 14,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "content": "虽然我的英语还不太好，但是我每天都练习。",
+      "pinyin": "Suīrán wǒ de Yīngyǔ hái bú tài hǎo, dànshì wǒ měitiān dōu liànxí.",
+      "meaning": "Although my English is not very good yet, I practice every day."
+    },
+    {
+      "id": 15,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "content": "以后我希望能用英语和更多的人交流。",
+      "pinyin": "Yǐhòu wǒ xīwàng néng yòng Yīngyǔ hé gèng duō de rén jiāoliú.",
+      "meaning": "In the future, I hope to use English to communicate with more people."
+    },
+    {
+      "id": 16,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "content": "我对飞机很感兴趣。",
+      "pinyin": "Wǒ duì fēijī hěn gǎn xìngqù.",
+      "meaning": "I am very interested in airplanes."
+    },
+    {
+      "id": 17,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "content": "我想成为一名飞行员。",
+      "pinyin": "Wǒ xiǎng chéngwéi yì míng fēixíngyuán.",
+      "meaning": "I want to become a pilot."
+    },
+    {
+      "id": 18,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "content": "我需要认真学习。",
+      "pinyin": "Wǒ xūyào rènzhēn xuéxí.",
+      "meaning": "I need to study seriously."
+    }
+  ],
+  "words": [
+    {
+      "id": 1,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "sentenceId": 1,
+      "content": "你好",
+      "pinyin": "nǐ hǎo",
+      "meaning": "hello"
+    },
+    {
+      "id": 2,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "sentenceId": 2,
+      "content": "叫",
+      "pinyin": "jiào",
+      "meaning": "to be called"
+    },
+    {
+      "id": 3,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "sentenceId": 3,
+      "content": "学生",
+      "pinyin": "xuésheng",
+      "meaning": "student"
+    },
+    {
+      "id": 4,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "sentenceId": 4,
+      "content": "喜欢",
+      "pinyin": "xǐhuan",
+      "meaning": "to like"
+    },
+    {
+      "id": 5,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "sentenceId": 4,
+      "content": "吃",
+      "pinyin": "chī",
+      "meaning": "to eat"
+    },
+    {
+      "id": 6,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "sentenceId": 4,
+      "content": "苹果",
+      "pinyin": "píngguǒ",
+      "meaning": "apple"
+    },
+    {
+      "id": 7,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "sentenceId": 6,
+      "content": "每天",
+      "pinyin": "měitiān",
+      "meaning": "every day"
+    },
+    {
+      "id": 8,
+      "hskId": 3,
+      "lessonId": 3,
+      "textId": 3,
+      "sentenceId": 7,
+      "content": "一个",
+      "pinyin": "yí ge",
+      "meaning": "one"
+    },
+    {
+      "id": 9,
+      "hskId": 3,
+      "lessonId": 3,
+      "textId": 3,
+      "sentenceId": 8,
+      "content": "学校",
+      "pinyin": "xuéxiào",
+      "meaning": "school"
+    },
+    {
+      "id": 10,
+      "hskId": 3,
+      "lessonId": 3,
+      "textId": 3,
+      "sentenceId": 8,
+      "content": "学习",
+      "pinyin": "xuéxí",
+      "meaning": "to study"
+    },
+    {
+      "id": 11,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "sentenceId": 10,
+      "content": "想",
+      "pinyin": "xiǎng",
+      "meaning": "to want / to think"
+    },
+    {
+      "id": 12,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "sentenceId": 10,
+      "content": "买",
+      "pinyin": "mǎi",
+      "meaning": "to buy"
+    },
+    {
+      "id": 13,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "sentenceId": 10,
+      "content": "手机",
+      "pinyin": "shǒujī",
+      "meaning": "mobile phone"
+    },
+    {
+      "id": 14,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "sentenceId": 11,
+      "content": "多少钱",
+      "pinyin": "duōshao qián",
+      "meaning": "how much money"
+    },
+    {
+      "id": 15,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "sentenceId": 12,
+      "content": "如果",
+      "pinyin": "rúguǒ",
+      "meaning": "if"
+    },
+    {
+      "id": 16,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "sentenceId": 12,
+      "content": "贵",
+      "pinyin": "guì",
+      "meaning": "expensive"
+    },
+    {
+      "id": 17,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 13,
+      "content": "会",
+      "pinyin": "huì",
+      "meaning": "can / know how to"
+    },
+    {
+      "id": 18,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 13,
+      "content": "英语",
+      "pinyin": "Yīngyǔ",
+      "meaning": "English"
+    },
+    {
+      "id": 19,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 14,
+      "content": "虽然",
+      "pinyin": "suīrán",
+      "meaning": "although"
+    },
+    {
+      "id": 20,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 14,
+      "content": "但是",
+      "pinyin": "dànshì",
+      "meaning": "but"
+    },
+    {
+      "id": 21,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 14,
+      "content": "练习",
+      "pinyin": "liànxí",
+      "meaning": "to practice"
+    },
+    {
+      "id": 22,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 15,
+      "content": "以后",
+      "pinyin": "yǐhòu",
+      "meaning": "in the future"
+    },
+    {
+      "id": 23,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 15,
+      "content": "交流",
+      "pinyin": "jiāoliú",
+      "meaning": "to communicate"
+    },
+    {
+      "id": 24,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "sentenceId": 16,
+      "content": "飞机",
+      "pinyin": "fēijī",
+      "meaning": "airplane"
+    },
+    {
+      "id": 25,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "sentenceId": 16,
+      "content": "感兴趣",
+      "pinyin": "gǎn xìngqù",
+      "meaning": "to be interested in"
+    },
+    {
+      "id": 26,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "sentenceId": 17,
+      "content": "成为",
+      "pinyin": "chéngwéi",
+      "meaning": "to become"
+    },
+    {
+      "id": 27,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "sentenceId": 17,
+      "content": "飞行员",
+      "pinyin": "fēixíngyuán",
+      "meaning": "pilot"
+    },
+    {
+      "id": 28,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "sentenceId": 18,
+      "content": "需要",
+      "pinyin": "xūyào",
+      "meaning": "to need"
+    },
+    {
+      "id": 29,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "sentenceId": 18,
+      "content": "认真",
+      "pinyin": "rènzhēn",
+      "meaning": "serious / carefully"
+    }
+  ],
+  "characters": [
+    {
+      "id": 1,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "sentenceId": 1,
+      "wordId": 1,
+      "content": "你",
+      "pinyin": "nǐ",
+      "tone": "3",
+      "meaning": "you"
+    },
+    {
+      "id": 2,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "sentenceId": 1,
+      "wordId": 1,
+      "content": "好",
+      "pinyin": "hǎo",
+      "tone": "3",
+      "meaning": "good"
+    },
+    {
+      "id": 3,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "sentenceId": 2,
+      "wordId": 2,
+      "content": "我",
+      "pinyin": "wǒ",
+      "tone": "3",
+      "meaning": "I / me"
+    },
+    {
+      "id": 4,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "sentenceId": 2,
+      "wordId": 2,
+      "content": "叫",
+      "pinyin": "jiào",
+      "tone": "4",
+      "meaning": "to be called"
+    },
+    {
+      "id": 5,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "sentenceId": 3,
+      "wordId": 3,
+      "content": "学",
+      "pinyin": "xué",
+      "tone": "2",
+      "meaning": "to study"
+    },
+    {
+      "id": 6,
+      "hskId": 1,
+      "lessonId": 1,
+      "textId": 1,
+      "sentenceId": 3,
+      "wordId": 3,
+      "content": "生",
+      "pinyin": "shēng",
+      "tone": "1",
+      "meaning": "life / student suffix."
+    },
+    {
+      "id": 7,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "sentenceId": 4,
+      "wordId": 4,
+      "content": "喜",
+      "pinyin": "xǐ",
+      "tone": "3",
+      "meaning": "to like / joy"
+    },
+    {
+      "id": 8,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "sentenceId": 4,
+      "wordId": 4,
+      "content": "欢",
+      "pinyin": "huān",
+      "tone": "1",
+      "meaning": "happy / joy"
+    },
+    {
+      "id": 9,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "sentenceId": 4,
+      "wordId": 5,
+      "content": "吃",
+      "pinyin": "chī",
+      "tone": "1",
+      "meaning": "to eat"
+    },
+    {
+      "id": 10,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "sentenceId": 4,
+      "wordId": 6,
+      "content": "苹",
+      "pinyin": "píng",
+      "tone": "2",
+      "meaning": "apple"
+    },
+    {
+      "id": 11,
+      "hskId": 2,
+      "lessonId": 2,
+      "textId": 2,
+      "sentenceId": 4,
+      "wordId": 6,
+      "content": "果",
+      "pinyin": "guǒ",
+      "tone": "3",
+      "meaning": "fruit"
+    },
+    {
+      "id": 12,
+      "hskId": 3,
+      "lessonId": 3,
+      "textId": 3,
+      "sentenceId": 8,
+      "wordId": 9,
+      "content": "校",
+      "pinyin": "xiào",
+      "tone": "4",
+      "meaning": "school"
+    },
+    {
+      "id": 13,
+      "hskId": 3,
+      "lessonId": 3,
+      "textId": 3,
+      "sentenceId": 8,
+      "wordId": 10,
+      "content": "习",
+      "pinyin": "xí",
+      "tone": "2",
+      "meaning": "to practice / learn"
+    },
+    {
+      "id": 14,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "sentenceId": 11,
+      "wordId": 14,
+      "content": "多",
+      "pinyin": "duō",
+      "tone": "1",
+      "meaning": "many / much"
+    },
+    {
+      "id": 15,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "sentenceId": 11,
+      "wordId": 14,
+      "content": "少",
+      "pinyin": "shǎo",
+      "tone": "3",
+      "meaning": "few / little"
+    },
+    {
+      "id": 16,
+      "hskId": 4,
+      "lessonId": 4,
+      "textId": 4,
+      "sentenceId": 11,
+      "wordId": 14,
+      "content": "钱",
+      "pinyin": "qián",
+      "tone": "2",
+      "meaning": "money"
+    },
+    {
+      "id": 17,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 13,
+      "wordId": 18,
+      "content": "英",
+      "pinyin": "yīng",
+      "tone": "1",
+      "meaning": "English / heroic"
+    },
+    {
+      "id": 18,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 13,
+      "wordId": 18,
+      "content": "语",
+      "pinyin": "yǔ",
+      "tone": "3",
+      "meaning": "language"
+    },
+    {
+      "id": 19,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 14,
+      "wordId": 21,
+      "content": "练",
+      "pinyin": "liàn",
+      "tone": "4",
+      "meaning": "to practice"
+    },
+    {
+      "id": 20,
+      "hskId": 5,
+      "lessonId": 5,
+      "textId": 5,
+      "sentenceId": 14,
+      "wordId": 21,
+      "content": "习",
+      "pinyin": "xí",
+      "tone": "2",
+      "meaning": "to practice / learn"
+    },
+    {
+      "id": 21,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "sentenceId": 16,
+      "wordId": 24,
+      "content": "飞",
+      "pinyin": "fēi",
+      "tone": "1",
+      "meaning": "to fly"
+    },
+    {
+      "id": 22,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "sentenceId": 16,
+      "wordId": 24,
+      "content": "机",
+      "pinyin": "jī",
+      "tone": "1",
+      "meaning": "machine"
+    },
+    {
+      "id": 23,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "sentenceId": 17,
+      "wordId": 26,
+      "content": "成",
+      "pinyin": "chéng",
+      "tone": "2",
+      "meaning": "to become"
+    },
+    {
+      "id": 24,
+      "hskId": 6,
+      "lessonId": 6,
+      "textId": 6,
+      "sentenceId": 17,
+      "wordId": 26,
+      "content": "为",
+      "pinyin": "wéi",
+      "tone": "2",
+      "meaning": "to become / for"
+    }
+  ],
+  "rules": [
+    {
+      "id": 1,
+      "hskId": 1,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "吗 (ma) is placed at the end of a statement to turn it into a yes/no question."
+    },
+    {
+      "id": 2,
+      "hskId": 1,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "不 (bù) is placed before a verb or adjective to make the sentence negative."
+    },
+    {
+      "id": 3,
+      "hskId": 2,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "过 (guo) is placed after a verb to indicate that someone has experienced something before."
+    },
+    {
+      "id": 4,
+      "hskId": 2,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "正在 (zhèngzài) is placed before a verb to indicate that an action is happening right now."
+    },
+    {
+      "id": 5,
+      "hskId": 2,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "比 (bǐ) is used to compare two people or things."
+    },
+    {
+      "id": 6,
+      "hskId": 5,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "虽然 (suīrán) introduces a concessive clause meaning 'although' and is often followed by 但是 (dànshì)."
+    },
+    {
+      "id": 7,
+      "hskId": 3,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "把 (bǎ) places the object before the verb and emphasizes what happens to that object."
+    },
+    {
+      "id": 8,
+      "hskId": 3,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "越来越 (yuèláiyuè) means 'more and more' and describes a gradual change."
+    },
+    {
+      "id": 9,
+      "hskId": 3,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "除了 (chúle) can mean 'besides' or 'except for', depending on the sentence structure."
+    },
+    {
+      "id": 10,
+      "hskId": 5,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "既然 (jìrán) introduces a known reason or fact and is commonly followed by 就 (jiù)."
+    },
+    {
+      "id": 11,
+      "hskId": 4,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "即使 (jíshǐ) means 'even if' and introduces a hypothetical condition."
+    },
+    {
+      "id": 12,
+      "hskId": 5,
+      "lessonId": null,
+      "textId": null,
+      "sentenceId": null,
+      "wordId": null,
+      "content": "不仅 (bùjǐn) means 'not only' and is often paired with 而且 (érqiě)."
+    }
+  ]
+}

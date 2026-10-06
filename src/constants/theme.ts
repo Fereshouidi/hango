@@ -63,3 +63,5 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+export const randomColors = ["#ec489ae8","#f59f0bec","#3b83f6eb","#8a5cf6ef","#0bc476e0","#ef4444e8","#6365f1ea", "#7c3aed", "#f97316"]
