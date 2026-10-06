@@ -353,10 +353,10 @@ const AddWord = () => {
           content: wordText,
           pinyin: pinyin.trim(),
           meaning: meaning.trim(),
-          hskId: primaryHskId,
-          lessonId: primaryLessonId,
-          textId: primaryTextId,
-          sentenceId: primarySentenceId,
+          hskId: primaryHskId ?? undefined,
+          lessonId: primaryLessonId ?? undefined,
+          textId: primaryTextId ?? undefined,
+          sentenceId: primarySentenceId ?? undefined,
         });
 
         updateWordRelations(editWordId, {

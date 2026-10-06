@@ -53,7 +53,7 @@ const HSKs = () => {
         items={[
           <TouchableOpacity
             key="add"
-            onPress={() => router.push('/pages/addLesson')}
+            onPress={() => router.push('/pages/addHSK')}
           >
             <Lucide
               name="plus"
@@ -128,7 +128,8 @@ const HSKs = () => {
                 onPress={() => router.push({
                   pathname: '/pages/lessons/[id]',
                   params: {
-                    hskId: hsk.id
+                    id: hsk.id,
+                    hskId: hsk.id,
                   }
                 })}
                 style={{

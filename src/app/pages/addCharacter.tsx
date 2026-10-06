@@ -245,11 +245,11 @@ const AddCharacter = () => {
           pinyin: pinyin.trim(),
           tone,
           meaning: meaning.trim(),
-          hskId: firstHskId,
-          lessonId: firstLessonId,
-          textId: firstTextId,
-          sentenceId: firstSentenceId,
-          wordId: firstWordId,
+          hskId: firstHskId ?? undefined,
+          lessonId: firstLessonId ?? undefined,
+          textId: firstTextId ?? undefined,
+          sentenceId: firstSentenceId ?? undefined,
+          wordId: firstWordId ?? undefined,
         });
 
         updateCharacterRelations(editCharacterId, {

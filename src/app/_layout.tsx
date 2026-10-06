@@ -74,6 +74,10 @@ export default function TabLayout() {
                     options={{ headerShown: false }}
                 />
                 <Stack.Screen
+                    name="pages/addHSK"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
                     name="pages/addLesson"
                     options={{ headerShown: false }}
                 />

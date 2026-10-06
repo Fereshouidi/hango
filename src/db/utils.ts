@@ -148,10 +148,18 @@ export const createHSKTable = () => {
 };
 
 export const createHSK = (name: string) => {
-    db.runSync(
-        `INSERT OR IGNORE INTO hsks (name) VALUES (?)`,
+    return db.runSync(
+        `INSERT INTO hsks (name) VALUES (?)`,
         name
     );
+};
+
+export const updateHSK = (id: number, name: string) => {
+    return db.runSync(`UPDATE hsks SET name = ? WHERE id = ?`, name, id);
+};
+
+export const deleteHSK = (id: number) => {
+    return db.runSync(`DELETE FROM hsks WHERE id = ?`, id);
 };
 
 export const getAllHSKs = () => { 
@@ -1176,6 +1184,98 @@ export const linkCharacterRelations = (
                 ruleId,
                 characterId
             );
+        }
+    }
+};
+
+export const linkHSKRelations = (
+    hskId: number,
+    relations: {
+        lessonIds?: number[];
+        textIds?: number[];
+        sentenceIds?: number[];
+        wordIds?: number[];
+        characterIds?: number[];
+        ruleIds?: number[];
+    }
+) => {
+    if (relations.lessonIds && relations.lessonIds.length > 0) {
+        for (const lessonId of relations.lessonIds) {
+            db.runSync(`UPDATE lessons SET hskId = ? WHERE id = ?`, hskId, lessonId);
+        }
+    }
+    if (relations.textIds && relations.textIds.length > 0) {
+        for (const textId of relations.textIds) {
+            db.runSync(`UPDATE texts SET hskId = ? WHERE id = ?`, hskId, textId);
+        }
+    }
+    if (relations.sentenceIds && relations.sentenceIds.length > 0) {
+        for (const sentenceId of relations.sentenceIds) {
+            db.runSync(`UPDATE sentences SET hskId = ? WHERE id = ?`, hskId, sentenceId);
+        }
+    }
+    if (relations.wordIds && relations.wordIds.length > 0) {
+        for (const wordId of relations.wordIds) {
+            db.runSync(`INSERT OR IGNORE INTO word_hsks (wordId, hskId) VALUES (?, ?)`, wordId, hskId);
+            db.runSync(`UPDATE words SET hskId = COALESCE(hskId, ?) WHERE id = ?`, hskId, wordId);
+        }
+    }
+    if (relations.characterIds && relations.characterIds.length > 0) {
+        for (const characterId of relations.characterIds) {
+            db.runSync(`INSERT OR IGNORE INTO character_hsks (characterId, hskId) VALUES (?, ?)`, characterId, hskId);
+            db.runSync(`UPDATE characters SET hskId = COALESCE(hskId, ?) WHERE id = ?`, hskId, characterId);
+        }
+    }
+    if (relations.ruleIds && relations.ruleIds.length > 0) {
+        for (const ruleId of relations.ruleIds) {
+            db.runSync(`INSERT OR IGNORE INTO rule_hsks (ruleId, hskId) VALUES (?, ?)`, ruleId, hskId);
+            db.runSync(`UPDATE rules SET hskId = COALESCE(hskId, ?) WHERE id = ?`, ruleId, ruleId);
+        }
+    }
+};
+
+export const updateHSKRelations = (
+    hskId: number,
+    relations: {
+        lessonIds?: number[];
+        textIds?: number[];
+        sentenceIds?: number[];
+        wordIds?: number[];
+        characterIds?: number[];
+        ruleIds?: number[];
+    }
+) => {
+    if (relations.lessonIds) {
+        for (const lessonId of relations.lessonIds) {
+            db.runSync(`UPDATE lessons SET hskId = ? WHERE id = ?`, hskId, lessonId);
+        }
+    }
+    if (relations.textIds) {
+        for (const textId of relations.textIds) {
+            db.runSync(`UPDATE texts SET hskId = ? WHERE id = ?`, hskId, textId);
+        }
+    }
+    if (relations.sentenceIds) {
+        for (const sentenceId of relations.sentenceIds) {
+            db.runSync(`UPDATE sentences SET hskId = ? WHERE id = ?`, hskId, sentenceId);
+        }
+    }
+    if (relations.wordIds) {
+        db.runSync(`DELETE FROM word_hsks WHERE hskId = ?`, hskId);
+        for (const wordId of relations.wordIds) {
+            db.runSync(`INSERT OR IGNORE INTO word_hsks (wordId, hskId) VALUES (?, ?)`, wordId, hskId);
+        }
+    }
+    if (relations.characterIds) {
+        db.runSync(`DELETE FROM character_hsks WHERE hskId = ?`, hskId);
+        for (const characterId of relations.characterIds) {
+            db.runSync(`INSERT OR IGNORE INTO character_hsks (characterId, hskId) VALUES (?, ?)`, characterId, hskId);
+        }
+    }
+    if (relations.ruleIds) {
+        db.runSync(`DELETE FROM rule_hsks WHERE hskId = ?`, hskId);
+        for (const ruleId of relations.ruleIds) {
+            db.runSync(`INSERT OR IGNORE INTO rule_hsks (ruleId, hskId) VALUES (?, ?)`, ruleId, hskId);
         }
     }
 };
