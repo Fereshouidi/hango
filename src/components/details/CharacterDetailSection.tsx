@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   countBubble: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f1f5f9d0',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'transparent',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#f1f5f9',

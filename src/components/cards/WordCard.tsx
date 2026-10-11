@@ -14,6 +14,11 @@ interface WordCardProps {
   isPlaying?: boolean;
   onPlayAudio?: (id: number, text: string) => void;
   accentColor?: string;
+  isSelected?: boolean;
+  isSelectionMode?: boolean;
+  onLongPress?: () => void;
+  onPress?: () => void;
+  onOptionsPress?: () => void;
 }
 
 export const WordCard: React.FC<WordCardProps> = ({
@@ -25,20 +30,37 @@ export const WordCard: React.FC<WordCardProps> = ({
   isPlaying,
   onPlayAudio,
   accentColor = '#059669',
+  isSelected = false,
+  isSelectionMode = false,
+  onLongPress,
+  onPress,
+  onOptionsPress,
 }) => {
   const router = useRouter();
+  const [localPlaying, setLocalPlaying] = React.useState(false);
+  const activePlaying = isPlaying !== undefined ? isPlaying : localPlaying;
 
-  const handleSpeech = (e: any) => {
-    e.stopPropagation();
+  const handleSpeech = () => {
     if (onPlayAudio && word.id) {
       onPlayAudio(word.id, word.content);
     } else {
-      speakChineseText(word.content);
+      setLocalPlaying(true);
+      speakChineseText(
+        word.content,
+        () => setLocalPlaying(true),
+        () => setLocalPlaying(false)
+      );
     }
   };
 
   const handlePressCard = () => {
-    router.push(`/pages/wordDetails/${word.id}` as any);
+    if (isSelectionMode && onPress) {
+      onPress();
+    } else if (onPress) {
+      onPress();
+    } else {
+      router.push(`/pages/wordDetails/${word.id}` as any);
+    }
   };
 
   return (
@@ -46,12 +68,19 @@ export const WordCard: React.FC<WordCardProps> = ({
       style={[
         styles.card,
         cardBg ? { backgroundColor: cardBg } : styles.defaultBg,
+        isSelected && { borderColor: '#0f172a', borderWidth: 3.5 },
+        isSelectionMode && !isSelected && { opacity: 0.85 },
       ]}
       onPress={handlePressCard}
+      onLongPress={onLongPress}
       activeOpacity={0.85}
     >
       <View style={styles.header}>
-        {index !== undefined ? (
+        {isSelectionMode ? (
+          <View style={[styles.selectBadge, isSelected ? { backgroundColor: '#0f172a' } : { borderColor: '#ffffff', borderWidth: 1.5, backgroundColor: 'rgba(0,0,0,0.2)' }]}>
+            {isSelected && <Lucide name="check" size={12} color="#ffffff" />}
+          </View>
+        ) : index !== undefined ? (
           <View style={[styles.indexBadge, cardBg ? styles.whiteBadgeBg : { backgroundColor: accentColor + '20' }]}>
             <Text style={[styles.indexBadgeText, cardBg ? styles.whiteText : { color: accentColor }]}>
               #{index + 1}
@@ -61,21 +90,38 @@ export const WordCard: React.FC<WordCardProps> = ({
           <View />
         )}
 
-        <TouchableOpacity
-          style={[
-            styles.playBtn,
-            cardBg ? styles.whitePlayBtnBg : { backgroundColor: accentColor + '20' },
-            isPlaying && styles.playingBtnActive,
-          ]}
-          onPress={handleSpeech}
-          activeOpacity={0.7}
-        >
-          <Lucide
-            name={isPlaying ? 'volume-2' : 'volume-1'}
-            size={15}
-            color={isPlaying ? '#ffffff' : cardBg ? '#ffffff' : accentColor}
-          />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <TouchableOpacity
+            style={[
+              styles.playBtn,
+              cardBg ? styles.whitePlayBtnBg : { backgroundColor: accentColor + '20' },
+              activePlaying && styles.playingBtnActive,
+            ]}
+            onPress={handleSpeech}
+            activeOpacity={0.7}
+          >
+            <Lucide
+              name={activePlaying ? 'volume-2' : 'volume-1'}
+              size={15}
+              color={activePlaying ? '#ffffff' : cardBg ? '#ffffff' : accentColor}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.playBtn,
+              cardBg ? styles.whitePlayBtnBg : { backgroundColor: accentColor + '20' },
+            ]}
+            onPress={onOptionsPress || onLongPress}
+            activeOpacity={0.7}
+          >
+            <Lucide
+              name="more-vertical"
+              size={15}
+              color={cardBg ? '#ffffff' : accentColor}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Text style={[styles.chineseText, cardBg && styles.whiteText]}>
@@ -99,6 +145,8 @@ export const WordCard: React.FC<WordCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
+    width: "48%",
+    margin: "1%",
     borderRadius: 16,
     padding: 14,
     gap: 5,
@@ -157,6 +205,13 @@ const styles = StyleSheet.create({
   meaningText: {
     fontSize: 12.5,
     fontWeight: '500',
+  },
+  selectBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   whiteText: {
     color: '#ffffff',

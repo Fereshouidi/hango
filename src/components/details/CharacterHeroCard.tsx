@@ -31,6 +31,7 @@ interface CharacterHeroCardProps {
   isPlaying: boolean;
   onPlay: () => void;
   onEdit?: () => void;
+  onWrite?: () => void;
   showPinyin: boolean;
   setShowPinyin: (val: boolean) => void;
   showMeaning: boolean;
@@ -48,6 +49,7 @@ export const CharacterHeroCard: React.FC<CharacterHeroCardProps> = ({
   isPlaying,
   onPlay,
   onEdit,
+  onWrite,
   showPinyin,
   setShowPinyin,
   showMeaning,
@@ -95,7 +97,7 @@ export const CharacterHeroCard: React.FC<CharacterHeroCardProps> = ({
             <Text style={[styles.toneLabel, { color: toneColor }]}>{toneLabel}</Text>
           </View>
 
-          {/* Actions row: Listen + Edit */}
+          {/* Actions row: Listen + Write + Edit */}
           <View style={{ flexDirection: 'row', gap: 6 }}>
             <TouchableOpacity
               style={[styles.listenBtn, { flex: 1 }, isPlaying && styles.listenBtnActive, { borderColor: toneColor }]}
@@ -112,14 +114,25 @@ export const CharacterHeroCard: React.FC<CharacterHeroCardProps> = ({
               </Text>
             </TouchableOpacity>
 
+            {onWrite && (
+              <TouchableOpacity
+                style={[styles.listenBtn, { backgroundColor: toneColor + '18', borderColor: toneColor }]}
+                onPress={onWrite}
+                activeOpacity={0.8}
+              >
+                <Lucide name="pencil-line" size={14} color={toneColor} />
+                <Text style={[styles.listenBtnText, { color: toneColor }]}>Write</Text>
+              </TouchableOpacity>
+            )}
+
             {onEdit && (
               <TouchableOpacity
-                style={[styles.listenBtn, { backgroundColor: toneColor + '15', borderColor: toneColor }]}
+                style={[styles.listenBtn, { backgroundColor: '#f1f5f9', borderColor: '#e2e8f0' }]}
                 onPress={onEdit}
                 activeOpacity={0.8}
               >
-                <Lucide name="pencil" size={14} color={toneColor} />
-                <Text style={[styles.listenBtnText, { color: toneColor }]}>Edit</Text>
+                <Lucide name="pencil" size={14} color="#64748b" />
+                <Text style={[styles.listenBtnText, { color: '#64748b' }]}>Edit</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -184,7 +197,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
-    elevation: 3,
   },
   topRow: {
     flexDirection: 'row',
@@ -253,7 +265,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1.5,

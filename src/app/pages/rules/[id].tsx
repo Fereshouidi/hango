@@ -1,6 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  BackHandler,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,13 +12,22 @@ import {
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import {
+  deleteRule,
+  deleteRules,
   getAllRules,
+  getCharacterById,
+  getHSKById,
+  getLessonById,
+  getRuleById,
   getRulesByCharacterId,
   getRulesByHSKId,
   getRulesByLessonId,
   getRulesBySentenceId,
   getRulesByTextId,
   getRulesByWordId,
+  getSentenceById,
+  getTextById,
+  getWordById,
 } from '@/db/utils';
 import { RuleType } from '@/types';
 import Header from '@/components/main/header';
@@ -26,7 +36,15 @@ import { randomColors } from '@/constants/theme';
 import Lucide from '@react-native-vector-icons/lucide';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { RuleCard } from '@/components/cards/RuleCard';
-import { SearchBar } from '@/components/common/SearchBar';
+import {
+  CollapsibleControlBar,
+  HeaderFilterButton,
+} from '@/components/common/CollapsibleControlBar';
+import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
+import { speakEnglishText } from '@/utils/tts';
+
+const PAGE_SIZE = 10;
 
 export default function RulesScreen() {
   const router = useRouter();
@@ -40,6 +58,8 @@ export default function RulesScreen() {
     characterId?: string;
     caracterid?: string;
     ruleId?: string;
+    scope?: string;
+    search?: string;
   }>();
 
   const parseNum = (val?: string) => (val && !isNaN(Number(val)) ? Number(val) : 0);
@@ -52,22 +72,51 @@ export default function RulesScreen() {
   const characterId = parseNum(params.characterId || params.caracterid);
   const ruleId = parseNum(params.ruleId);
   const genericId = parseNum(params.id);
+  const isGlobalScope = params.scope === 'global';
 
   const [rules, setRules] = useState<RuleType[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(params.search || '');
+  const [isControlBarOpen, setIsControlBarOpen] = useState(false);
   const [playingId, setPlayingId] = useState<number | null>(null);
 
+  // Selection mode & card menu state
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [activeCardRule, setActiveCardRule] = useState<RuleType | null>(null);
+
+  useEffect(() => {
+    if (params.search !== undefined) {
+      setSearchQuery(params.search);
+    }
+  }, [params.search]);
+
+  // Handle hardware back button to cancel selection mode
+  useEffect(() => {
+    if (!isSelectionMode) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      exitSelectionMode();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [isSelectionMode]);
+
   const getFilterBadgeLabel = (): string | null => {
-    if (hskId > 0) return `HSK Level ${hskId}`;
-    if (lessonId > 0) return `Lesson ${lessonId}`;
-    if (textId > 0) return `Text ${textId}`;
-    if (sentenceId > 0) return `Sentence ${sentenceId}`;
-    if (wordId > 0) return `Word ${wordId}`;
-    if (characterId > 0) return `Character ${characterId}`;
-    if (ruleId > 0) return `Rule ${ruleId}`;
-    if (genericId > 0) return `ID ${genericId}`;
-    return null;
+    let baseLabel: string | null = null;
+    if (hskId > 0) baseLabel = `HSK Level ${hskId}`;
+    else if (lessonId > 0) baseLabel = `Lesson ${lessonId}`;
+    else if (textId > 0) baseLabel = `Text ${textId}`;
+    else if (sentenceId > 0) baseLabel = `Sentence ${sentenceId}`;
+    else if (wordId > 0) baseLabel = `Word ${wordId}`;
+    else if (characterId > 0) baseLabel = `Character ${characterId}`;
+    else if (ruleId > 0) baseLabel = `Rule ${ruleId}`;
+    else if (genericId > 0) baseLabel = `ID ${genericId}`;
+
+    if (isGlobalScope) {
+      return baseLabel ? `${baseLabel} (Global)` : 'All DB Search';
+    }
+    return baseLabel;
   };
 
   const activeFilterLabel = getFilterBadgeLabel();
@@ -76,7 +125,9 @@ export default function RulesScreen() {
     try {
       let data: RuleType[] = [];
 
-      if (hskId > 0) {
+      if (isGlobalScope) {
+        data = getAllRules() as unknown as RuleType[];
+      } else if (hskId > 0) {
         data = getRulesByHSKId(hskId) as unknown as RuleType[];
       } else if (lessonId > 0) {
         data = getRulesByLessonId(lessonId) as unknown as RuleType[];
@@ -101,11 +152,12 @@ export default function RulesScreen() {
     } catch (e) {
       console.error('Failed to load rules:', e);
     }
-  }, [hskId, lessonId, textId, sentenceId, wordId, characterId, genericId]);
+  }, [isGlobalScope, hskId, lessonId, textId, sentenceId, wordId, characterId, genericId]);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
+      exitSelectionMode();
     }, [loadData])
   );
 
@@ -119,56 +171,208 @@ export default function RulesScreen() {
 
   const q = searchQuery.toLowerCase().trim();
   const filteredRules = rules.filter(
-    (r) => !q || r.content.toLowerCase().includes(q)
+    (r) =>
+      !q ||
+      ((r as any).title || '').toLowerCase().includes(q) ||
+      (r.content || '').toLowerCase().includes(q)
   );
+
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, hskId, lessonId, textId, sentenceId, wordId, characterId, genericId]);
+
+  const displayedRules = filteredRules.slice(0, visibleCount);
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredRules.length));
+  };
+
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 180;
+    if (isCloseToBottom && visibleCount < filteredRules.length) {
+      handleLoadMore();
+    }
+  };
+
+  const handlePlayAudio = (id: number, text: string) => {
+    setPlayingId(id);
+    speakEnglishText(
+      text,
+      () => setPlayingId(id),
+      () => setPlayingId(null)
+    );
+  };
+
+  // Selection mode helpers
+  const enterSelectionMode = (id: number) => {
+    setIsSelectionMode(true);
+    setSelectedIds(new Set([id]));
+  };
+
+  const exitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedIds(new Set());
+    setActiveCardRule(null);
+  };
+
+  const toggleSelection = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      if (next.size === 0) {
+        setIsSelectionMode(false);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredRules.map((r) => r.id!).filter(Boolean)));
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    Alert.alert(
+      'Delete Rules',
+      `Are you sure you want to permanently delete ${selectedIds.size} rule${selectedIds.size > 1 ? 's' : ''}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            try {
+              deleteRules([...selectedIds]);
+              exitSelectionMode();
+              loadData();
+            } catch (e) {
+              Alert.alert('Error', 'Failed to delete rules.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const buildMenuOptions = () => {
+    if (activeCardRule) {
+      const rId = activeCardRule.id!;
+      const rTitle = (activeCardRule as any).title || 'this rule';
+      const isAlreadySelected = selectedIds.has(rId);
+      return [
+        {
+          id: 'view',
+          label: 'View Details',
+          iconName: 'external-link',
+          color: '#6366f1',
+          onPress: () => { setMenuVisible(false); setActiveCardRule(null); router.push(`/pages/ruleDetails/${rId}` as any); },
+        },
+        {
+          id: 'select',
+          label: isAlreadySelected ? 'Deselect' : 'Select',
+          iconName: 'check-square',
+          color: '#6366f1',
+          onPress: () => {
+            if (!isSelectionMode) { setIsSelectionMode(true); setSelectedIds(new Set([rId])); }
+            else toggleSelection(rId);
+            setMenuVisible(false); setActiveCardRule(null);
+          },
+        },
+        {
+          id: 'delete',
+          label: `Delete "${rTitle}"`,
+          iconName: 'trash-2',
+          destructive: true,
+          onPress: () => {
+            setMenuVisible(false); setActiveCardRule(null);
+            Alert.alert('Delete Rule', `Delete "${rTitle}" permanently?`, [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => { try { deleteRule(rId); loadData(); } catch { Alert.alert('Error', 'Failed to delete.'); } } },
+            ]);
+          },
+        },
+      ];
+    }
+    return [
+      ...(isSelectionMode && selectedIds.size > 0
+        ? [{ id: 'delete', label: `Delete ${selectedIds.size} selected`, iconName: 'trash-2', destructive: true, onPress: handleDeleteSelected }]
+        : []),
+      { id: 'selectAll', label: 'Select All', iconName: 'check-square', color: '#6366f1', onPress: () => { selectAll(); setMenuVisible(false); } },
+      ...(isSelectionMode
+        ? [{ id: 'cancel', label: 'Cancel Selection', iconName: 'x-circle', color: '#64748b', onPress: () => { exitSelectionMode(); setMenuVisible(false); } }]
+        : [
+            { id: 'startSelect', label: 'Select Items', iconName: 'check-square', color: '#6366f1', onPress: () => { setIsSelectionMode(true); setMenuVisible(false); } },
+            { id: 'add', label: 'Add New Rule', iconName: 'plus-circle', color: '#6366f1', onPress: () => { setMenuVisible(false); router.push('/pages/addRule'); } },
+          ]),
+    ];
+  };
 
   return (
     <ThemedView style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}>
       <Bg1 />
 
       <Header
-        useBackArrow={true}
-        label="Grammar Rules"
+        useBackArrow={!isSelectionMode}
+        label={isSelectionMode ? `${selectedIds.size} Selected` : 'Grammar Rules'}
         subtitle={activeFilterLabel || undefined}
-        items={[
-          <TouchableOpacity
-            key="add"
-            onPress={() => router.push('/pages/addRule')}
-            activeOpacity={0.7}
-          >
-            <Lucide name="plus" size={20} color="#373737ff" style={styles.actionBtnIcon} />
-          </TouchableOpacity>,
-          <TouchableOpacity
-            key="delete"
-            onPress={() => Alert.alert('Delete', 'Grammar rule deletion option')}
-            activeOpacity={0.7}
-          >
-            <Lucide name="trash" size={20} color="#373737ff" style={styles.actionBtnIcon} />
-          </TouchableOpacity>,
-        ]}
+        onBack={isSelectionMode ? exitSelectionMode : undefined}
+        items={
+          isSelectionMode
+            ? [
+                <TouchableOpacity
+                  key="trash"
+                  onPress={handleDeleteSelected}
+                  activeOpacity={0.8}
+                  style={styles.headerTrashBtn}
+                >
+                  <Lucide name="trash-2" size={18} color="#ffffff" />
+                  <Text style={styles.headerTrashText}>
+                    Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                  </Text>
+                </TouchableOpacity>,
+              ]
+            : [
+                <HeaderFilterButton
+                  key="filter-toggle"
+                  isOpen={isControlBarOpen}
+                  onToggle={() => setIsControlBarOpen((prev) => !prev)}
+                  hasActiveFilter={Boolean(searchQuery)}
+                  accentColor="#6366f1"
+                />,
+                <TouchableOpacity
+                  key="add"
+                  onPress={() => router.push('/pages/addRule')}
+                  activeOpacity={0.7}
+                >
+                  <Lucide name="plus" size={20} color="#373737ff" style={styles.actionBtnIcon} />
+                </TouchableOpacity>,
+              ]
+        }
       />
 
-      <View style={styles.controlBar}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search grammar rules & notes..."
-        />
-
-        {activeFilterLabel && (
-          <View style={styles.filterRow}>
-            <View style={styles.filterBadge}>
-              <Lucide name="filter" size={12} color="#6366f1" />
-              <Text style={styles.filterBadgeText}>{activeFilterLabel}</Text>
-            </View>
-          </View>
-        )}
-      </View>
+      <CollapsibleControlBar
+        isOpen={isControlBarOpen}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        placeholder="Search grammar rules & notes..."
+        filterBadgeLabel={activeFilterLabel || undefined}
+        count={filteredRules.length}
+        totalCount={rules.length}
+        countLabel="rules"
+        singleUnit="rule"
+        accentColor="#6366f1"
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={32}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -179,19 +383,38 @@ export default function RulesScreen() {
         }
       >
         {filteredRules.length > 0 ? (
-          filteredRules.map((rule, index) => {
-            const cardBg = randomColors[index % randomColors.length];
-            return (
-              <RuleCard
-                key={rule.id || index}
-                rule={rule}
-                index={index}
-                cardBg={cardBg}
-                isPlaying={playingId === (rule.id || index + 1)}
-                onPlayAudio={(id) => setPlayingId(id)}
-              />
-            );
-          })
+          <>
+            {displayedRules.map((rule, index) => {
+              const cardBg = randomColors[index % randomColors.length];
+              const ruleId = rule.id!;
+              const isSelected = selectedIds.has(ruleId);
+
+              return (
+                <RuleCard
+                  key={ruleId || index}
+                  rule={rule}
+                  index={index}
+                  cardBg={cardBg}
+                  isPlaying={playingId === (ruleId || index + 1)}
+                  onPlayAudio={handlePlayAudio}
+                  isSelected={isSelected}
+                  isSelectionMode={isSelectionMode}
+                  onLongPress={() => enterSelectionMode(ruleId)}
+                  onPress={isSelectionMode ? () => toggleSelection(ruleId) : undefined}
+                  onOptionsPress={() => { setActiveCardRule(rule); setMenuVisible(true); }}
+                />
+              );
+            })}
+
+            <LoadMoreFooter
+              currentCount={displayedRules.length}
+              totalCount={filteredRules.length}
+              pageSize={PAGE_SIZE}
+              accentColor="#6366f1"
+              itemLabel="rules"
+              onLoadMore={handleLoadMore}
+            />
+          </>
         ) : (
           <View style={styles.emptyContainer}>
             <Lucide name="book-open-check" size={40} color="#cbd5e1" />
@@ -205,6 +428,13 @@ export default function RulesScreen() {
           </View>
         )}
       </ScrollView>
+
+      <OptionsMenuModal
+        visible={menuVisible}
+        onClose={() => { setMenuVisible(false); setActiveCardRule(null); }}
+        title={activeCardRule ? 'Rule Options' : isSelectionMode ? `${selectedIds.size} selected` : 'Options'}
+        options={buildMenuOptions()}
+      />
     </ThemedView>
   );
 }
@@ -221,42 +451,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#414040ff',
   },
-  controlBar: {
-    paddingHorizontal: 8,
+  headerTrashBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    gap: 8,
-    position: 'absolute',
-    top: 60,
-    width: '100%',
-    height: 90,
-    zIndex: 1000,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  filterBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#eef2ff',
-    borderWidth: 1,
-    borderColor: '#c7d2fe',
+    elevation: 3,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
-  filterBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4338ca',
+  headerTrashText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 13,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 8,
-    paddingTop: 80,
+    paddingHorizontal: 5,
+    paddingTop: 8,
     paddingBottom: 30,
     gap: 6,
   },
@@ -272,3 +491,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

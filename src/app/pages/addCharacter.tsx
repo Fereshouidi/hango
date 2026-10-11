@@ -343,6 +343,17 @@ const AddCharacter = () => {
         ]}
       />
 
+      {/* Success Banner — outside ScrollView so it truly overlays the screen */}
+      <SuccessBanner
+        visible={createdBannerInfo.visible}
+        title="Character Created!"
+        lessonTitle={createdBannerInfo.charContent}
+        details={createdBannerInfo.details}
+        onClose={() =>
+          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
+        }
+      />
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -351,16 +362,6 @@ const AddCharacter = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Success Banner */}
-          <SuccessBanner
-            visible={createdBannerInfo.visible}
-            title="Character Created!"
-            lessonTitle={createdBannerInfo.charContent}
-            details={createdBannerInfo.details}
-            onClose={() =>
-              setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
-            }
-          />
 
           {/* ───── CHARACTER DETAILS CARD ───── */}
           <View style={styles.card}>
@@ -582,8 +583,8 @@ export default AddCharacter;
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 10,
-    gap: 12,
+    padding: 5,
+    gap: 5,
   },
   headerSaveButton: {
     backgroundColor: '#ec489a',
@@ -601,7 +602,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffffffd8',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
@@ -611,7 +612,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
-    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -696,6 +696,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 5,
     gap: 8,
     backgroundColor: '#ec489a',
     borderRadius: 14,

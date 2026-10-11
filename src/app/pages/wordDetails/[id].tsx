@@ -1,17 +1,31 @@
-import React, { useCallback, useState } from 'react';
-import {
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { ThemedView } from '@/components/themed-view';
+import { CharacterCard } from '@/components/cards/CharacterCard';
+import { RuleCard } from '@/components/cards/RuleCard';
+import { SentenceCard } from '@/components/cards/SentenceCard';
+import { TextCard } from '@/components/cards/TextCard';
+import { CategoryTabType } from '@/components/common/CategoryTabs';
+import { DetailControlPanel } from '@/components/common/DetailControlPanel';
+import { ViewAllButton } from '@/components/common/ViewAllButton';
+import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { CharacterDetailSection } from '@/components/details/CharacterDetailSection';
+import { WordHeroCard } from '@/components/details/WordHeroCard';
 import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
-import Lucide from '@react-native-vector-icons/lucide';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { ThemedView } from '@/components/themed-view';
+import {
+  getAllCharacters,
+  getAllRules,
+  getAllSentences,
+  getAllTexts,
+  getCharactersByWordId,
+  getHSKById,
+  getHSKsByWordId,
+  getLessonById,
+  getLessonsByWordId,
+  getRulesByWordId,
+  getSentencesByWordId,
+  getTextsByWordId,
+  getWordById,
+} from '@/db/utils';
 import {
   CharacterType,
   HSKType,
@@ -21,32 +35,21 @@ import {
   TextType,
   WordType,
 } from '@/types';
-import {
-  getWordById,
-  getHSKById,
-  getLessonById,
-  getHSKsByWordId,
-  getLessonsByWordId,
-  getTextsByWordId,
-  getSentencesByWordId,
-  getCharactersByWordId,
-  getRulesByWordId,
-  getAllTexts,
-  getAllSentences,
-  getAllCharacters,
-  getAllRules,
-} from '@/db/utils';
 import { speakChineseText } from '@/utils/tts';
-import { TextCard } from '@/components/cards/TextCard';
-import { SentenceCard } from '@/components/cards/SentenceCard';
-import { CharacterCard } from '@/components/cards/CharacterCard';
-import { RuleCard } from '@/components/cards/RuleCard';
-import { SearchBar } from '@/components/common/SearchBar';
-import { CategoryTabs, CategoryTabType } from '@/components/common/CategoryTabs';
-import { WordHeroCard } from '@/components/details/WordHeroCard';
-import { CharacterScopeToggle } from '@/components/details/CharacterScopeToggle';
-import { CharacterDetailSection } from '@/components/details/CharacterDetailSection';
-import { ThemedText } from '@/components/themed-text';
+import Lucide from '@react-native-vector-icons/lucide';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+const ITEM_LIMIT = 4;
+const PAGE_SIZE = 10;
 
 const WordDetails = () => {
   const router = useRouter();
@@ -81,6 +84,16 @@ const WordDetails = () => {
   const [showMeaning, setShowMeaning] = useState(true);
   const [activeTab, setActiveTab] = useState<CategoryTabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [activeTab, searchQuery, searchScope]);
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => prev + PAGE_SIZE);
+  };
 
   const loadData = useCallback(() => {
     try {
@@ -207,11 +220,11 @@ const WordDetails = () => {
   const globalMatchCount = searchScope === 'global'
     ? filteredTexts.length + filteredSentences.length + filteredCharacters.length + filteredRules.length
     : (
-        allTexts.filter((t) => matchesItem(t.content, t.title || '', t.pinyin || '', t.meaning || '')).length +
-        allSentences.filter((s) => matchesItem(s.content, '', s.pinyin || '', s.meaning || '')).length +
-        allCharacters.filter((ch) => matchesItem(ch.content, '', ch.pinyin || '', ch.meaning || '')).length +
-        allRules.filter((r) => matchesItem(r.content, '', '', '')).length
-      );
+      allTexts.filter((t) => matchesItem(t.content, t.title || '', t.pinyin || '', t.meaning || '')).length +
+      allSentences.filter((s) => matchesItem(s.content, '', s.pinyin || '', s.meaning || '')).length +
+      allCharacters.filter((ch) => matchesItem(ch.content, '', ch.pinyin || '', ch.meaning || '')).length +
+      allRules.filter((r) => matchesItem(r.content, '', '', '')).length
+    );
 
   const totalFilteredCount = filteredTexts.length + filteredSentences.length + filteredCharacters.length + filteredRules.length;
 
@@ -275,29 +288,20 @@ const WordDetails = () => {
           setShowMeaning={setShowMeaning}
         />
 
-        {/* ── SEARCH & SCOPE SELECTOR ── */}
-        <View style={styles.searchContainer}>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={
-              searchScope === 'linked'
-                ? "Search word's linked content..."
-                : "Search all database texts, sentences, words..."
-            }
-          />
-
-          <CharacterScopeToggle
-            searchScope={searchScope}
-            onSelectScope={setSearchScope}
-            toneColor="#059669"
-            linkedTotalCount={linkedTotalCount}
-            globalTotalCount={globalMatchCount}
-          />
-        </View>
-
-        {/* ── CATEGORY TABS ── */}
-        <CategoryTabs
+        {/* ── UNIFIED CONTROLS: SEARCH, SCOPE & TABS ── */}
+        <DetailControlPanel
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={
+            searchScope === 'linked'
+              ? "Search word's linked content..."
+              : "Search all database texts, sentences, words..."
+          }
+          searchScope={searchScope}
+          onSelectScope={setSearchScope}
+          accentColor="#059669"
+          linkedTotalCount={linkedTotalCount}
+          globalTotalCount={globalMatchCount}
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           counts={{
@@ -320,7 +324,7 @@ const WordDetails = () => {
             onAddPress={() => router.push(`/pages/addText?wordId=${wordId}` as any)}
             emptyLabel="No reading texts linked yet"
           >
-            {filteredTexts.map((textObj, idx) => (
+            {filteredTexts.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((textObj, idx) => (
               <TextCard
                 key={textObj.id || idx}
                 textObj={textObj}
@@ -331,6 +335,33 @@ const WordDetails = () => {
                 onPlayAudio={(id, content) => playItemAudio(id, content, `text-${id}`)}
               />
             ))}
+            {activeTab === 'all' && filteredTexts.length > ITEM_LIMIT && (
+              <ViewAllButton
+                count={filteredTexts.length}
+                label="Reading Texts"
+                accentColor="#3b82f6"
+                onPress={() =>
+                  router.push({
+                    pathname: `/pages/texts/${wordId}`,
+                    params: {
+                      wordId,
+                      scope: searchScope,
+                      search: searchQuery,
+                    },
+                  } as any)
+                }
+              />
+            )}
+            {activeTab !== 'all' && (
+              <LoadMoreFooter
+                currentCount={Math.min(visibleCount, filteredTexts.length)}
+                totalCount={filteredTexts.length}
+                pageSize={PAGE_SIZE}
+                accentColor="#3b82f6"
+                itemLabel="reading texts"
+                onLoadMore={handleLoadMore}
+              />
+            )}
           </CharacterDetailSection>
         )}
 
@@ -345,7 +376,7 @@ const WordDetails = () => {
             onAddPress={() => router.push(`/pages/addSentence?wordId=${wordId}` as any)}
             emptyLabel="No example sentences linked yet"
           >
-            {filteredSentences.map((sentence, idx) => (
+            {filteredSentences.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((sentence, idx) => (
               <SentenceCard
                 key={sentence.id || idx}
                 sentence={sentence}
@@ -356,6 +387,33 @@ const WordDetails = () => {
                 onPlayAudio={(id, content) => playItemAudio(id, content, `sentence-${id}`)}
               />
             ))}
+            {activeTab === 'all' && filteredSentences.length > ITEM_LIMIT && (
+              <ViewAllButton
+                count={filteredSentences.length}
+                label="Sentences"
+                accentColor="#8b5cf6"
+                onPress={() =>
+                  router.push({
+                    pathname: `/pages/sentences/${wordId}`,
+                    params: {
+                      wordId,
+                      scope: searchScope,
+                      search: searchQuery,
+                    },
+                  } as any)
+                }
+              />
+            )}
+            {activeTab !== 'all' && (
+              <LoadMoreFooter
+                currentCount={Math.min(visibleCount, filteredSentences.length)}
+                totalCount={filteredSentences.length}
+                pageSize={PAGE_SIZE}
+                accentColor="#8b5cf6"
+                itemLabel="sentences"
+                onLoadMore={handleLoadMore}
+              />
+            )}
           </CharacterDetailSection>
         )}
 
@@ -371,19 +429,47 @@ const WordDetails = () => {
             emptyLabel="No characters linked yet"
           >
             <View style={styles.charsGrid}>
-              {filteredCharacters.map((charObj, idx) => (
+              {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((charObj, idx) => (
                 <View key={charObj.id || idx} style={{ width: '48%' }}>
-                    {/* <ThemedText style={{color: "black"}}>{JSON.stringify(charObj, null, 2)}</ThemedText> */}
-                  {charObj && <CharacterCard
-                    character={charObj as unknown as CharacterType}
-                    showPinyin={showPinyin}
-                    showMeaning={showMeaning}
-                    isPlaying={playingItemId === `char-${charObj.id}`}
-                    onPlayAudio={(id, content) => playItemAudio(id, content, `char-${id}`)}
-                  />}
+                  {charObj && (
+                    <CharacterCard
+                      character={charObj as unknown as CharacterType}
+                      showPinyin={showPinyin}
+                      showMeaning={showMeaning}
+                      isPlaying={playingItemId === `char-${charObj.id}`}
+                      onPlayAudio={(id, content) => playItemAudio(id, content, `char-${id}`)}
+                    />
+                  )}
                 </View>
               ))}
             </View>
+            {activeTab === 'all' && filteredCharacters.length > ITEM_LIMIT && (
+              <ViewAllButton
+                count={filteredCharacters.length}
+                label="Characters"
+                accentColor="#ec489a"
+                onPress={() =>
+                  router.push({
+                    pathname: `/pages/characters/${wordId}`,
+                    params: {
+                      wordId,
+                      scope: searchScope,
+                      search: searchQuery,
+                    },
+                  } as any)
+                }
+              />
+            )}
+            {activeTab !== 'all' && (
+              <LoadMoreFooter
+                currentCount={Math.min(visibleCount, filteredCharacters.length)}
+                totalCount={filteredCharacters.length}
+                pageSize={PAGE_SIZE}
+                accentColor="#ec489a"
+                itemLabel="characters"
+                onLoadMore={handleLoadMore}
+              />
+            )}
           </CharacterDetailSection>
         )}
 
@@ -398,7 +484,7 @@ const WordDetails = () => {
             onAddPress={() => router.push(`/pages/addRule?wordId=${wordId}` as any)}
             emptyLabel="No grammar points linked yet"
           >
-            {filteredRules.map((rule, idx) => (
+            {filteredRules.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((rule, idx) => (
               <RuleCard
                 key={rule.id || idx}
                 rule={rule}
@@ -407,6 +493,33 @@ const WordDetails = () => {
                 onPlayAudio={(id, content) => playItemAudio(id, content, `rule-${id}`)}
               />
             ))}
+            {activeTab === 'all' && filteredRules.length > ITEM_LIMIT && (
+              <ViewAllButton
+                count={filteredRules.length}
+                label="Grammar Points"
+                accentColor="#d97706"
+                onPress={() =>
+                  router.push({
+                    pathname: `/pages/rules/${wordId}`,
+                    params: {
+                      wordId,
+                      scope: searchScope,
+                      search: searchQuery,
+                    },
+                  } as any)
+                }
+              />
+            )}
+            {activeTab !== 'all' && (
+              <LoadMoreFooter
+                currentCount={Math.min(visibleCount, filteredRules.length)}
+                totalCount={filteredRules.length}
+                pageSize={PAGE_SIZE}
+                accentColor="#d97706"
+                itemLabel="grammar points"
+                onLoadMore={handleLoadMore}
+              />
+            )}
           </CharacterDetailSection>
         )}
 
@@ -433,8 +546,8 @@ export default WordDetails;
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 10,
-    gap: 8,
+    padding: 5,
+    gap: 4,
     paddingBottom: 0,
   },
   headerIconBtn: {
@@ -451,10 +564,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ecfdf5',
     borderColor: '#059669',
   },
-  searchContainer: {
-    marginTop: 4,
-    gap: 8,
-  },
+
   charsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

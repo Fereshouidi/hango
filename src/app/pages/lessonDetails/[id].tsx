@@ -1,17 +1,30 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { ThemedView } from '@/components/themed-view';
+import { CharacterCard } from '@/components/cards/CharacterCard';
+import { RuleCard } from '@/components/cards/RuleCard';
+import { SentenceCard } from '@/components/cards/SentenceCard';
+import { TextCard } from '@/components/cards/TextCard';
+import { WordCard } from '@/components/cards/WordCard';
+import { CategoryTabType } from '@/components/common/CategoryTabs';
+import { DetailControlPanel } from '@/components/common/DetailControlPanel';
+import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { ViewAllButton } from '@/components/common/ViewAllButton';
+import { LessonHeroCard } from '@/components/details/LessonHeroCard';
 import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
-import Lucide from '@react-native-vector-icons/lucide';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ThemedView } from '@/components/themed-view';
+import {
+  getAllCharacters,
+  getAllRules,
+  getAllSentences,
+  getAllTexts,
+  getAllWords,
+  getCharactersByLessonId,
+  getHSKById,
+  getLessonById,
+  getRulesByLessonId,
+  getSentencesByLessonId,
+  getTextsByLessonId,
+  getWordsByLessonId,
+} from '@/db/utils';
 import {
   CharacterType,
   HSKType,
@@ -21,24 +34,21 @@ import {
   TextType,
   WordType,
 } from '@/types';
-import {
-  getCharactersByLessonId,
-  getHSKById,
-  getLessonById,
-  getRulesByLessonId,
-  getSentencesByLessonId,
-  getTextsByLessonId,
-  getWordsByLessonId,
-} from '@/db/utils';
 import { speakChineseText, speakEnglishText } from '@/utils/tts';
-import { TextCard } from '@/components/cards/TextCard';
-import { SentenceCard } from '@/components/cards/SentenceCard';
-import { WordCard } from '@/components/cards/WordCard';
-import { CharacterCard } from '@/components/cards/CharacterCard';
-import { RuleCard } from '@/components/cards/RuleCard';
-import { SearchBar } from '@/components/common/SearchBar';
-import { CategoryTabs, CategoryTabType } from '@/components/common/CategoryTabs';
-import { LessonHeroCard } from '@/components/details/LessonHeroCard';
+import Lucide from '@react-native-vector-icons/lucide';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+const ITEM_LIMIT = 4;
+const PAGE_SIZE = 10;
 
 const LessonDetails = () => {
   const router = useRouter();
@@ -61,6 +71,23 @@ const LessonDetails = () => {
   const [showMeaning, setShowMeaning] = useState(true);
   const [activeTab, setActiveTab] = useState<CategoryTabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchScope, setSearchScope] = useState<'linked' | 'global'>('linked');
+
+  const [allTexts, setAllTexts] = useState<TextType[]>([]);
+  const [allSentences, setAllSentences] = useState<SentenceType[]>([]);
+  const [allWords, setAllWords] = useState<WordType[]>([]);
+  const [allCharacters, setAllCharacters] = useState<CharacterType[]>([]);
+  const [allRules, setAllRules] = useState<RuleType[]>([]);
+
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [activeTab, searchQuery, searchScope]);
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => prev + PAGE_SIZE);
+  };
 
   const playItemAudio = (id: number, text: string, key: string, isEnglish = false) => {
     setPlayingItemId(key);
@@ -104,6 +131,13 @@ const LessonDetails = () => {
 
       const ruleData = getRulesByLessonId(lessonId) as unknown as RuleType[];
       setRules(ruleData || []);
+
+      // Load all database items for global search
+      setAllTexts((getAllTexts() as unknown as TextType[]) || []);
+      setAllSentences((getAllSentences() as unknown as SentenceType[]) || []);
+      setAllWords((getAllWords() as unknown as WordType[]) || []);
+      setAllCharacters((getAllCharacters() as unknown as CharacterType[]) || []);
+      setAllRules((getAllRules() as unknown as RuleType[]) || []);
     } catch (error) {
       console.error('Error loading lesson details:', error);
     }
@@ -121,47 +155,56 @@ const LessonDetails = () => {
     }, 400);
   }, [loadLessonData]);
 
+  // ── Source selection based on scope ──
+  const sourceTexts = searchScope === 'linked' ? texts : allTexts;
+  const sourceSentences = searchScope === 'linked' ? sentences : allSentences;
+  const sourceWords = searchScope === 'linked' ? words : allWords;
+  const sourceCharacters = searchScope === 'linked' ? characters : allCharacters;
+  const sourceRules = searchScope === 'linked' ? rules : allRules;
+
   // Search filtering
   const q = searchQuery.toLowerCase().trim();
+  const lessonSymbol = lesson?.title?.trim() || '';
 
-  const filteredTexts = texts.filter(
-    (t) =>
-      !q ||
-      t.title.toLowerCase().includes(q) ||
-      t.content.toLowerCase().includes(q) ||
-      t.meaning.toLowerCase().includes(q)
+  const matchesItem = (
+    content: string = '',
+    title: string = '',
+    pinyin: string = '',
+    meaning: string = ''
+  ) => {
+    const c = content.toLowerCase();
+    const t = title.toLowerCase();
+    const p = pinyin.toLowerCase();
+    const m = meaning.toLowerCase();
+
+    if (q) {
+      return c.includes(q) || t.includes(q) || p.includes(q) || m.includes(q);
+    }
+    return true;
+  };
+
+  const filteredTexts = sourceTexts.filter((t) =>
+    matchesItem(t.content, t.title || '', t.pinyin || '', t.meaning || '')
   );
 
-  const filteredSentences = sentences.filter(
-    (s) =>
-      !q ||
-      s.content.toLowerCase().includes(q) ||
-      s.pinyin.toLowerCase().includes(q) ||
-      s.meaning.toLowerCase().includes(q)
+  const filteredSentences = sourceSentences.filter((s) =>
+    matchesItem(s.content, '', s.pinyin || '', s.meaning || '')
   );
 
-  const filteredWords = words.filter(
-    (w) =>
-      !q ||
-      w.content.toLowerCase().includes(q) ||
-      w.pinyin.toLowerCase().includes(q) ||
-      w.meaning.toLowerCase().includes(q)
+  const filteredWords = sourceWords.filter((w) =>
+    matchesItem(w.content, '', w.pinyin || '', w.meaning || '')
   );
 
-  const filteredCharacters = characters.filter(
-    (c) =>
-      !q ||
-      c.content.toLowerCase().includes(q) ||
-      c.pinyin.toLowerCase().includes(q) ||
-      c.meaning.toLowerCase().includes(q)
+  const filteredCharacters = sourceCharacters.filter((c) =>
+    matchesItem(c.content, '', c.pinyin || '', c.meaning || '')
   );
 
-  const filteredRules = rules.filter(
-    (r) => !q || r.content.toLowerCase().includes(q)
+  const filteredRules = sourceRules.filter((r) =>
+    matchesItem(r.content, '', '', '')
   );
 
-  const totalItemCount =
-    texts.length + sentences.length + words.length + characters.length + rules.length;
+  const linkedTotalCount = texts.length + sentences.length + words.length + characters.length + rules.length;
+  const totalItemCount = filteredTexts.length + filteredSentences.length + filteredWords.length + filteredCharacters.length + filteredRules.length;
 
   return (
     <ThemedView style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}>
@@ -228,25 +271,29 @@ const LessonDetails = () => {
           setShowMeaning={setShowMeaning}
         />
 
-        {/* SEARCH BAR */}
-        <View style={styles.searchContainer}>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search within this lesson..."
-          />
-        </View>
+        <View style={{margin: 2}}></View>
 
-        {/* TAB SWITCHER */}
-        <CategoryTabs
+        {/* UNIFIED CONTROLS: SEARCH, SCOPE & TABS */}
+        <DetailControlPanel
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={
+            searchScope === 'linked'
+              ? 'Search content in this lesson...'
+              : 'Search all database texts, sentences, words, rules...'
+          }
+          searchScope={searchScope}
+          onSelectScope={setSearchScope}
+          accentColor="#2563eb"
+          linkedTotalCount={linkedTotalCount}
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           counts={{
-            texts: texts.length,
-            sentences: sentences.length,
-            words: words.length,
-            characters: characters.length,
-            rules: rules.length,
+            texts: filteredTexts.length,
+            sentences: filteredSentences.length,
+            words: filteredWords.length,
+            characters: filteredCharacters.length,
+            rules: filteredRules.length,
           }}
         />
 
@@ -265,7 +312,7 @@ const LessonDetails = () => {
               </View>
 
               <TouchableOpacity
-              onPress={() => {router.push(`/pages/addText`)}}
+                onPress={() => { router.push(`/pages/addText?lessonId=${lessonId}`) }}
                 style={{
                   backgroundColor: "#3b82f6",
                   borderRadius: 50,
@@ -279,12 +326,11 @@ const LessonDetails = () => {
                 }}
               >
                 <Lucide name="plus" size={12} color="#ffffff" />
-                <Text style={{fontSize: 12, color: "#fff"}}>add text</Text>
+                <Text style={{ fontSize: 12, color: "#fff" }}>add text</Text>
               </TouchableOpacity>
-
             </View>
 
-            {filteredTexts.map((text, idx) => (
+            {filteredTexts.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((text, idx) => (
               <TextCard
                 key={text.id || idx}
                 textObj={text}
@@ -295,13 +341,40 @@ const LessonDetails = () => {
                 onPlayAudio={(id, content) => playItemAudio(id, content, `text-${id}`)}
               />
             ))}
+            {activeTab === 'all' && filteredTexts.length > ITEM_LIMIT && (
+              <ViewAllButton
+                count={filteredTexts.length}
+                label="Reading Texts"
+                accentColor="#3b82f6"
+                onPress={() =>
+                  router.push({
+                    pathname: `/pages/texts/${lessonId}`,
+                    params: {
+                      lessonId,
+                      scope: searchScope,
+                      search: searchQuery,
+                    },
+                  } as any)
+                }
+              />
+            )}
+            {activeTab !== 'all' && (
+              <LoadMoreFooter
+                currentCount={Math.min(visibleCount, filteredTexts.length)}
+                totalCount={filteredTexts.length}
+                pageSize={PAGE_SIZE}
+                accentColor="#3b82f6"
+                itemLabel="reading texts"
+                onLoadMore={handleLoadMore}
+              />
+            )}
           </View>
         )}
 
         {/* SECTION: SENTENCES */}
         {(activeTab === 'all' || activeTab === 'sentences') && filteredSentences.length > 0 && (
           <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeader}>
               <View style={[styles.sectionIconBadge, { backgroundColor: '#8b5cf6' }]}>
                 <Lucide name="message-square-text" size={15} color="#ffffff" />
               </View>
@@ -320,7 +393,7 @@ const LessonDetails = () => {
               </TouchableOpacity>
             </View>
 
-            {filteredSentences.map((sentence, idx) => (
+            {filteredSentences.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((sentence, idx) => (
               <SentenceCard
                 key={sentence.id || idx}
                 sentence={sentence}
@@ -331,6 +404,33 @@ const LessonDetails = () => {
                 onPlayAudio={(id, content) => playItemAudio(id, content, `sentence-${id}`)}
               />
             ))}
+            {activeTab === 'all' && filteredSentences.length > ITEM_LIMIT && (
+              <ViewAllButton
+                count={filteredSentences.length}
+                label="Sentences"
+                accentColor="#8b5cf6"
+                onPress={() =>
+                  router.push({
+                    pathname: `/pages/sentences/${lessonId}`,
+                    params: {
+                      lessonId,
+                      scope: searchScope,
+                      search: searchQuery,
+                    },
+                  } as any)
+                }
+              />
+            )}
+            {activeTab !== 'all' && (
+              <LoadMoreFooter
+                currentCount={Math.min(visibleCount, filteredSentences.length)}
+                totalCount={filteredSentences.length}
+                pageSize={PAGE_SIZE}
+                accentColor="#8b5cf6"
+                itemLabel="sentences"
+                onLoadMore={handleLoadMore}
+              />
+            )}
           </View>
         )}
 
@@ -357,8 +457,8 @@ const LessonDetails = () => {
             </View>
 
             <View style={styles.wordsGrid}>
-              {filteredWords.map((word, idx) => (
-                <View key={word.id || idx} style={{ width: '48%' }}>
+              {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((word, idx) => (
+                // <View key={word.id || idx} style={{ width: '48%' }}>
                   <WordCard
                     word={word}
                     showPinyin={showPinyin}
@@ -366,9 +466,36 @@ const LessonDetails = () => {
                     isPlaying={playingItemId === `word-${word.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
                   />
-                </View>
+                // </View>
               ))}
             </View>
+            {activeTab === 'all' && filteredWords.length > ITEM_LIMIT && (
+              <ViewAllButton
+                count={filteredWords.length}
+                label="Vocabulary Words"
+                accentColor="#059669"
+                onPress={() =>
+                  router.push({
+                    pathname: `/pages/words/${lessonId}`,
+                    params: {
+                      lessonId,
+                      scope: searchScope,
+                      search: searchQuery,
+                    },
+                  } as any)
+                }
+              />
+            )}
+            {activeTab !== 'all' && (
+              <LoadMoreFooter
+                currentCount={Math.min(visibleCount, filteredWords.length)}
+                totalCount={filteredWords.length}
+                pageSize={PAGE_SIZE}
+                accentColor="#059669"
+                itemLabel="vocabulary words"
+                onLoadMore={handleLoadMore}
+              />
+            )}
           </View>
         )}
 
@@ -395,7 +522,7 @@ const LessonDetails = () => {
             </View>
 
             <View style={styles.charsGrid}>
-              {filteredCharacters.map((char, idx) => (
+              {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((char, idx) => (
                 <View key={char.id || idx} style={{ width: '48%' }}>
                   <CharacterCard
                     char={char}
@@ -407,6 +534,33 @@ const LessonDetails = () => {
                 </View>
               ))}
             </View>
+            {activeTab === 'all' && filteredCharacters.length > ITEM_LIMIT && (
+              <ViewAllButton
+                count={filteredCharacters.length}
+                label="Characters"
+                accentColor="#ec489a"
+                onPress={() =>
+                  router.push({
+                    pathname: `/pages/characters/${lessonId}`,
+                    params: {
+                      lessonId,
+                      scope: searchScope,
+                      search: searchQuery,
+                    },
+                  } as any)
+                }
+              />
+            )}
+            {activeTab !== 'all' && (
+              <LoadMoreFooter
+                currentCount={Math.min(visibleCount, filteredCharacters.length)}
+                totalCount={filteredCharacters.length}
+                pageSize={PAGE_SIZE}
+                accentColor="#ec489a"
+                itemLabel="characters"
+                onLoadMore={handleLoadMore}
+              />
+            )}
           </View>
         )}
 
@@ -432,7 +586,7 @@ const LessonDetails = () => {
               </TouchableOpacity>
             </View>
 
-            {filteredRules.map((rule, idx) => (
+            {filteredRules.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((rule, idx) => (
               <RuleCard
                 key={rule.id || idx}
                 rule={rule}
@@ -441,6 +595,33 @@ const LessonDetails = () => {
                 onPlayAudio={(id, content) => playItemAudio(id, content, `rule-${id}`, true)}
               />
             ))}
+            {activeTab === 'all' && filteredRules.length > ITEM_LIMIT && (
+              <ViewAllButton
+                count={filteredRules.length}
+                label="Grammar Points"
+                accentColor="#d97706"
+                onPress={() =>
+                  router.push({
+                    pathname: `/pages/rules/${lessonId}`,
+                    params: {
+                      lessonId,
+                      scope: searchScope,
+                      search: searchQuery,
+                    },
+                  } as any)
+                }
+              />
+            )}
+            {activeTab !== 'all' && (
+              <LoadMoreFooter
+                currentCount={Math.min(visibleCount, filteredRules.length)}
+                totalCount={filteredRules.length}
+                pageSize={PAGE_SIZE}
+                accentColor="#d97706"
+                itemLabel="grammar points"
+                onLoadMore={handleLoadMore}
+              />
+            )}
           </View>
         )}
 
@@ -465,8 +646,7 @@ export default LessonDetails;
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 10,
-    gap: 5,
+    padding: 5,
     paddingBottom: 0,
   },
   headerIconBtn: {
@@ -483,10 +663,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff6ff',
     borderColor: '#3b82f6',
   },
-  searchContainer: {
-    marginTop: 10,
-    flexDirection: 'row',
-  },
+
   sectionContainer: {
     gap: 10,
     marginTop: 4,
@@ -544,9 +721,10 @@ const styles = StyleSheet.create({
     color: '#64748b',
   },
   wordsGrid: {
+    width: "100%",
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    // gap: 10,
     justifyContent: 'space-between',
   },
   charsGrid: {

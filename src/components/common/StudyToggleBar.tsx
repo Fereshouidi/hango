@@ -20,7 +20,7 @@ export const StudyToggleBar: React.FC<StudyToggleBarProps> = ({
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        style={[styles.chip, showPinyin && { backgroundColor: accentColor + '15', borderColor: accentColor + '40' }]}
+        style={[styles.chip, showPinyin && { backgroundColor: accentColor + '40', borderColor: accentColor + '40' }]}
         onPress={() => setShowPinyin(!showPinyin)}
         activeOpacity={0.7}
       >
@@ -33,7 +33,7 @@ export const StudyToggleBar: React.FC<StudyToggleBarProps> = ({
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.chip, showMeaning && { backgroundColor: accentColor + '15', borderColor: accentColor + '40' }]}
+        style={[styles.chip, showMeaning && { backgroundColor: accentColor + '40', borderColor: accentColor + '40' }]}
         onPress={() => setShowMeaning(!showMeaning)}
         activeOpacity={0.7}
       >

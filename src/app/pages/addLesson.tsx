@@ -15,13 +15,19 @@ import { ThemedView } from '@/components/themed-view';
 import {
   getAllHSKs,
   getAllLessons,
-  getAllTexts,
-  getAllSentences,
-  getAllWords,
-  getAllCharacters,
-  getAllRules,
+  getCharactersPaged,
+  getCharactersCountPaged,
+  getTextsPaged,
+  getTextsCount,
+  getSentencesPaged,
+  getSentencesCount,
+  getWordsPaged,
+  getWordsCount,
+  getRulesPaged,
+  getRulesCount,
   db,
 } from '@/db/utils';
+import { usePagedSection } from '@/hooks/usePagedSection';
 import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
 import Lucide from '@react-native-vector-icons/lucide';
@@ -39,6 +45,7 @@ import {
   CharacterCard,
   ItemCard,
   SliderSection,
+  SliderLoadMoreCard,
   LessonInfoCard,
   LessonSummary,
 } from '@/components/add-lesson';
@@ -70,33 +77,12 @@ const AddLesson = () => {
     details: '',
   });
 
-  // All items from DB
-  const [allTexts, setAllTexts] = useState<TextType[]>([]);
-  const [allSentences, setAllSentences] = useState<SentenceType[]>([]);
-  const [allWords, setAllWords] = useState<WordType[]>([]);
-  const [allCharacters, setAllCharacters] = useState<CharacterType[]>([]);
-  const [allRules, setAllRules] = useState<RuleType[]>([]);
-
   // Selected item IDs
   const [selectedTextIds, setSelectedTextIds] = useState<Set<number>>(new Set());
   const [selectedSentenceIds, setSelectedSentenceIds] = useState<Set<number>>(new Set());
   const [selectedWordIds, setSelectedWordIds] = useState<Set<number>>(new Set());
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<number>>(new Set());
   const [selectedRuleIds, setSelectedRuleIds] = useState<Set<number>>(new Set());
-
-  // Search queries per section
-  const [searchTexts, setSearchTexts] = useState('');
-  const [searchSentences, setSearchSentences] = useState('');
-  const [searchWords, setSearchWords] = useState('');
-  const [searchCharacters, setSearchCharacters] = useState('');
-  const [searchRules, setSearchRules] = useState('');
-
-  // Filter modes per section ('all' | 'unassigned' | 'hsk')
-  const [filterTexts, setFilterTexts] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterSentences, setFilterSentences] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterWords, setFilterWords] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterCharacters, setFilterCharacters] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterRules, setFilterRules] = useState<'all' | 'unassigned' | 'hsk'>('all');
 
   // Quick Add Word modal
   const [showAddWordModal, setShowAddWordModal] = useState(false);
@@ -113,16 +99,18 @@ const AddLesson = () => {
     rules: false,
   });
 
+  // ── Paginated sections (DB-level, 10 at a time) ──────────────────────────
+  const textsPage = usePagedSection<TextType>(getTextsPaged, getTextsCount);
+  const sentencesPage = usePagedSection<SentenceType>(getSentencesPaged, getSentencesCount);
+  const wordsPage = usePagedSection<WordType>(getWordsPaged, getWordsCount);
+  const charactersPage = usePagedSection<CharacterType>(getCharactersPaged, getCharactersCountPaged);
+  const rulesPage = usePagedSection<RuleType>(getRulesPaged, getRulesCount);
+
   useFocusEffect(
     useCallback(() => {
       try {
         setHsks(getAllHSKs() as unknown as HSKType[]);
         setLessons(getAllLessons() as unknown as LessonType[]);
-        setAllTexts(getAllTexts() as unknown as TextType[]);
-        setAllSentences(getAllSentences() as unknown as SentenceType[]);
-        setAllWords(getAllWords() as unknown as WordType[]);
-        setAllCharacters(getAllCharacters() as unknown as CharacterType[]);
-        setAllRules(getAllRules() as unknown as RuleType[]);
 
         if (preselectedHskId && !selectedHskId) {
           setSelectedHskId(preselectedHskId);
@@ -130,6 +118,13 @@ const AddLesson = () => {
       } catch (e) {
         console.error('Failed to load DB items in AddLesson:', e);
       }
+
+      // Initialize all paginated sections
+      textsPage.initialize();
+      sentencesPage.initialize();
+      wordsPage.initialize();
+      charactersPage.initialize();
+      rulesPage.initialize();
     }, [])
   );
 
@@ -157,114 +152,6 @@ const AddLesson = () => {
     return next;
   }
 
-  // Filtered item sets
-  const filteredCharacters = useMemo(() => {
-    return allCharacters.filter((c) => {
-      if (filterCharacters === 'unassigned' && c.lessonId) return false;
-      if (filterCharacters === 'hsk' && selectedHskId && c.hskId !== selectedHskId) return false;
-      if (!searchCharacters.trim()) return true;
-      const q = searchCharacters.toLowerCase();
-      return (
-        c.content.toLowerCase().includes(q) ||
-        c.pinyin.toLowerCase().includes(q) ||
-        c.meaning.toLowerCase().includes(q)
-      );
-    });
-  }, [allCharacters, filterCharacters, selectedHskId, searchCharacters]);
-
-  const filteredWords = useMemo(() => {
-    return allWords.filter((w) => {
-      if (filterWords === 'unassigned' && w.lessonId) return false;
-      if (filterWords === 'hsk' && selectedHskId && w.hskId !== selectedHskId) return false;
-      if (!searchWords.trim()) return true;
-      const q = searchWords.toLowerCase();
-      return (
-        w.content.toLowerCase().includes(q) ||
-        w.pinyin.toLowerCase().includes(q) ||
-        w.meaning.toLowerCase().includes(q)
-      );
-    });
-  }, [allWords, filterWords, selectedHskId, searchWords]);
-
-  const filteredSentences = useMemo(() => {
-    return allSentences.filter((s) => {
-      if (filterSentences === 'unassigned' && s.lessonId) return false;
-      if (filterSentences === 'hsk' && selectedHskId && s.hskId !== selectedHskId) return false;
-      if (!searchSentences.trim()) return true;
-      const q = searchSentences.toLowerCase();
-      return (
-        s.content.toLowerCase().includes(q) ||
-        s.pinyin.toLowerCase().includes(q) ||
-        s.meaning.toLowerCase().includes(q)
-      );
-    });
-  }, [allSentences, filterSentences, selectedHskId, searchSentences]);
-
-  const filteredTexts = useMemo(() => {
-    return allTexts.filter((t) => {
-      if (filterTexts === 'unassigned' && t.lessonId) return false;
-      if (filterTexts === 'hsk' && selectedHskId && t.hskId !== selectedHskId) return false;
-      if (!searchTexts.trim()) return true;
-      const q = searchTexts.toLowerCase();
-      return (
-        t.title.toLowerCase().includes(q) ||
-        t.content.toLowerCase().includes(q) ||
-        t.meaning.toLowerCase().includes(q)
-      );
-    });
-  }, [allTexts, filterTexts, selectedHskId, searchTexts]);
-
-  const filteredRules = useMemo(() => {
-    return allRules.filter((r) => {
-      if (filterRules === 'unassigned' && r.lessonId) return false;
-      if (filterRules === 'hsk' && selectedHskId && r.hskId !== selectedHskId) return false;
-      if (!searchRules.trim()) return true;
-      const q = searchRules.toLowerCase();
-      return r.content.toLowerCase().includes(q);
-    });
-  }, [allRules, filterRules, selectedHskId, searchRules]);
-
-  // Bulk select helpers
-  const handleSelectAllCharacters = () => {
-    setSelectedCharacterIds((prev) => {
-      const next = new Set(prev);
-      filteredCharacters.forEach((c) => next.add(c.id));
-      return next;
-    });
-  };
-
-  const handleSelectAllWords = () => {
-    setSelectedWordIds((prev) => {
-      const next = new Set(prev);
-      filteredWords.forEach((w) => next.add(w.id));
-      return next;
-    });
-  };
-
-  const handleSelectAllSentences = () => {
-    setSelectedSentenceIds((prev) => {
-      const next = new Set(prev);
-      filteredSentences.forEach((s) => next.add(s.id));
-      return next;
-    });
-  };
-
-  const handleSelectAllTexts = () => {
-    setSelectedTextIds((prev) => {
-      const next = new Set(prev);
-      filteredTexts.forEach((t) => next.add(t.id));
-      return next;
-    });
-  };
-
-  const handleSelectAllRules = () => {
-    setSelectedRuleIds((prev) => {
-      const next = new Set(prev);
-      filteredRules.forEach((r) => next.add(r.id));
-      return next;
-    });
-  };
-
   const handleQuickAddWord = () => {
     if (!newWordContent.trim()) {
       Alert.alert('Validation', 'Please enter Chinese content for the word.');
@@ -279,8 +166,7 @@ const AddLesson = () => {
         selectedHskId
       );
       const insertedId = res.lastInsertRowId;
-      const updatedWords = getAllWords() as unknown as WordType[];
-      setAllWords(updatedWords);
+      wordsPage.initialize(); // refresh DB page
       setSelectedWordIds((prev) => new Set(prev).add(insertedId));
       setNewWordContent('');
       setNewWordPinyin('');
@@ -477,7 +363,7 @@ const AddLesson = () => {
             title="Texts"
             icon="file-text"
             color="#2563eb"
-            totalCount={allTexts.length}
+            totalCount={textsPage.total}
             selectedCount={selectedTextIds.size}
             expanded={expandedSections.texts}
             onToggle={() => toggleSection('texts')}
@@ -489,23 +375,36 @@ const AddLesson = () => {
               )
             }
             addNewLabel="+ Text"
-            onSelectAll={handleSelectAllTexts}
+            onSelectAll={() =>
+              setSelectedTextIds((prev) => {
+                const next = new Set(prev);
+                textsPage.items.forEach((t) => next.add(t.id));
+                return next;
+              })
+            }
             onClearAll={() => setSelectedTextIds(new Set())}
-            searchQuery={searchTexts}
-            onSearchChange={setSearchTexts}
-            filterMode={filterTexts}
-            onFilterChange={setFilterTexts}
+            searchQuery={textsPage.search}
+            onSearchChange={textsPage.setSearch}
+            filterMode={textsPage.filter}
+            onFilterChange={(f) => textsPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
           >
-            {filteredTexts.length === 0 ? (
+            {textsPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No texts match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={({ nativeEvent }) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    textsPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={200}
               >
-                {filteredTexts.map((t) => (
+                {textsPage.items.map((t) => (
                   <ItemCard
                     key={t.id}
                     title={t.title}
@@ -522,6 +421,13 @@ const AddLesson = () => {
                     }
                   />
                 ))}
+                {textsPage.hasMore && (
+                  <SliderLoadMoreCard
+                    remaining={textsPage.total - textsPage.items.length}
+                    onPress={() => textsPage.loadMore()}
+                    color="#2563eb"
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -531,7 +437,7 @@ const AddLesson = () => {
             title="Sentences"
             icon="message-square-text"
             color="#8b5cf6"
-            totalCount={allSentences.length}
+            totalCount={sentencesPage.total}
             selectedCount={selectedSentenceIds.size}
             expanded={expandedSections.sentences}
             onToggle={() => toggleSection('sentences')}
@@ -543,23 +449,36 @@ const AddLesson = () => {
               )
             }
             addNewLabel="+ Sentence"
-            onSelectAll={handleSelectAllSentences}
+            onSelectAll={() =>
+              setSelectedSentenceIds((prev) => {
+                const next = new Set(prev);
+                sentencesPage.items.forEach((s) => next.add(s.id));
+                return next;
+              })
+            }
             onClearAll={() => setSelectedSentenceIds(new Set())}
-            searchQuery={searchSentences}
-            onSearchChange={setSearchSentences}
-            filterMode={filterSentences}
-            onFilterChange={setFilterSentences}
+            searchQuery={sentencesPage.search}
+            onSearchChange={sentencesPage.setSearch}
+            filterMode={sentencesPage.filter}
+            onFilterChange={(f) => sentencesPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
           >
-            {filteredSentences.length === 0 ? (
+            {sentencesPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No sentences match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={({ nativeEvent }) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    sentencesPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={200}
               >
-                {filteredSentences.map((s) => (
+                {sentencesPage.items.map((s) => (
                   <ItemCard
                     key={s.id}
                     title={s.content}
@@ -576,6 +495,13 @@ const AddLesson = () => {
                     }
                   />
                 ))}
+                {sentencesPage.hasMore && (
+                  <SliderLoadMoreCard
+                    remaining={sentencesPage.total - sentencesPage.items.length}
+                    onPress={() => sentencesPage.loadMore()}
+                    color="#8b5cf6"
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -585,29 +511,42 @@ const AddLesson = () => {
             title="Words"
             icon="languages"
             color="#059669"
-            totalCount={allWords.length}
+            totalCount={wordsPage.total}
             selectedCount={selectedWordIds.size}
             expanded={expandedSections.words}
             onToggle={() => toggleSection('words')}
             onAddNew={() => setShowAddWordModal(true)}
             addNewLabel="+ Word"
-            onSelectAll={handleSelectAllWords}
+            onSelectAll={() =>
+              setSelectedWordIds((prev) => {
+                const next = new Set(prev);
+                wordsPage.items.forEach((w) => next.add(w.id));
+                return next;
+              })
+            }
             onClearAll={() => setSelectedWordIds(new Set())}
-            searchQuery={searchWords}
-            onSearchChange={setSearchWords}
-            filterMode={filterWords}
-            onFilterChange={setFilterWords}
+            searchQuery={wordsPage.search}
+            onSearchChange={wordsPage.setSearch}
+            filterMode={wordsPage.filter}
+            onFilterChange={(f) => wordsPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
           >
-            {filteredWords.length === 0 ? (
+            {wordsPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No words match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={({ nativeEvent }) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    wordsPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={200}
               >
-                {filteredWords.map((w) => (
+                {wordsPage.items.map((w) => (
                   <ItemCard
                     key={w.id}
                     title={w.content}
@@ -624,6 +563,13 @@ const AddLesson = () => {
                     }
                   />
                 ))}
+                {wordsPage.hasMore && (
+                  <SliderLoadMoreCard
+                    remaining={wordsPage.total - wordsPage.items.length}
+                    onPress={() => wordsPage.loadMore()}
+                    color="#059669"
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -633,7 +579,7 @@ const AddLesson = () => {
             title="Characters"
             icon="spell-check"
             color="#ec489a"
-            totalCount={allCharacters.length}
+            totalCount={charactersPage.total}
             selectedCount={selectedCharacterIds.size}
             expanded={expandedSections.characters}
             onToggle={() => toggleSection('characters')}
@@ -645,23 +591,36 @@ const AddLesson = () => {
               )
             }
             addNewLabel="+ Character"
-            onSelectAll={handleSelectAllCharacters}
+            onSelectAll={() =>
+              setSelectedCharacterIds((prev) => {
+                const next = new Set(prev);
+                charactersPage.items.forEach((c) => next.add(c.id));
+                return next;
+              })
+            }
             onClearAll={() => setSelectedCharacterIds(new Set())}
-            searchQuery={searchCharacters}
-            onSearchChange={setSearchCharacters}
-            filterMode={filterCharacters}
-            onFilterChange={setFilterCharacters}
+            searchQuery={charactersPage.search}
+            onSearchChange={charactersPage.setSearch}
+            filterMode={charactersPage.filter}
+            onFilterChange={(f) => charactersPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
           >
-            {filteredCharacters.length === 0 ? (
+            {charactersPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No characters match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={({ nativeEvent }) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    charactersPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={200}
               >
-                {filteredCharacters.map((c) => (
+                {charactersPage.items.map((c) => (
                   <CharacterCard
                     key={c.id}
                     character={c}
@@ -674,6 +633,13 @@ const AddLesson = () => {
                     }
                   />
                 ))}
+                {charactersPage.hasMore && (
+                  <SliderLoadMoreCard
+                    remaining={charactersPage.total - charactersPage.items.length}
+                    onPress={() => charactersPage.loadMore()}
+                    color="#ec489a"
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -683,27 +649,40 @@ const AddLesson = () => {
             title="Grammar Rules"
             icon="graduation-cap"
             color="#d97706"
-            totalCount={allRules.length}
+            totalCount={rulesPage.total}
             selectedCount={selectedRuleIds.size}
             expanded={expandedSections.rules}
             onToggle={() => toggleSection('rules')}
-            onSelectAll={handleSelectAllRules}
+            onSelectAll={() =>
+              setSelectedRuleIds((prev) => {
+                const next = new Set(prev);
+                rulesPage.items.forEach((r) => next.add(r.id));
+                return next;
+              })
+            }
             onClearAll={() => setSelectedRuleIds(new Set())}
-            searchQuery={searchRules}
-            onSearchChange={setSearchRules}
-            filterMode={filterRules}
-            onFilterChange={setFilterRules}
+            searchQuery={rulesPage.search}
+            onSearchChange={rulesPage.setSearch}
+            filterMode={rulesPage.filter}
+            onFilterChange={(f) => rulesPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
           >
-            {filteredRules.length === 0 ? (
+            {rulesPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No rules match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={({ nativeEvent }) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    rulesPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={200}
               >
-                {filteredRules.map((r) => (
+                {rulesPage.items.map((r) => (
                   <ItemCard
                     key={r.id}
                     title={r.content}
@@ -719,6 +698,13 @@ const AddLesson = () => {
                     }
                   />
                 ))}
+                {rulesPage.hasMore && (
+                  <SliderLoadMoreCard
+                    remaining={rulesPage.total - rulesPage.items.length}
+                    onPress={() => rulesPage.loadMore()}
+                    color="#d97706"
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -844,8 +830,8 @@ export default AddLesson;
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 7,
-    gap: 7,
+    padding: 5,
+    gap: 5,
   },
 
   // ---- Header check button ----
@@ -906,6 +892,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 5,
     gap: 8,
     shadowColor: '#2563eb',
     shadowOffset: { width: 0, height: 4 },

@@ -26,6 +26,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   useEffect(() => {
+    
     initDatabase();
   }, [])
 
@@ -110,11 +111,39 @@ export default function TabLayout() {
                     options={{ headerShown: false }}
                 />
                 <Stack.Screen
+                    name="pages/sentenceDetails/[id]"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="pages/hskDetails/[id]"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
                     name="pages/characterDetails/[id]"
                     options={{ headerShown: false }}
                 />
                 <Stack.Screen
+                    name="pages/characterWrite/[id]"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="pages/characterWrite/index"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="pages/writing/index"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="pages/listeningLoop/index"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
                     name="pages/wordDetails/[id]"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="pages/ruleDetails/[id]"
                     options={{ headerShown: false }}
                 />
                 <Stack.Screen

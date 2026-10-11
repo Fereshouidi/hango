@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image
 } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
 import { usePathname, useRouter } from 'expo-router';
@@ -30,16 +31,16 @@ export const sidebarItems: SidebarItem[] = [
     id: 'hsks',
     label: 'HSKs',
     chineseLabel: '汉语水平考试',
-    icon: 'book-open',
+    icon: 'book-marked',
     color: '#ef4444',
     target: '/pages/hsks/[id]',
-    description: 'Proficiency levels 1 to 6',
+    description: 'Proficiency levels',
   },
   {
     id: 'lessons',
     label: 'Lessons',
     chineseLabel: '课程',
-    icon: 'book-marked',
+    icon: 'book-open',
     color: '#f59e0b',
     target: '/pages/lessons/[id]',
     description: 'Structured course lessons',
@@ -89,6 +90,33 @@ export const sidebarItems: SidebarItem[] = [
     target: '/pages/rules',
     description: 'Grammar points & guides',
   },
+  {
+    id: 'characterWrite',
+    label: 'Write Characters',
+    chineseLabel: '写字 / 练字',
+    icon: 'pencil-line',
+    color: '#0284c7',
+    target: '/pages/characterWrite',
+    description: 'Calligraphy & stroke order practice',
+  },
+  {
+    id: 'writing',
+    label: 'Writing',
+    chineseLabel: '中文写作 / 拼音',
+    icon: 'keyboard',
+    color: '#8b5cf6',
+    target: '/pages/writing',
+    description: 'Type & compose in Chinese with characters or pinyin',
+  },
+  {
+    id: 'listeningLoop',
+    label: 'Listening Loop',
+    chineseLabel: '听力循环 / 跟读',
+    icon: 'headphones',
+    color: '#ec4899',
+    target: '/pages/listeningLoop',
+    description: 'Loop sentences & texts with repeat and shadowing',
+  },
 ];
 
 type SidebarProps = {
@@ -107,6 +135,11 @@ export const Sidebar = ({ isOpen, onClose, onOpen, children }: SidebarProps) => 
 
   const translateX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
+
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   const isOpenRef = useRef(isOpen);
   useEffect(() => {
@@ -236,32 +269,52 @@ export const Sidebar = ({ isOpen, onClose, onOpen, children }: SidebarProps) => 
   // PanResponder for Edge Pull & Swipe Dismissal
   const panResponder = useRef(
     PanResponder.create({
-      // CAPTURE PHASE: Capture horizontal right swipes from left/middle screen region
+      // CAPTURE PHASE: Capture horizontal right swipes strictly from leftmost 20% of screen
       onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
         if (!isOpenRef.current) {
-          const screenW = Dimensions.get('window').width;
-          const x = evt.nativeEvent.pageX ?? evt.nativeEvent.locationX;
-          const isHorizontalRightSwipe =
-            gestureState.dx > 3 &&
-            Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.1;
+          // Never intercept touches while drawing on the character write screen
+          if (pathnameRef.current?.includes('characterWrite')) {
+            return false;
+          }
 
-          return x <= screenW * 0.7 && isHorizontalRightSwipe;
+          const screenW = Dimensions.get('window').width;
+          const edgeThreshold = screenW * 0.20; // Maximum 20% of screen width from left
+          const startX =
+            gestureState.x0 !== undefined && gestureState.x0 !== null && gestureState.x0 > 0
+              ? gestureState.x0
+              : (evt.nativeEvent.pageX ?? evt.nativeEvent.locationX);
+
+          const isHorizontalRightSwipe =
+            gestureState.dx > 12 &&
+            Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.3;
+
+          return startX <= edgeThreshold && isHorizontalRightSwipe;
         }
         return false;
       },
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
         if (!isOpenRef.current) {
-          const screenW = Dimensions.get('window').width;
-          const x = evt.nativeEvent.pageX ?? evt.nativeEvent.locationX;
-          const isHorizontalRightSwipe =
-            gestureState.dx > 3 &&
-            Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.1;
+          // Never intercept touches while drawing on the character write screen
+          if (pathnameRef.current?.includes('characterWrite')) {
+            return false;
+          }
 
-          return x <= screenW * 0.7 && isHorizontalRightSwipe;
+          const screenW = Dimensions.get('window').width;
+          const edgeThreshold = screenW * 0.20; // Maximum 20% of screen width from left
+          const startX =
+            gestureState.x0 !== undefined && gestureState.x0 !== null && gestureState.x0 > 0
+              ? gestureState.x0
+              : (evt.nativeEvent.pageX ?? evt.nativeEvent.locationX);
+
+          const isHorizontalRightSwipe =
+            gestureState.dx > 12 &&
+            Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.3;
+
+          return startX <= edgeThreshold && isHorizontalRightSwipe;
         }
-        return Math.abs(gestureState.dx) > 3;
+        return Math.abs(gestureState.dx) > 6;
       },
       onPanResponderGrant: () => {},
       onPanResponderMove: (evt, gestureState) => {
@@ -374,6 +427,11 @@ export const Sidebar = ({ isOpen, onClose, onOpen, children }: SidebarProps) => 
         {/* Header Brand */}
         <View style={styles.header}>
           <View style={styles.brandRow}>
+            {/* <Image
+              style={styles.logoImage}
+              source={require('@/assets/images/logo/normalScale.jpg')}
+              resizeMode="cover"
+            /> */}
             <View style={styles.logoBadge}>
               <Text style={styles.logoChar}>汉</Text>
             </View>
@@ -518,6 +576,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  logoImage: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
   },
   logoBadge: {
     width: 38,

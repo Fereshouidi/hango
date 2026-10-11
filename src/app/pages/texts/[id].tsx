@@ -1,6 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  BackHandler,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,13 +12,22 @@ import {
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import {
+  deleteText,
+  deleteTexts,
   getAllTexts,
+  getCharacterById,
+  getHSKById,
+  getLessonById,
+  getRuleById,
+  getSentenceById,
+  getTextById,
   getTextsByCharacterId,
   getTextsByHSKId,
   getTextsByLessonId,
   getTextsByRuleId,
   getTextsBySentenceId,
   getTextsByWordId,
+  getWordById,
 } from '@/db/utils';
 import { TextType } from '@/types';
 import Header from '@/components/main/header';
@@ -26,8 +36,15 @@ import { randomColors } from '@/constants/theme';
 import Lucide from '@react-native-vector-icons/lucide';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { TextCard } from '@/components/cards/TextCard';
-import { SearchBar } from '@/components/common/SearchBar';
-import { StudyToggleBar } from '@/components/common/StudyToggleBar';
+import {
+  CollapsibleControlBar,
+  HeaderFilterButton,
+} from '@/components/common/CollapsibleControlBar';
+import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
+import { speakChineseText } from '@/utils/tts';
+
+const PAGE_SIZE = 10;
 
 export default function TextsScreen() {
   const router = useRouter();
@@ -40,6 +57,8 @@ export default function TextsScreen() {
     characterId?: string;
     caracterid?: string;
     ruleId?: string;
+    scope?: string;
+    search?: string;
   }>();
 
   const parseNum = (val?: string) => (val && !isNaN(Number(val)) ? Number(val) : 0);
@@ -51,23 +70,52 @@ export default function TextsScreen() {
   const characterId = parseNum(params.characterId || params.caracterid);
   const ruleId = parseNum(params.ruleId);
   const genericId = parseNum(params.id);
+  const isGlobalScope = params.scope === 'global';
 
   const [texts, setTexts] = useState<TextType[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(params.search || '');
+  const [isControlBarOpen, setIsControlBarOpen] = useState(false);
   const [showPinyin, setShowPinyin] = useState(true);
   const [showMeaning, setShowMeaning] = useState(true);
   const [playingId, setPlayingId] = useState<number | null>(null);
 
+  // Selection mode & card menu state
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [activeCardText, setActiveCardText] = useState<TextType | null>(null);
+
+  useEffect(() => {
+    if (params.search !== undefined) {
+      setSearchQuery(params.search);
+    }
+  }, [params.search]);
+
+  // Handle hardware back button to cancel selection mode
+  useEffect(() => {
+    if (!isSelectionMode) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      exitSelectionMode();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [isSelectionMode]);
+
   const getFilterBadgeLabel = (): string | null => {
-    if (hskId > 0) return `HSK Level ${hskId}`;
-    if (lessonId > 0) return `Lesson ${lessonId}`;
-    if (sentenceId > 0) return `Sentence ${sentenceId}`;
-    if (wordId > 0) return `Word ${wordId}`;
-    if (characterId > 0) return `Character ${characterId}`;
-    if (ruleId > 0) return `Rule ${ruleId}`;
-    if (genericId > 0) return `ID ${genericId}`;
-    return null;
+    let baseLabel: string | null = null;
+    if (hskId > 0) baseLabel = `HSK Level ${hskId}`;
+    else if (lessonId > 0) baseLabel = `Lesson ${lessonId}`;
+    else if (sentenceId > 0) baseLabel = `Sentence ${sentenceId}`;
+    else if (wordId > 0) baseLabel = `Word ${wordId}`;
+    else if (characterId > 0) baseLabel = `Character ${characterId}`;
+    else if (ruleId > 0) baseLabel = `Rule ${ruleId}`;
+    else if (genericId > 0) baseLabel = `ID ${genericId}`;
+
+    if (isGlobalScope) {
+      return baseLabel ? `${baseLabel} (Global)` : 'All DB Search';
+    }
+    return baseLabel;
   };
 
   const activeFilterLabel = getFilterBadgeLabel();
@@ -76,7 +124,9 @@ export default function TextsScreen() {
     try {
       let data: TextType[] = [];
 
-      if (hskId > 0) {
+      if (isGlobalScope) {
+        data = getAllTexts() as unknown as TextType[];
+      } else if (hskId > 0) {
         data = getTextsByHSKId(hskId) as unknown as TextType[];
       } else if (lessonId > 0) {
         data = getTextsByLessonId(lessonId) as unknown as TextType[];
@@ -101,11 +151,12 @@ export default function TextsScreen() {
     } catch (e) {
       console.error('Failed to load texts:', e);
     }
-  }, [hskId, lessonId, sentenceId, wordId, characterId, ruleId, genericId]);
+  }, [isGlobalScope, hskId, lessonId, sentenceId, wordId, characterId, ruleId, genericId]);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
+      exitSelectionMode();
     }, [loadData])
   );
 
@@ -121,67 +172,222 @@ export default function TextsScreen() {
   const filteredTexts = texts.filter(
     (t) =>
       !q ||
-      t.title.toLowerCase().includes(q) ||
-      t.content.toLowerCase().includes(q) ||
-      t.pinyin.toLowerCase().includes(q) ||
-      t.meaning.toLowerCase().includes(q)
+      (t.title || '').toLowerCase().includes(q) ||
+      (t.content || '').toLowerCase().includes(q) ||
+      (t.pinyin || '').toLowerCase().includes(q) ||
+      (t.meaning || '').toLowerCase().includes(q)
   );
+
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, hskId, lessonId, sentenceId, wordId, characterId, ruleId, genericId]);
+
+  const displayedTexts = filteredTexts.slice(0, visibleCount);
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredTexts.length));
+  };
+
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 180;
+    if (isCloseToBottom && visibleCount < filteredTexts.length) {
+      handleLoadMore();
+    }
+  };
+
+  const handlePlayAudio = (id: number, text: string) => {
+    setPlayingId(id);
+    speakChineseText(
+      text,
+      () => setPlayingId(id),
+      () => setPlayingId(null)
+    );
+  };
+
+  // Selection mode helpers
+  const enterSelectionMode = (id: number) => {
+    setIsSelectionMode(true);
+    setSelectedIds(new Set([id]));
+  };
+
+  const exitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedIds(new Set());
+    setActiveCardText(null);
+  };
+
+  const toggleSelection = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      if (next.size === 0) {
+        setIsSelectionMode(false);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredTexts.map((t) => t.id!).filter(Boolean)));
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    Alert.alert(
+      'Delete Texts',
+      `Are you sure you want to permanently delete ${selectedIds.size} text${selectedIds.size > 1 ? 's' : ''}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            try {
+              deleteTexts([...selectedIds]);
+              exitSelectionMode();
+              loadData();
+            } catch (e) {
+              Alert.alert('Error', 'Failed to delete texts.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const buildMenuOptions = () => {
+    if (activeCardText) {
+      const tId = activeCardText.id!;
+      const isAlreadySelected = selectedIds.has(tId);
+      return [
+        {
+          id: 'view',
+          label: 'View Details',
+          iconName: 'external-link',
+          color: '#3b82f6',
+          onPress: () => { setMenuVisible(false); setActiveCardText(null); router.push(`/pages/textDetails/${tId}` as any); },
+        },
+        {
+          id: 'select',
+          label: isAlreadySelected ? 'Deselect' : 'Select',
+          iconName: 'check-square',
+          color: '#3b82f6',
+          onPress: () => {
+            if (!isSelectionMode) { setIsSelectionMode(true); setSelectedIds(new Set([tId])); }
+            else toggleSelection(tId);
+            setMenuVisible(false); setActiveCardText(null);
+          },
+        },
+        {
+          id: 'delete',
+          label: 'Delete this text',
+          iconName: 'trash-2',
+          destructive: true,
+          onPress: () => {
+            setMenuVisible(false); setActiveCardText(null);
+            Alert.alert('Delete Text', 'Delete this text permanently?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => { try { deleteText(tId); loadData(); } catch { Alert.alert('Error', 'Failed to delete.'); } } },
+            ]);
+          },
+        },
+      ];
+    }
+    return [
+      ...(isSelectionMode && selectedIds.size > 0
+        ? [{ id: 'delete', label: `Delete ${selectedIds.size} selected`, iconName: 'trash-2', destructive: true, onPress: handleDeleteSelected }]
+        : []),
+      { id: 'selectAll', label: 'Select All', iconName: 'check-square', color: '#3b82f6', onPress: () => { selectAll(); setMenuVisible(false); } },
+      ...(isSelectionMode
+        ? [{ id: 'cancel', label: 'Cancel Selection', iconName: 'x-circle', color: '#64748b', onPress: () => { exitSelectionMode(); setMenuVisible(false); } }]
+        : [
+            { id: 'startSelect', label: 'Select Items', iconName: 'check-square', color: '#3b82f6', onPress: () => { setIsSelectionMode(true); setMenuVisible(false); } },
+            { id: 'add', label: 'Add New Text', iconName: 'plus-circle', color: '#3b82f6', onPress: () => { setMenuVisible(false); router.push('/pages/addText'); } },
+          ]),
+    ];
+  };
 
   return (
     <ThemedView style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}>
       <Bg1 />
 
       <Header
-        useBackArrow={true}
-        label="Texts"
+        useBackArrow={!isSelectionMode}
+        label={isSelectionMode ? `${selectedIds.size} Selected` : 'Texts'}
         subtitle={activeFilterLabel || undefined}
-        items={[
-          <TouchableOpacity
-            key="add"
-            onPress={() => router.push('/pages/addText')}
-            activeOpacity={0.7}
-          >
-            <Lucide name="plus" size={20} color="#373737ff" style={styles.actionBtnIcon} />
-          </TouchableOpacity>,
-          <TouchableOpacity
-            key="delete"
-            onPress={() => Alert.alert('Delete', 'Text deletion option')}
-            activeOpacity={0.7}
-          >
-            <Lucide name="trash" size={20} color="#373737ff" style={styles.actionBtnIcon} />
-          </TouchableOpacity>,
-        ]}
+        onBack={isSelectionMode ? exitSelectionMode : undefined}
+        items={
+          isSelectionMode
+            ? [
+                <TouchableOpacity
+                  key="trash"
+                  onPress={handleDeleteSelected}
+                  activeOpacity={0.8}
+                  style={styles.headerTrashBtn}
+                >
+                  <Lucide name="trash-2" size={18} color="#ffffff" />
+                  <Text style={styles.headerTrashText}>
+                    Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                  </Text>
+                </TouchableOpacity>,
+              ]
+            : [
+                <HeaderFilterButton
+                  key="filter-toggle"
+                  isOpen={isControlBarOpen}
+                  onToggle={() => setIsControlBarOpen((prev) => !prev)}
+                  hasActiveFilter={Boolean(searchQuery)}
+                  accentColor="#3b82f6"
+                />,
+                <TouchableOpacity
+                  key="loop"
+                  onPress={() =>
+                    router.push(
+                      `/pages/listeningLoop?type=texts${hskId ? `&hskId=${hskId}` : ''}${lessonId ? `&lessonId=${lessonId}` : ''}` as any
+                    )
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Lucide name="headphones" size={19} color="#ec4899" style={styles.actionBtnIcon} />
+                </TouchableOpacity>,
+                <TouchableOpacity
+                  key="add"
+                  onPress={() => router.push('/pages/addText')}
+                  activeOpacity={0.7}
+                >
+                  <Lucide name="plus" size={20} color="#373737ff" style={styles.actionBtnIcon} />
+                </TouchableOpacity>,
+              ]
+        }
       />
 
-      <View style={styles.controlBar}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search passages, pinyin, meaning..."
-        />
-
-        <View style={styles.toggleRow}>
-          <StudyToggleBar
-            showPinyin={showPinyin}
-            setShowPinyin={setShowPinyin}
-            showMeaning={showMeaning}
-            setShowMeaning={setShowMeaning}
-            accentColor="#3b82f6"
-          />
-
-          {activeFilterLabel && (
-            <View style={styles.filterBadge}>
-              <Lucide name="filter" size={12} color="#3b82f6" />
-              <Text style={styles.filterBadgeText}>{activeFilterLabel}</Text>
-            </View>
-          )}
-        </View>
-      </View>
+      <CollapsibleControlBar
+        isOpen={isControlBarOpen}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        placeholder="Search passages, pinyin, meaning..."
+        filterBadgeLabel={activeFilterLabel || undefined}
+        count={filteredTexts.length}
+        totalCount={texts.length}
+        countLabel="texts"
+        singleUnit="text"
+        accentColor="#3b82f6"
+        showPinyin={showPinyin}
+        setShowPinyin={setShowPinyin}
+        showMeaning={showMeaning}
+        setShowMeaning={setShowMeaning}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={32}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -192,21 +398,40 @@ export default function TextsScreen() {
         }
       >
         {filteredTexts.length > 0 ? (
-          filteredTexts.map((textItem, index) => {
-            const cardBg = randomColors[index % randomColors.length];
-            return (
-              <TextCard
-                key={textItem.id || index}
-                textObj={textItem}
-                index={index}
-                showPinyin={showPinyin}
-                showMeaning={showMeaning}
-                cardBg={cardBg}
-                isPlaying={playingId === (textItem.id || index + 1)}
-                onPlayAudio={(id) => setPlayingId(id)}
-              />
-            );
-          })
+          <>
+            {displayedTexts.map((textItem, index) => {
+              const cardBg = randomColors[index % randomColors.length];
+              const textObjId = textItem.id!;
+              const isSelected = selectedIds.has(textObjId);
+
+              return (
+                <TextCard
+                  key={textObjId || index}
+                  textObj={textItem}
+                  index={index}
+                  showPinyin={showPinyin}
+                  showMeaning={showMeaning}
+                  cardBg={cardBg}
+                  isPlaying={playingId === (textObjId || index + 1)}
+                  onPlayAudio={handlePlayAudio}
+                  isSelected={isSelected}
+                  isSelectionMode={isSelectionMode}
+                  onLongPress={() => enterSelectionMode(textObjId)}
+                  onPress={isSelectionMode ? () => toggleSelection(textObjId) : undefined}
+                  onOptionsPress={() => { setActiveCardText(textItem); setMenuVisible(true); }}
+                />
+              );
+            })}
+
+            <LoadMoreFooter
+              currentCount={displayedTexts.length}
+              totalCount={filteredTexts.length}
+              pageSize={PAGE_SIZE}
+              accentColor="#3b82f6"
+              itemLabel="texts"
+              onLoadMore={handleLoadMore}
+            />
+          </>
         ) : (
           <View style={styles.emptyContainer}>
             <Lucide name="file-text" size={40} color="#cbd5e1" />
@@ -220,6 +445,13 @@ export default function TextsScreen() {
           </View>
         )}
       </ScrollView>
+
+      <OptionsMenuModal
+        visible={menuVisible}
+        onClose={() => { setMenuVisible(false); setActiveCardText(null); }}
+        title={activeCardText ? 'Text Options' : isSelectionMode ? `${selectedIds.size} selected` : 'Options'}
+        options={buildMenuOptions()}
+      />
     </ThemedView>
   );
 }
@@ -236,37 +468,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#414040ff',
   },
-  controlBar: {
-    paddingHorizontal: 8,
+  headerTrashBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    gap: 8,
-    position: 'absolute',
-    top: 60,
-    width: '100%',
-    height: 100,
-    zIndex: 1000,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  filterBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#dbeafe',
-    borderWidth: 1,
-    borderColor: '#93c5fd',
+    elevation: 3,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
-  filterBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1d4ed8',
+  headerTrashText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 13,
   },
   scrollView: {
     width: '100%',
@@ -276,8 +495,8 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 8,
     paddingBottom: 24,
-    paddingTop: 100,
-    gap: 6,
+    paddingTop: 8,
+    // gap: 6,
   },
   emptyContainer: {
     padding: 40,
@@ -292,3 +511,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

@@ -22,6 +22,11 @@ interface CharacterCardProps {
   cardBg?: string;
   isPlaying?: boolean;
   onPlayAudio?: (id: number, text: string) => void;
+  isSelected?: boolean;
+  isSelectionMode?: boolean;
+  onLongPress?: () => void;
+  onPress?: () => void;
+  onOptionsPress?: () => void;
 }
 
 export const CharacterCard: React.FC<CharacterCardProps> = ({
@@ -33,8 +38,15 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
   cardBg,
   isPlaying,
   onPlayAudio,
+  isSelected = false,
+  isSelectionMode = false,
+  onLongPress,
+  onPress,
+  onOptionsPress,
 }) => {
   const router = useRouter();
+  const [localPlaying, setLocalPlaying] = React.useState(false);
+  const activePlaying = isPlaying !== undefined ? isPlaying : localPlaying;
   const item = char || character;
 
   if (!item) return null;
@@ -42,17 +54,25 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
   const toneKey = item.tone || '5';
   const toneColor = toneColors[toneKey] || '#ec4899';
 
-  const handleSpeech = (e: any) => {
-    e.stopPropagation();
+  const handleSpeech = () => {
     if (onPlayAudio && item.id) {
       onPlayAudio(item.id, item.content);
     } else {
-      speakChineseText(item.content);
+      setLocalPlaying(true);
+      speakChineseText(
+        item.content,
+        () => setLocalPlaying(true),
+        () => setLocalPlaying(false)
+      );
     }
   };
 
   const handlePressCard = () => {
-    if (item.id) {
+    if (isSelectionMode && onPress) {
+      onPress();
+    } else if (onPress) {
+      onPress();
+    } else if (item.id) {
       router.push(`/pages/characterDetails/${item.id}` as any);
     }
   };
@@ -61,31 +81,76 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
     <TouchableOpacity
       style={[
         styles.card,
-        cardBg ? { backgroundColor: cardBg } : [styles.defaultBg, { borderColor: "#ec4899" + '40' }],
+        cardBg ? { backgroundColor: cardBg } : [styles.defaultBg, { borderColor: '#ec4899' + '40' }],
+        isSelected && { borderColor: '#0f172a', borderWidth: 3.5 },
+        isSelectionMode && !isSelected && { opacity: 0.85 },
       ]}
       onPress={handlePressCard}
+      onLongPress={onLongPress}
       activeOpacity={0.85}
     >
       <View style={styles.header}>
-        <View style={[styles.toneBadge, cardBg ? styles.whiteBadgeBg : { backgroundColor: "#ec4899" }]}>
-          <Text style={[styles.toneBadgeText, cardBg && styles.whiteText]}>T{toneKey}</Text>
-        </View>
+        {isSelectionMode ? (
+          <View style={[styles.selectBadge, isSelected ? { backgroundColor: '#0f172a' } : { borderColor: '#ffffff', borderWidth: 1.5, backgroundColor: 'rgba(0,0,0,0.2)' }]}>
+            {isSelected && <Lucide name="check" size={12} color="#ffffff" />}
+          </View>
+        ) : (
+          <View style={[styles.toneBadge, cardBg ? styles.whiteBadgeBg : { backgroundColor: '#ec4899' }]}>
+            <Text style={[styles.toneBadgeText, cardBg && styles.whiteText]}>T{toneKey}</Text>
+          </View>
+        )}
 
-        <TouchableOpacity
-          style={[
-            styles.playBtn,
-            cardBg ? styles.whitePlayBtnBg : { backgroundColor: "#ec4899" + '20' },
-            isPlaying && styles.playingBtnActive,
-          ]}
-          onPress={handleSpeech}
-          activeOpacity={0.7}
-        >
-          <Lucide
-            name={isPlaying ? 'volume-2' : 'volume-1'}
-            size={14}
-            color={isPlaying ? '#ffffff' : cardBg ? '#ffffff' : "#ec4899"}
-          />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <TouchableOpacity
+            style={[
+              styles.playBtn,
+              cardBg ? styles.whitePlayBtnBg : { backgroundColor: "#ec4899" + '15' },
+            ]}
+            onPress={() => {
+              if (item.id) {
+                router.push(`/pages/characterWrite/${item.id}` as any);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Lucide
+              name="pencil-line"
+              size={13}
+              color={cardBg ? '#ffffff' : "#ec4899"}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.playBtn,
+              cardBg ? styles.whitePlayBtnBg : { backgroundColor: "#ec4899" + '20' },
+              activePlaying && styles.playingBtnActive,
+            ]}
+            onPress={handleSpeech}
+            activeOpacity={0.7}
+          >
+            <Lucide
+              name={activePlaying ? 'volume-2' : 'volume-1'}
+              size={14}
+              color={activePlaying ? '#ffffff' : cardBg ? '#ffffff' : "#ec4899"}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.playBtn,
+              cardBg ? styles.whitePlayBtnBg : { backgroundColor: "#ec4899" + '20' },
+            ]}
+            onPress={onOptionsPress || onLongPress}
+            activeOpacity={0.7}
+          >
+            <Lucide
+              name="more-vertical"
+              size={14}
+              color={cardBg ? '#ffffff' : "#ec4899"}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Text style={[styles.charSymbol, cardBg && styles.whiteText]}>
@@ -109,6 +174,8 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
+    // backgroundColor: "red",
+    // width: "105%",
     borderRadius: 16,
     padding: 12,
     gap: 4,
@@ -116,6 +183,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
+    margin: 0
     // elevation: 2,
   },
   defaultBg: {
@@ -140,6 +208,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#ffffff',
+  },
+  selectBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   playBtn: {
     width: 28,

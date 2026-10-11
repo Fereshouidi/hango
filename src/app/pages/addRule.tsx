@@ -18,7 +18,16 @@ import {
   getAllSentences,
   getAllWords,
   getAllCharacters,
+  getRuleById,
+  getHSKsByRuleId,
+  getLessonsByRuleId,
+  getTextsByRuleId,
+  getSentencesByRuleId,
+  getWordsByRuleId,
+  getCharactersByRuleId,
   linkRuleRelations,
+  updateRule,
+  updateRuleRelations,
   db,
 } from '@/db/utils';
 import Header from '@/components/main/header';
@@ -43,6 +52,10 @@ import { SuccessBanner } from '@/components/banners';
 const AddRule = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const rawEditId = params.ruleId || (params.id && !params.hskId && !params.lessonId ? params.id : undefined);
+  const editRuleId = rawEditId && !isNaN(Number(rawEditId)) ? Number(rawEditId) : null;
+  const isEditing = Boolean(editRuleId);
+
   const preselectedHskId = params.hskId ? Number(params.hskId) : null;
   const preselectedLessonId = params.lessonId ? Number(params.lessonId) : null;
   const preselectedTextId = params.textId ? Number(params.textId) : null;
@@ -102,11 +115,11 @@ const AddRule = () => {
 
   // Expanded sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    hsks: false,
+    hsks: true,
     lessons: true,
     texts: false,
     sentences: false,
-    words: true,
+    words: false,
     characters: false,
   });
 
@@ -145,10 +158,30 @@ const AddRule = () => {
         setWords(wordData || []);
         const charData = getAllCharacters() as unknown as CharacterType[];
         setCharacters(charData || []);
+
+        // If editing, pre-fill form with existing rule data
+        if (editRuleId) {
+          const existingRule = getRuleById(editRuleId);
+          if (existingRule) {
+            setContent(existingRule.content || '');
+          }
+          const existingHsks = (getHSKsByRuleId(editRuleId) as any[]) || [];
+          const existingLessons = (getLessonsByRuleId(editRuleId) as any[]) || [];
+          const existingTexts = (getTextsByRuleId(editRuleId) as any[]) || [];
+          const existingSentences = (getSentencesByRuleId(editRuleId) as any[]) || [];
+          const existingWords = (getWordsByRuleId(editRuleId) as any[]) || [];
+          const existingChars = (getCharactersByRuleId(editRuleId) as any[]) || [];
+          setSelectedHskIds(new Set(existingHsks.map((h: any) => h.id)));
+          setSelectedLessonIds(new Set(existingLessons.map((l: any) => l.id)));
+          setSelectedTextIds(new Set(existingTexts.map((t: any) => t.id)));
+          setSelectedSentenceIds(new Set(existingSentences.map((s: any) => s.id)));
+          setSelectedWordIds(new Set(existingWords.map((w: any) => w.id)));
+          setSelectedCharacterIds(new Set(existingChars.map((c: any) => c.id)));
+        }
       } catch (e) {
         console.error('Failed to load DB items for addRule:', e);
       }
-    }, [])
+    }, [editRuleId])
   );
 
   // Helper toggle ID
@@ -304,6 +337,24 @@ const AddRule = () => {
 
     try {
       const ruleText = content.trim();
+
+      if (isEditing && editRuleId) {
+        // UPDATE existing rule
+        updateRule(editRuleId, ruleText);
+        updateRuleRelations(editRuleId, {
+          hskIds: Array.from(selectedHskIds),
+          lessonIds: Array.from(selectedLessonIds),
+          textIds: Array.from(selectedTextIds),
+          sentenceIds: Array.from(selectedSentenceIds),
+          wordIds: Array.from(selectedWordIds),
+          characterIds: Array.from(selectedCharacterIds),
+        });
+        Alert.alert('Success', 'Grammar rule updated successfully!', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+        return;
+      }
+
       const primaryHskId = selectedHskIds.size > 0 ? Array.from(selectedHskIds)[0] : null;
       const primaryLessonId = selectedLessonIds.size > 0 ? Array.from(selectedLessonIds)[0] : null;
       const primaryTextId = selectedTextIds.size > 0 ? Array.from(selectedTextIds)[0] : null;
@@ -352,7 +403,7 @@ const AddRule = () => {
       setSelectedCharacterIds(new Set());
     } catch (e) {
       console.error('Failed to save rule:', e);
-      Alert.alert('Database Error', 'Could not save the new grammar rule.');
+      Alert.alert('Database Error', 'Could not save the grammar rule.');
     }
   };
 
@@ -363,7 +414,7 @@ const AddRule = () => {
       {/* Header */}
       <Header
         useBackArrow={true}
-        label="Create Rule"
+        label={isEditing ? 'Edit Rule' : 'Create Rule'}
         items={[
           <TouchableOpacity
             key="check"
@@ -376,6 +427,17 @@ const AddRule = () => {
         ]}
       />
 
+      {/* Success Banner — outside ScrollView so it truly overlays the screen */}
+      <SuccessBanner
+        visible={createdBannerInfo.visible}
+        title="Grammar Rule Created!"
+        lessonTitle={createdBannerInfo.ruleContent}
+        details={createdBannerInfo.details}
+        onClose={() =>
+          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
+        }
+      />
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -384,16 +446,6 @@ const AddRule = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Success Banner */}
-          <SuccessBanner
-            visible={createdBannerInfo.visible}
-            title="Grammar Rule Created!"
-            lessonTitle={createdBannerInfo.ruleContent}
-            details={createdBannerInfo.details}
-            onClose={() =>
-              setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
-            }
-          />
 
           {/* ===== RULE DETAILS CARD ===== */}
           <View style={styles.card}>
@@ -720,8 +772,8 @@ export default AddRule;
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 10,
-    gap: 12,
+    padding: 5,
+    gap: 5,
   },
   headerSaveButton: {
     backgroundColor: '#d97706',
@@ -739,7 +791,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffffffe7',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
@@ -749,7 +801,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
-    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -808,6 +859,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 5,
     gap: 8,
     shadowColor: '#d97706',
     shadowOffset: { width: 0, height: 4 },

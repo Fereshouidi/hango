@@ -2,12 +2,13 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
 
-export type CategoryTabType = 'all' | 'texts' | 'sentences' | 'words' | 'characters' | 'rules';
+export type CategoryTabType = 'all' | 'lessons' | 'texts' | 'sentences' | 'words' | 'characters' | 'rules';
 
 interface CategoryTabsProps {
   activeTab: CategoryTabType;
   onSelectTab: (tab: CategoryTabType) => void;
   counts?: {
+    lessons?: number;
     texts?: number;
     sentences?: number;
     words?: number;
@@ -33,6 +34,18 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
       >
         <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>All Items</Text>
       </TouchableOpacity>
+
+      {counts?.lessons !== undefined && (
+        <TouchableOpacity
+          style={[styles.tabBtn, activeTab === 'lessons' && styles.tabBtnActive]}
+          onPress={() => onSelectTab('lessons')}
+        >
+          <Lucide name="book-open" size={14} color={activeTab === 'lessons' ? '#2563eb' : '#64748b'} />
+          <Text style={[styles.tabText, activeTab === 'lessons' && styles.tabTextActive]}>
+            Lessons ({counts.lessons})
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {counts?.texts !== undefined && (
         <TouchableOpacity
@@ -109,12 +122,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#ffffffe5',
+    backgroundColor: '#ffffffa9',
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   tabBtnActive: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f8fafcd3',
     borderColor: '#0284c7',
   },
   tabText: {

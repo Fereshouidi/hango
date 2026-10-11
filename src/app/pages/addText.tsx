@@ -15,9 +15,12 @@ import { ThemedView } from '@/components/themed-view';
 import {
   getAllHSKs,
   getAllLessons,
-  getAllWords,
-  getAllCharacters,
-  getAllRules,
+  getWordsPaged,
+  getWordsCount,
+  getCharactersPaged,
+  getCharactersCountPaged,
+  getRulesPaged,
+  getRulesCount,
   db,
 } from '@/db/utils';
 import Header from '@/components/main/header';
@@ -35,9 +38,13 @@ import {
   CharacterCard,
   ItemCard,
   SliderSection,
+  SliderLoadMoreCard,
 } from '@/components/add-lesson';
+import { usePagedSection } from '@/hooks/usePagedSection';
 import { SuccessBanner } from '@/components/banners';
 import { TextToSentencesConstructions } from '@/components/sub/textToSentencesConstructions';
+
+const SLIDER_PAGE_SIZE = 10;
 
 type ExtractedSentence = {
   id: number;
@@ -88,27 +95,19 @@ const AddText = () => {
     details: '',
   });
 
-  // All items from DB for words, characters, rules
-  const [allWords, setAllWords] = useState<WordType[]>([]);
-  const [allCharacters, setAllCharacters] = useState<CharacterType[]>([]);
-  const [allRules, setAllRules] = useState<RuleType[]>([]);
-
   // Selected item IDs for words, characters, rules
   const [selectedWordIds, setSelectedWordIds] = useState<Set<number>>(new Set());
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<number>>(new Set());
   const [selectedRuleIds, setSelectedRuleIds] = useState<Set<number>>(new Set());
 
-  // Search queries per section
+  // Search and pagination for extracted sentences
   const [searchSentences, setSearchSentences] = useState('');
-  const [searchWords, setSearchWords] = useState('');
-  const [searchCharacters, setSearchCharacters] = useState('');
-  const [searchRules, setSearchRules] = useState('');
-
-  // Filter modes per section
   const [filterSentences, setFilterSentences] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterWords, setFilterWords] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterCharacters, setFilterCharacters] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterRules, setFilterRules] = useState<'all' | 'unassigned' | 'hsk'>('all');
+  const [sentencesVisibleCount, setSentencesVisibleCount] = useState(SLIDER_PAGE_SIZE);
+
+  useEffect(() => {
+    setSentencesVisibleCount(SLIDER_PAGE_SIZE);
+  }, [searchSentences, filterSentences]);
 
   // Expanded sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -118,6 +117,10 @@ const AddText = () => {
     rules: false,
   });
 
+  // Paginated sections (DB-level, 10 at a time)
+  const wordsPage = usePagedSection<WordType>(getWordsPaged, getWordsCount);
+  const charactersPage = usePagedSection<CharacterType>(getCharactersPaged, getCharactersCountPaged);
+  const rulesPage = usePagedSection<RuleType>(getRulesPaged, getRulesCount);
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
@@ -126,7 +129,7 @@ const AddText = () => {
     }));
   };
 
-  // Load HSKs, Lessons, and selectable items from DB
+  // Load HSKs, Lessons, and initialize paged sections
   useFocusEffect(
     useCallback(() => {
       try {
@@ -134,18 +137,12 @@ const AddText = () => {
         setHsks(hskData || []);
         const lessonData = getAllLessons() as unknown as LessonType[];
         setLessons(lessonData || []);
-
-        const wordData = getAllWords() as unknown as WordType[];
-        setAllWords(wordData || []);
-
-        const charData = getAllCharacters() as unknown as CharacterType[];
-        setAllCharacters(charData || []);
-
-        const ruleData = getAllRules() as unknown as RuleType[];
-        setAllRules(ruleData || []);
       } catch (e) {
         console.error('Failed to load DB items for addText:', e);
       }
+      wordsPage.initialize();
+      charactersPage.initialize();
+      rulesPage.initialize();
     }, [])
   );
 
@@ -216,49 +213,11 @@ const AddText = () => {
     });
   }, [extractedSentences, searchSentences]);
 
-  const filteredWords = useMemo(() => {
-    return allWords.filter((w) => {
-      const q = searchWords.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        w.content.toLowerCase().includes(q) ||
-        w.pinyin.toLowerCase().includes(q) ||
-        w.meaning.toLowerCase().includes(q);
-      if (!matchesSearch) return false;
-
-      if (filterWords === 'unassigned') return !w.textId;
-      if (filterWords === 'hsk' && selectedHskId) return w.hskId === selectedHskId;
-      return true;
-    });
-  }, [allWords, searchWords, filterWords, selectedHskId]);
-
-  const filteredCharacters = useMemo(() => {
-    return allCharacters.filter((c) => {
-      const q = searchCharacters.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        c.content.toLowerCase().includes(q) ||
-        c.pinyin.toLowerCase().includes(q) ||
-        c.meaning.toLowerCase().includes(q);
-      if (!matchesSearch) return false;
-
-      if (filterCharacters === 'unassigned') return !c.textId;
-      if (filterCharacters === 'hsk' && selectedHskId) return c.hskId === selectedHskId;
-      return true;
-    });
-  }, [allCharacters, searchCharacters, filterCharacters, selectedHskId]);
-
-  const filteredRules = useMemo(() => {
-    return allRules.filter((r) => {
-      const q = searchRules.toLowerCase().trim();
-      const matchesSearch = !q || r.content.toLowerCase().includes(q);
-      if (!matchesSearch) return false;
-
-      if (filterRules === 'unassigned') return !r.textId;
-      if (filterRules === 'hsk' && selectedHskId) return r.hskId === selectedHskId;
-      return true;
-    });
-  }, [allRules, searchRules, filterRules, selectedHskId]);
+  const displayedExtractedSentences = useMemo(() => {
+    const selected = filteredExtractedSentences.filter((s) => selectedSentenceIndices.has(s.id));
+    const unselected = filteredExtractedSentences.filter((s) => !selectedSentenceIndices.has(s.id));
+    return [...selected, ...unselected].slice(0, sentencesVisibleCount);
+  }, [filteredExtractedSentences, selectedSentenceIndices, sentencesVisibleCount]);
 
   // Select all handlers
   const handleSelectAllSentences = () => {
@@ -268,7 +227,7 @@ const AddText = () => {
   const handleSelectAllWords = () => {
     setSelectedWordIds((prev) => {
       const next = new Set(prev);
-      filteredWords.forEach((w) => next.add(w.id));
+      wordsPage.items.forEach((w) => next.add(w.id));
       return next;
     });
   };
@@ -276,7 +235,7 @@ const AddText = () => {
   const handleSelectAllCharacters = () => {
     setSelectedCharacterIds((prev) => {
       const next = new Set(prev);
-      filteredCharacters.forEach((c) => next.add(c.id));
+      charactersPage.items.forEach((c) => next.add(c.id));
       return next;
     });
   };
@@ -284,7 +243,7 @@ const AddText = () => {
   const handleSelectAllRules = () => {
     setSelectedRuleIds((prev) => {
       const next = new Set(prev);
-      filteredRules.forEach((r) => next.add(r.id));
+      rulesPage.items.forEach((r) => next.add(r.id));
       return next;
     });
   };
@@ -306,17 +265,9 @@ const AddText = () => {
       );
 
       const newId = Number(result.lastInsertRowId);
-      const newWordObj: WordType = {
-        id: newId,
-        content: newWordContent.trim(),
-        pinyin: newWordPinyin.trim(),
-        meaning: newWordMeaning.trim(),
-        hskId: selectedHskId || undefined,
-        lessonId: selectedLessonId || undefined,
-      };
 
-      // Add to words list and select it immediately!
-      setAllWords((prev) => [newWordObj, ...prev]);
+      // Refresh words page and select newly created word
+      wordsPage.initialize();
       setSelectedWordIds((prev) => new Set(prev).add(newId));
 
       // Reset and close
@@ -451,6 +402,17 @@ const AddText = () => {
         ]}
       />
 
+      {/* Success Banner — outside ScrollView so it truly overlays the screen */}
+      <SuccessBanner
+        visible={createdBannerInfo.visible}
+        title="Text Created!"
+        lessonTitle={createdBannerInfo.textTitle}
+        details={createdBannerInfo.details}
+        onClose={() =>
+          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
+        }
+      />
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -459,16 +421,6 @@ const AddText = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Success Banner */}
-          <SuccessBanner
-            visible={createdBannerInfo.visible}
-            title="Text Created!"
-            lessonTitle={createdBannerInfo.textTitle}
-            details={createdBannerInfo.details}
-            onClose={() =>
-              setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
-            }
-          />
 
           {/* ===== TEXT DETAILS CARD ===== */}
           <View style={styles.card}>
@@ -691,8 +643,17 @@ const AddText = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    if (sentencesVisibleCount < filteredExtractedSentences.length) {
+                      setSentencesVisibleCount((prev) => prev + SLIDER_PAGE_SIZE);
+                    }
+                  }
+                }}
+                scrollEventThrottle={16}
               >
-                {filteredExtractedSentences.map((s, index) => (
+                {displayedExtractedSentences.map((s, index) => (
                   <ItemCard
                     key={s.id}
                     title={s.content}
@@ -706,6 +667,15 @@ const AddText = () => {
                     width={220}
                   />
                 ))}
+                {sentencesVisibleCount < filteredExtractedSentences.length && (
+                  <SliderLoadMoreCard
+                    currentCount={displayedExtractedSentences.length}
+                    totalCount={filteredExtractedSentences.length}
+                    pageSize={SLIDER_PAGE_SIZE}
+                    color="#8b5cf6"
+                    onLoadMore={() => setSentencesVisibleCount((prev) => prev + SLIDER_PAGE_SIZE)}
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -715,7 +685,7 @@ const AddText = () => {
             title="Words"
             icon="languages"
             color="#059669"
-            totalCount={allWords.length}
+            totalCount={wordsPage.total}
             selectedCount={selectedWordIds.size}
             expanded={expandedSections.words}
             onToggle={() => toggleSection('words')}
@@ -723,21 +693,28 @@ const AddText = () => {
             addNewLabel="+ Word"
             onSelectAll={handleSelectAllWords}
             onClearAll={() => setSelectedWordIds(new Set())}
-            searchQuery={searchWords}
-            onSearchChange={setSearchWords}
-            filterMode={filterWords}
-            onFilterChange={setFilterWords}
+            searchQuery={wordsPage.search}
+            onSearchChange={wordsPage.setSearch}
+            filterMode={wordsPage.filter}
+            onFilterChange={(f) => wordsPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
           >
-            {filteredWords.length === 0 ? (
+            {wordsPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No words match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    wordsPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={16}
               >
-                {filteredWords.map((w) => (
+                {wordsPage.items.map((w) => (
                   <ItemCard
                     key={w.id}
                     title={w.content}
@@ -751,6 +728,15 @@ const AddText = () => {
                     width={150}
                   />
                 ))}
+                {wordsPage.hasMore && (
+                  <SliderLoadMoreCard
+                    currentCount={wordsPage.items.length}
+                    totalCount={wordsPage.total}
+                    pageSize={SLIDER_PAGE_SIZE}
+                    color="#059669"
+                    onLoadMore={wordsPage.loadMore}
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -760,7 +746,7 @@ const AddText = () => {
             title="Characters"
             icon="spell-check"
             color="#ec489a"
-            totalCount={allCharacters.length}
+            totalCount={charactersPage.total}
             selectedCount={selectedCharacterIds.size}
             expanded={expandedSections.characters}
             onToggle={() => toggleSection('characters')}
@@ -774,21 +760,28 @@ const AddText = () => {
             addNewLabel="+ Character"
             onSelectAll={handleSelectAllCharacters}
             onClearAll={() => setSelectedCharacterIds(new Set())}
-            searchQuery={searchCharacters}
-            onSearchChange={setSearchCharacters}
-            filterMode={filterCharacters}
-            onFilterChange={setFilterCharacters}
+            searchQuery={charactersPage.search}
+            onSearchChange={charactersPage.setSearch}
+            filterMode={charactersPage.filter}
+            onFilterChange={(f) => charactersPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
           >
-            {filteredCharacters.length === 0 ? (
+            {charactersPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No characters match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    charactersPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={16}
               >
-                {filteredCharacters.map((c) => (
+                {charactersPage.items.map((c) => (
                   <CharacterCard
                     key={c.id}
                     character={c}
@@ -798,6 +791,15 @@ const AddText = () => {
                     }
                   />
                 ))}
+                {charactersPage.hasMore && (
+                  <SliderLoadMoreCard
+                    currentCount={charactersPage.items.length}
+                    totalCount={charactersPage.total}
+                    pageSize={SLIDER_PAGE_SIZE}
+                    color="#ec489a"
+                    onLoadMore={charactersPage.loadMore}
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -807,27 +809,34 @@ const AddText = () => {
             title="Grammar Rules"
             icon="book-open-check"
             color="#d97706"
-            totalCount={allRules.length}
+            totalCount={rulesPage.total}
             selectedCount={selectedRuleIds.size}
             expanded={expandedSections.rules}
             onToggle={() => toggleSection('rules')}
             onSelectAll={handleSelectAllRules}
             onClearAll={() => setSelectedRuleIds(new Set())}
-            searchQuery={searchRules}
-            onSearchChange={setSearchRules}
-            filterMode={filterRules}
-            onFilterChange={setFilterRules}
+            searchQuery={rulesPage.search}
+            onSearchChange={rulesPage.setSearch}
+            filterMode={rulesPage.filter}
+            onFilterChange={(f) => rulesPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
           >
-            {filteredRules.length === 0 ? (
+            {rulesPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No grammar rules match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    rulesPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={16}
               >
-                {filteredRules.map((r) => (
+                {rulesPage.items.map((r) => (
                   <ItemCard
                     key={r.id}
                     title={r.content}
@@ -841,6 +850,15 @@ const AddText = () => {
                     isChineseTitle={false}
                   />
                 ))}
+                {rulesPage.hasMore && (
+                  <SliderLoadMoreCard
+                    currentCount={rulesPage.items.length}
+                    totalCount={rulesPage.total}
+                    pageSize={SLIDER_PAGE_SIZE}
+                    color="#d97706"
+                    onLoadMore={rulesPage.loadMore}
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -958,7 +976,7 @@ export default AddText;
 const styles = StyleSheet.create({
   scrollContent: {
     padding: 5,
-    gap: 12,
+    gap: 5,
   },
   headerSaveButton: {
     backgroundColor: '#0284c7',
@@ -1106,6 +1124,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    marginTop: 5,
     shadowColor: '#0284c7',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

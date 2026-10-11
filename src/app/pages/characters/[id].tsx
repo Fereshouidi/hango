@@ -1,6 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  BackHandler,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,13 +12,22 @@ import {
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import {
+  deleteCharacter,
+  deleteCharacters,
   getAllCharacters,
+  getCharacterById,
   getCharactersByHSKId,
   getCharactersByLessonId,
-  getCharactersByTextId,
-  getCharactersBySentenceId,
-  getCharactersByWordId,
   getCharactersByRuleId,
+  getCharactersBySentenceId,
+  getCharactersByTextId,
+  getCharactersByWordId,
+  getHSKById,
+  getLessonById,
+  getRuleById,
+  getSentenceById,
+  getTextById,
+  getWordById,
 } from '@/db/utils';
 import { CharacterType } from '@/types';
 import Header from '@/components/main/header';
@@ -26,8 +36,15 @@ import { randomColors } from '@/constants/theme';
 import Lucide from '@react-native-vector-icons/lucide';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { CharacterCard } from '@/components/cards/CharacterCard';
-import { SearchBar } from '@/components/common/SearchBar';
-import { StudyToggleBar } from '@/components/common/StudyToggleBar';
+import {
+  CollapsibleControlBar,
+  HeaderFilterButton,
+} from '@/components/common/CollapsibleControlBar';
+import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
+import { speakChineseText } from '@/utils/tts';
+
+const PAGE_SIZE = 10;
 
 export default function CharactersScreen() {
   const router = useRouter();
@@ -41,6 +58,8 @@ export default function CharactersScreen() {
     characterId?: string;
     caracterid?: string;
     ruleId?: string;
+    scope?: string;
+    search?: string;
   }>();
 
   const parseNum = (val?: string) => (val && !isNaN(Number(val)) ? Number(val) : 0);
@@ -52,23 +71,52 @@ export default function CharactersScreen() {
   const wordId = parseNum(params.wordId);
   const ruleId = parseNum(params.ruleId);
   const genericId = parseNum(params.id);
+  const isGlobalScope = params.scope === 'global';
 
   const [characters, setCharacters] = useState<CharacterType[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(params.search || '');
+  const [isControlBarOpen, setIsControlBarOpen] = useState(false);
   const [showPinyin, setShowPinyin] = useState(true);
   const [showMeaning, setShowMeaning] = useState(true);
   const [playingId, setPlayingId] = useState<number | null>(null);
 
+  // Selection mode & card menu state
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [activeCardChar, setActiveCardChar] = useState<CharacterType | null>(null);
+
+  useEffect(() => {
+    if (params.search !== undefined) {
+      setSearchQuery(params.search);
+    }
+  }, [params.search]);
+
+  // Handle hardware back button to cancel selection mode
+  useEffect(() => {
+    if (!isSelectionMode) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      exitSelectionMode();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [isSelectionMode]);
+
   const getFilterBadgeLabel = (): string | null => {
-    if (hskId > 0) return `HSK Level ${hskId}`;
-    if (lessonId > 0) return `Lesson ${lessonId}`;
-    if (textId > 0) return `Text ${textId}`;
-    if (sentenceId > 0) return `Sentence ${sentenceId}`;
-    if (wordId > 0) return `Word ${wordId}`;
-    if (ruleId > 0) return `Rule ${ruleId}`;
-    if (genericId > 0) return `ID ${genericId}`;
-    return null;
+    let baseLabel: string | null = null;
+    if (hskId > 0) baseLabel = `HSK Level ${hskId}`;
+    else if (lessonId > 0) baseLabel = `Lesson ${lessonId}`;
+    else if (textId > 0) baseLabel = `Text ${textId}`;
+    else if (sentenceId > 0) baseLabel = `Sentence ${sentenceId}`;
+    else if (wordId > 0) baseLabel = `Word ${wordId}`;
+    else if (ruleId > 0) baseLabel = `Rule ${ruleId}`;
+    else if (genericId > 0) baseLabel = `ID ${genericId}`;
+
+    if (isGlobalScope) {
+      return baseLabel ? `${baseLabel} (Global)` : 'All DB Search';
+    }
+    return baseLabel;
   };
 
   const activeFilterLabel = getFilterBadgeLabel();
@@ -77,7 +125,9 @@ export default function CharactersScreen() {
     try {
       let data: CharacterType[] = [];
 
-      if (hskId > 0) {
+      if (isGlobalScope) {
+        data = getAllCharacters() as unknown as CharacterType[];
+      } else if (hskId > 0) {
         data = getCharactersByHSKId(hskId) as unknown as CharacterType[];
       } else if (lessonId > 0) {
         data = getCharactersByLessonId(lessonId) as unknown as CharacterType[];
@@ -102,11 +152,12 @@ export default function CharactersScreen() {
     } catch (e) {
       console.error('Failed to load characters:', e);
     }
-  }, [hskId, lessonId, textId, sentenceId, wordId, ruleId, genericId]);
+  }, [isGlobalScope, hskId, lessonId, textId, sentenceId, wordId, ruleId, genericId]);
 
   useFocusEffect(
     useCallback(() => {
       loadData();
+      exitSelectionMode();
     }, [loadData])
   );
 
@@ -122,66 +173,210 @@ export default function CharactersScreen() {
   const filteredCharacters = characters.filter(
     (c) =>
       !q ||
-      c.content.toLowerCase().includes(q) ||
-      c.pinyin.toLowerCase().includes(q) ||
-      c.meaning.toLowerCase().includes(q)
+      (c.content || '').toLowerCase().includes(q) ||
+      (c.pinyin || '').toLowerCase().includes(q) ||
+      (c.meaning || '').toLowerCase().includes(q)
   );
+
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, hskId, lessonId, textId, sentenceId, wordId, ruleId, genericId]);
+
+  const displayedCharacters = filteredCharacters.slice(0, visibleCount);
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, filteredCharacters.length));
+  };
+
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 180;
+    if (isCloseToBottom && visibleCount < filteredCharacters.length) {
+      handleLoadMore();
+    }
+  };
+
+  const handlePlayAudio = (id: number, text: string) => {
+    setPlayingId(id);
+    speakChineseText(
+      text,
+      () => setPlayingId(id),
+      () => setPlayingId(null)
+    );
+  };
+
+  // Selection mode helpers
+  const enterSelectionMode = (id: number) => {
+    setIsSelectionMode(true);
+    setSelectedIds(new Set([id]));
+  };
+
+  const exitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedIds(new Set());
+    setActiveCardChar(null);
+  };
+
+  const toggleSelection = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      if (next.size === 0) {
+        setIsSelectionMode(false);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredCharacters.map((c) => c.id!).filter(Boolean)));
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    Alert.alert(
+      'Delete Characters',
+      `Are you sure you want to permanently delete ${selectedIds.size} character${selectedIds.size > 1 ? 's' : ''}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            try {
+              deleteCharacters([...selectedIds]);
+              exitSelectionMode();
+              loadData();
+            } catch (e) {
+              Alert.alert('Error', 'Failed to delete characters.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const buildMenuOptions = () => {
+    if (activeCardChar) {
+      const cId = activeCardChar.id!;
+      const isAlreadySelected = selectedIds.has(cId);
+      return [
+        {
+          id: 'view',
+          label: 'View Details',
+          iconName: 'external-link',
+          color: '#ec4899',
+          onPress: () => { setMenuVisible(false); setActiveCardChar(null); router.push(`/pages/characterDetails/${cId}` as any); },
+        },
+        {
+          id: 'select',
+          label: isAlreadySelected ? 'Deselect' : 'Select',
+          iconName: 'check-square',
+          color: '#ec4899',
+          onPress: () => {
+            if (!isSelectionMode) { setIsSelectionMode(true); setSelectedIds(new Set([cId])); }
+            else toggleSelection(cId);
+            setMenuVisible(false); setActiveCardChar(null);
+          },
+        },
+        {
+          id: 'delete',
+          label: `Delete "${activeCardChar.content}"`,
+          iconName: 'trash-2',
+          destructive: true,
+          onPress: () => {
+            setMenuVisible(false); setActiveCardChar(null);
+            Alert.alert('Delete Character', `Delete "${activeCardChar.content}" permanently?`, [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Delete', style: 'destructive', onPress: () => { try { deleteCharacter(cId); loadData(); } catch { Alert.alert('Error', 'Failed to delete.'); } } },
+            ]);
+          },
+        },
+      ];
+    }
+    return [
+      ...(isSelectionMode && selectedIds.size > 0
+        ? [{ id: 'delete', label: `Delete ${selectedIds.size} selected`, iconName: 'trash-2', destructive: true, onPress: handleDeleteSelected }]
+        : []),
+      { id: 'selectAll', label: 'Select All', iconName: 'check-square', color: '#ec4899', onPress: () => { selectAll(); setMenuVisible(false); } },
+      ...(isSelectionMode
+        ? [{ id: 'cancel', label: 'Cancel Selection', iconName: 'x-circle', color: '#64748b', onPress: () => { exitSelectionMode(); setMenuVisible(false); } }]
+        : [
+            { id: 'startSelect', label: 'Select Items', iconName: 'check-square', color: '#ec4899', onPress: () => { setIsSelectionMode(true); setMenuVisible(false); } },
+            { id: 'add', label: 'Add New Character', iconName: 'plus-circle', color: '#ec4899', onPress: () => { setMenuVisible(false); router.push('/pages/addCharacter'); } },
+          ]),
+    ];
+  };
 
   return (
     <ThemedView style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}>
       <Bg1 />
 
       <Header
-        useBackArrow={true}
-        label="Characters"
+        useBackArrow={!isSelectionMode}
+        label={isSelectionMode ? `${selectedIds.size} Selected` : 'Characters'}
         subtitle={activeFilterLabel || undefined}
-        items={[
-          <TouchableOpacity
-            key="add"
-            onPress={() => router.push('/pages/addCharacter')}
-            activeOpacity={0.7}
-          >
-            <Lucide name="plus" size={20} color="#373737ff" style={styles.actionBtnIcon} />
-          </TouchableOpacity>,
-          <TouchableOpacity
-            key="delete"
-            onPress={() => Alert.alert('Delete', 'Character deletion option')}
-            activeOpacity={0.7}
-          >
-            <Lucide name="trash" size={20} color="#373737ff" style={styles.actionBtnIcon} />
-          </TouchableOpacity>,
-        ]}
+        onBack={isSelectionMode ? exitSelectionMode : undefined}
+        items={
+          isSelectionMode
+            ? [
+                <TouchableOpacity
+                  key="trash"
+                  onPress={handleDeleteSelected}
+                  activeOpacity={0.8}
+                  style={styles.headerTrashBtn}
+                >
+                  <Lucide name="trash-2" size={18} color="#ffffff" />
+                  <Text style={styles.headerTrashText}>
+                    Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                  </Text>
+                </TouchableOpacity>,
+              ]
+            : [
+                <HeaderFilterButton
+                  key="filter-toggle"
+                  isOpen={isControlBarOpen}
+                  onToggle={() => setIsControlBarOpen((prev) => !prev)}
+                  hasActiveFilter={Boolean(searchQuery)}
+                  accentColor="#ec4899"
+                />,
+                <TouchableOpacity
+                  key="add"
+                  onPress={() => router.push('/pages/addCharacter')}
+                  activeOpacity={0.7}
+                >
+                  <Lucide name="plus" size={20} color="#373737ff" style={styles.actionBtnIcon} />
+                </TouchableOpacity>,
+              ]
+        }
       />
 
-      <View style={styles.controlBar}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search characters, pinyin, meaning..."
-        />
-
-        <View style={styles.toggleRow}>
-          <StudyToggleBar
-            showPinyin={showPinyin}
-            setShowPinyin={setShowPinyin}
-            showMeaning={showMeaning}
-            setShowMeaning={setShowMeaning}
-            accentColor="#ec4899"
-          />
-
-          {activeFilterLabel && (
-            <View style={styles.filterBadge}>
-              <Lucide name="filter" size={12} color="#ec4899" />
-              <Text style={styles.filterBadgeText}>{activeFilterLabel}</Text>
-            </View>
-          )}
-        </View>
-      </View>
+      <CollapsibleControlBar
+        isOpen={isControlBarOpen}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        placeholder="Search characters, pinyin, meaning..."
+        filterBadgeLabel={activeFilterLabel || undefined}
+        count={filteredCharacters.length}
+        totalCount={characters.length}
+        countLabel="characters"
+        singleUnit="character"
+        accentColor="#ec4899"
+        showPinyin={showPinyin}
+        setShowPinyin={setShowPinyin}
+        showMeaning={showMeaning}
+        setShowMeaning={setShowMeaning}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={32}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -192,24 +387,43 @@ export default function CharactersScreen() {
         }
       >
         {filteredCharacters.length > 0 ? (
-          <View style={styles.gridContainer}>
-            {filteredCharacters.map((char, index) => {
-              const cardBg = randomColors[index % randomColors.length];
-              return (
-                <View key={char.id || index} style={{ width: '48.5%' }}>
-                  <CharacterCard
-                    char={char}
-                    index={index}
-                    showPinyin={showPinyin}
-                    showMeaning={showMeaning}
-                    cardBg={cardBg}
-                    isPlaying={playingId === (char.id || index + 1)}
-                    onPlayAudio={(id) => setPlayingId(id)}
-                  />
-                </View>
-              );
-            })}
-          </View>
+          <>
+            <View style={styles.gridContainer}>
+              {displayedCharacters.map((char, index) => {
+                const cardBg = randomColors[index % randomColors.length];
+                const charId = char.id!;
+                const isSelected = selectedIds.has(charId);
+
+                return (
+                  <View key={charId || index} style={{ width: '49%' }}>
+                    <CharacterCard
+                      char={char}
+                      index={index}
+                      showPinyin={showPinyin}
+                      showMeaning={showMeaning}
+                      cardBg={cardBg}
+                      isPlaying={playingId === (charId || index + 1)}
+                      onPlayAudio={handlePlayAudio}
+                      isSelected={isSelected}
+                      isSelectionMode={isSelectionMode}
+                      onLongPress={() => enterSelectionMode(charId)}
+                      onPress={isSelectionMode ? () => toggleSelection(charId) : undefined}
+                      onOptionsPress={() => { setActiveCardChar(char); setMenuVisible(true); }}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+
+            <LoadMoreFooter
+              currentCount={displayedCharacters.length}
+              totalCount={filteredCharacters.length}
+              pageSize={PAGE_SIZE}
+              accentColor="#ec4899"
+              itemLabel="characters"
+              onLoadMore={handleLoadMore}
+            />
+          </>
         ) : (
           <View style={styles.emptyContainer}>
             <Lucide name="spell-check" size={40} color="#cbd5e1" />
@@ -223,6 +437,13 @@ export default function CharactersScreen() {
           </View>
         )}
       </ScrollView>
+
+      <OptionsMenuModal
+        visible={menuVisible}
+        onClose={() => { setMenuVisible(false); setActiveCardChar(null); }}
+        title={activeCardChar ? `"${activeCardChar.content}" Options` : isSelectionMode ? `${selectedIds.size} selected` : 'Options'}
+        options={buildMenuOptions()}
+      />
     </ThemedView>
   );
 }
@@ -239,37 +460,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#414040ff',
   },
-  controlBar: {
-    paddingHorizontal: 8,
+  headerTrashBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    gap: 8,
-    position: 'absolute',
-    top: 60,
-    width: '100%',
-    height: 100,
-    zIndex: 1000,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  filterBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#fdf2f8',
-    borderWidth: 1,
-    borderColor: '#fbcfe8',
+    elevation: 3,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
-  filterBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#be185d',
+  headerTrashText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 13,
   },
   scrollView: {
     width: '100%',
@@ -277,8 +485,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     width: '100%',
-    paddingHorizontal: 8,
-    paddingTop: 100,
+    paddingHorizontal: 5,
+    paddingTop: 8,
     paddingBottom: 30,
   },
   gridContainer: {
@@ -299,3 +507,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

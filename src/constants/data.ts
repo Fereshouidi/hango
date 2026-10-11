@@ -1,13 +1,15 @@
+import { randomColors } from "./theme";
+
 export const homeScreenItems = [
     {
         label: "HSKs",
-        icon: "book-open",
+        icon: "book-marked",
         color: "#ef4444e8",
         target: "pages/hsks",
     },
     {
         label: "Lessons",
-        icon: "book-marked",
+        icon: "book-open",
         color: "#f59f0bec",
         target: "pages/lessons",
     },
@@ -40,5 +42,23 @@ export const homeScreenItems = [
         icon: "graduation-cap",
         color: "#6365f1ea",
         target: "pages/rules",
+    },
+    {
+        label: "Write Characters",
+        icon: "pencil-line",
+        color: "#0284c7e8",
+        target: "pages/characterWrite",
+    },
+    {
+        label: "Writing",
+        icon: "keyboard",
+        color: "#8b5cf6e8",
+        target: "pages/writing",
+    },
+    {
+        label: "Listening Loop",
+        icon: "headphones",
+        color: "#ec4899e8",
+        target: "pages/listeningLoop",
     },
 ];

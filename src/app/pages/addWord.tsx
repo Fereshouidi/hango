@@ -14,10 +14,14 @@ import { ThemedView } from '@/components/themed-view';
 import {
   getAllHSKs,
   getAllLessons,
-  getAllTexts,
-  getAllSentences,
-  getAllCharacters,
-  getAllRules,
+  getTextsPaged,
+  getTextsCount,
+  getSentencesPaged,
+  getSentencesCount,
+  getCharactersPaged,
+  getCharactersCountPaged,
+  getRulesPaged,
+  getRulesCount,
   getWordById,
   getHSKsByWordId,
   getLessonsByWordId,
@@ -46,8 +50,12 @@ import {
   CharacterCard,
   ItemCard,
   SliderSection,
+  SliderLoadMoreCard,
 } from '@/components/add-lesson';
+import { usePagedSection } from '@/hooks/usePagedSection';
 import { SuccessBanner } from '@/components/banners';
+
+const SLIDER_PAGE_SIZE = 10;
 
 const AddWord = () => {
   const router = useRouter();
@@ -93,18 +101,10 @@ const AddWord = () => {
   // Search queries per section
   const [searchHsks, setSearchHsks] = useState('');
   const [searchLessons, setSearchLessons] = useState('');
-  const [searchTexts, setSearchTexts] = useState('');
-  const [searchSentences, setSearchSentences] = useState('');
-  const [searchCharacters, setSearchCharacters] = useState('');
-  const [searchRules, setSearchRules] = useState('');
 
   // Filter modes per section ('all' | 'unassigned' | 'hsk')
   const [filterHsks, setFilterHsks] = useState<'all' | 'unassigned' | 'hsk'>('all');
   const [filterLessons, setFilterLessons] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterTexts, setFilterTexts] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterSentences, setFilterSentences] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterCharacters, setFilterCharacters] = useState<'all' | 'unassigned' | 'hsk'>('all');
-  const [filterRules, setFilterRules] = useState<'all' | 'unassigned' | 'hsk'>('all');
 
   // Expanded sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -128,6 +128,12 @@ const AddWord = () => {
     details: '',
   });
 
+  // Paginated sections (DB-level, 10 at a time)
+  const textsPage = usePagedSection<TextType>(getTextsPaged, getTextsCount);
+  const sentencesPage = usePagedSection<SentenceType>(getSentencesPaged, getSentencesCount);
+  const charactersPage = usePagedSection<CharacterType>(getCharactersPaged, getCharactersCountPaged);
+  const rulesPage = usePagedSection<RuleType>(getRulesPaged, getRulesCount);
+
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -143,14 +149,6 @@ const AddWord = () => {
         setHsks(hskData || []);
         const lessonData = getAllLessons() as unknown as LessonType[];
         setLessons(lessonData || []);
-        const textData = getAllTexts() as unknown as TextType[];
-        setTexts(textData || []);
-        const sentenceData = getAllSentences() as unknown as SentenceType[];
-        setSentences(sentenceData || []);
-        const charData = getAllCharacters() as unknown as CharacterType[];
-        setAllCharacters(charData || []);
-        const ruleData = getAllRules() as unknown as RuleType[];
-        setAllRules(ruleData || []);
 
         if (editWordId) {
           const wordData = getWordById(editWordId);
@@ -189,6 +187,10 @@ const AddWord = () => {
       } catch (e) {
         console.error('Failed to load DB items for addWord:', e);
       }
+      textsPage.initialize();
+      sentencesPage.initialize();
+      charactersPage.initialize();
+      rulesPage.initialize();
     }, [editWordId])
   );
 
@@ -221,62 +223,6 @@ const AddWord = () => {
     });
   }, [lessons, searchLessons, filterLessons, selectedHskIds]);
 
-  const filteredTexts = useMemo(() => {
-    return texts.filter((t) => {
-      const q = searchTexts.toLowerCase().trim();
-      const matches =
-        !q ||
-        t.title.toLowerCase().includes(q) ||
-        t.content.toLowerCase().includes(q) ||
-        t.meaning.toLowerCase().includes(q);
-      if (!matches) return false;
-      if (filterTexts === 'unassigned' && t.lessonId) return false;
-      if (filterTexts === 'hsk' && selectedHskIds.size > 0 && t.hskId && !selectedHskIds.has(t.hskId)) return false;
-      return true;
-    });
-  }, [texts, searchTexts, filterTexts, selectedHskIds]);
-
-  const filteredSentences = useMemo(() => {
-    return sentences.filter((s) => {
-      const q = searchSentences.toLowerCase().trim();
-      const matches =
-        !q ||
-        s.content.toLowerCase().includes(q) ||
-        s.pinyin.toLowerCase().includes(q) ||
-        s.meaning.toLowerCase().includes(q);
-      if (!matches) return false;
-      if (filterSentences === 'unassigned' && s.lessonId) return false;
-      if (filterSentences === 'hsk' && selectedHskIds.size > 0 && s.hskId && !selectedHskIds.has(s.hskId)) return false;
-      return true;
-    });
-  }, [sentences, searchSentences, filterSentences, selectedHskIds]);
-
-  const filteredCharacters = useMemo(() => {
-    return allCharacters.filter((c) => {
-      const q = searchCharacters.toLowerCase().trim();
-      const matches =
-        !q ||
-        c.content.toLowerCase().includes(q) ||
-        c.pinyin.toLowerCase().includes(q) ||
-        c.meaning.toLowerCase().includes(q);
-      if (!matches) return false;
-      if (filterCharacters === 'unassigned' && c.wordId) return false;
-      if (filterCharacters === 'hsk' && selectedHskIds.size > 0 && c.hskId && !selectedHskIds.has(c.hskId)) return false;
-      return true;
-    });
-  }, [allCharacters, searchCharacters, filterCharacters, selectedHskIds]);
-
-  const filteredRules = useMemo(() => {
-    return allRules.filter((r) => {
-      const q = searchRules.toLowerCase().trim();
-      const matches = !q || r.content.toLowerCase().includes(q);
-      if (!matches) return false;
-      if (filterRules === 'unassigned' && r.wordId) return false;
-      if (filterRules === 'hsk' && selectedHskIds.size > 0 && r.hskId && !selectedHskIds.has(r.hskId)) return false;
-      return true;
-    });
-  }, [allRules, searchRules, filterRules, selectedHskIds]);
-
   // Bulk select handlers
   const handleSelectAllHsks = () => {
     setSelectedHskIds((prev) => {
@@ -297,7 +243,7 @@ const AddWord = () => {
   const handleSelectAllTexts = () => {
     setSelectedTextIds((prev) => {
       const next = new Set(prev);
-      filteredTexts.forEach((t) => next.add(t.id));
+      textsPage.items.forEach((t) => next.add(t.id));
       return next;
     });
   };
@@ -305,7 +251,7 @@ const AddWord = () => {
   const handleSelectAllSentences = () => {
     setSelectedSentenceIds((prev) => {
       const next = new Set(prev);
-      filteredSentences.forEach((s) => next.add(s.id));
+      sentencesPage.items.forEach((s) => next.add(s.id));
       return next;
     });
   };
@@ -313,7 +259,7 @@ const AddWord = () => {
   const handleSelectAllCharacters = () => {
     setSelectedCharacterIds((prev) => {
       const next = new Set(prev);
-      filteredCharacters.forEach((c) => next.add(c.id));
+      charactersPage.items.forEach((c) => next.add(c.id));
       return next;
     });
   };
@@ -321,7 +267,7 @@ const AddWord = () => {
   const handleSelectAllRules = () => {
     setSelectedRuleIds((prev) => {
       const next = new Set(prev);
-      filteredRules.forEach((r) => next.add(r.id));
+      rulesPage.items.forEach((r) => next.add(r.id));
       return next;
     });
   };
@@ -443,6 +389,17 @@ const AddWord = () => {
         ]}
       />
 
+      {/* Success Banner — outside ScrollView so it truly overlays the screen */}
+      <SuccessBanner
+        visible={createdBannerInfo.visible}
+        title="Word Created!"
+        lessonTitle={createdBannerInfo.wordContent}
+        details={createdBannerInfo.details}
+        onClose={() =>
+          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
+        }
+      />
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -451,16 +408,6 @@ const AddWord = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Success Banner */}
-          <SuccessBanner
-            visible={createdBannerInfo.visible}
-            title="Word Created!"
-            lessonTitle={createdBannerInfo.wordContent}
-            details={createdBannerInfo.details}
-            onClose={() =>
-              setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
-            }
-          />
 
           {/* ===== WORD DETAILS CARD ===== */}
           <View style={styles.card}>
@@ -596,7 +543,7 @@ const AddWord = () => {
             title="Reading Texts"
             icon="file-text"
             color="#0284c7"
-            totalCount={texts.length}
+            totalCount={textsPage.total}
             selectedCount={selectedTextIds.size}
             expanded={expandedSections.texts}
             onToggle={() => toggleSection('texts')}
@@ -610,21 +557,28 @@ const AddWord = () => {
             addNewLabel="+ Text"
             onSelectAll={handleSelectAllTexts}
             onClearAll={() => setSelectedTextIds(new Set())}
-            searchQuery={searchTexts}
-            onSearchChange={setSearchTexts}
-            filterMode={filterTexts}
-            onFilterChange={setFilterTexts}
+            searchQuery={textsPage.search}
+            onSearchChange={textsPage.setSearch}
+            filterMode={textsPage.filter}
+            onFilterChange={(f) => textsPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={selectedHskIds.size > 0}
           >
-            {filteredTexts.length === 0 ? (
+            {textsPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No reading texts match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    textsPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={16}
               >
-                {filteredTexts.map((t) => (
+                {textsPage.items.map((t) => (
                   <ItemCard
                     key={t.id}
                     title={t.title || t.content.substring(0, 12)}
@@ -636,6 +590,15 @@ const AddWord = () => {
                     width={200}
                   />
                 ))}
+                {textsPage.hasMore && (
+                  <SliderLoadMoreCard
+                    currentCount={textsPage.items.length}
+                    totalCount={textsPage.total}
+                    pageSize={SLIDER_PAGE_SIZE}
+                    color="#0284c7"
+                    onLoadMore={textsPage.loadMore}
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -645,7 +608,7 @@ const AddWord = () => {
             title="Sentences"
             icon="message-square-text"
             color="#8b5cf6"
-            totalCount={sentences.length}
+            totalCount={sentencesPage.total}
             selectedCount={selectedSentenceIds.size}
             expanded={expandedSections.sentences}
             onToggle={() => toggleSection('sentences')}
@@ -659,21 +622,28 @@ const AddWord = () => {
             addNewLabel="+ Sentence"
             onSelectAll={handleSelectAllSentences}
             onClearAll={() => setSelectedSentenceIds(new Set())}
-            searchQuery={searchSentences}
-            onSearchChange={setSearchSentences}
-            filterMode={filterSentences}
-            onFilterChange={setFilterSentences}
+            searchQuery={sentencesPage.search}
+            onSearchChange={sentencesPage.setSearch}
+            filterMode={sentencesPage.filter}
+            onFilterChange={(f) => sentencesPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={selectedHskIds.size > 0}
           >
-            {filteredSentences.length === 0 ? (
+            {sentencesPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No sentences match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    sentencesPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={16}
               >
-                {filteredSentences.map((s) => (
+                {sentencesPage.items.map((s) => (
                   <ItemCard
                     key={s.id}
                     title={s.content}
@@ -685,6 +655,15 @@ const AddWord = () => {
                     width={200}
                   />
                 ))}
+                {sentencesPage.hasMore && (
+                  <SliderLoadMoreCard
+                    currentCount={sentencesPage.items.length}
+                    totalCount={sentencesPage.total}
+                    pageSize={SLIDER_PAGE_SIZE}
+                    color="#8b5cf6"
+                    onLoadMore={sentencesPage.loadMore}
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -694,7 +673,7 @@ const AddWord = () => {
             title="Characters"
             icon="spell-check"
             color="#ec489a"
-            totalCount={allCharacters.length}
+            totalCount={charactersPage.total}
             selectedCount={selectedCharacterIds.size}
             expanded={expandedSections.characters}
             onToggle={() => toggleSection('characters')}
@@ -708,21 +687,28 @@ const AddWord = () => {
             addNewLabel="+ Character"
             onSelectAll={handleSelectAllCharacters}
             onClearAll={() => setSelectedCharacterIds(new Set())}
-            searchQuery={searchCharacters}
-            onSearchChange={setSearchCharacters}
-            filterMode={filterCharacters}
-            onFilterChange={setFilterCharacters}
+            searchQuery={charactersPage.search}
+            onSearchChange={charactersPage.setSearch}
+            filterMode={charactersPage.filter}
+            onFilterChange={(f) => charactersPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={selectedHskIds.size > 0}
           >
-            {filteredCharacters.length === 0 ? (
+            {charactersPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No characters match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    charactersPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={16}
               >
-                {filteredCharacters.map((c) => (
+                {charactersPage.items.map((c) => (
                   <CharacterCard
                     key={c.id}
                     character={c}
@@ -732,6 +718,15 @@ const AddWord = () => {
                     }
                   />
                 ))}
+                {charactersPage.hasMore && (
+                  <SliderLoadMoreCard
+                    currentCount={charactersPage.items.length}
+                    totalCount={charactersPage.total}
+                    pageSize={SLIDER_PAGE_SIZE}
+                    color="#ec489a"
+                    onLoadMore={charactersPage.loadMore}
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -741,7 +736,7 @@ const AddWord = () => {
             title="Grammar Rules"
             icon="book-open-check"
             color="#d97706"
-            totalCount={allRules.length}
+            totalCount={rulesPage.total}
             selectedCount={selectedRuleIds.size}
             expanded={expandedSections.rules}
             onToggle={() => toggleSection('rules')}
@@ -752,24 +747,31 @@ const AddWord = () => {
                   : '/pages/addRule'
               )
             }
-            addNewLabel="+ Character"
+            addNewLabel="+ Rule"
             onSelectAll={handleSelectAllRules}
             onClearAll={() => setSelectedRuleIds(new Set())}
-            searchQuery={searchRules}
-            onSearchChange={setSearchRules}
-            filterMode={filterRules}
-            onFilterChange={setFilterRules}
+            searchQuery={rulesPage.search}
+            onSearchChange={rulesPage.setSearch}
+            filterMode={rulesPage.filter}
+            onFilterChange={(f) => rulesPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={selectedHskIds.size > 0}
           >
-            {filteredRules.length === 0 ? (
+            {rulesPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No grammar rules match the filter.</Text>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    rulesPage.loadMore();
+                  }
+                }}
+                scrollEventThrottle={16}
               >
-                {filteredRules.map((r) => (
+                {rulesPage.items.map((r) => (
                   <ItemCard
                     key={r.id}
                     title={r.content}
@@ -783,6 +785,15 @@ const AddWord = () => {
                     isChineseTitle={false}
                   />
                 ))}
+                {rulesPage.hasMore && (
+                  <SliderLoadMoreCard
+                    currentCount={rulesPage.items.length}
+                    totalCount={rulesPage.total}
+                    pageSize={SLIDER_PAGE_SIZE}
+                    color="#d97706"
+                    onLoadMore={rulesPage.loadMore}
+                  />
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -811,8 +822,8 @@ export default AddWord;
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 10,
-    gap: 12,
+    padding: 5,
+    gap: 5,
   },
   headerSaveButton: {
     backgroundColor: '#059669',
@@ -895,6 +906,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 5,
     gap: 8,
     shadowColor: '#059669',
     shadowOffset: { width: 0, height: 4 },

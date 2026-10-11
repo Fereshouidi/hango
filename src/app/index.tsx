@@ -1,5 +1,5 @@
 import * as Device from 'expo-device';
-import { Platform, ScrollView, StyleSheet, Text, Image, useColorScheme, TouchableOpacity } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, Image, useColorScheme, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedIcon } from '@/components/animated-icon';
@@ -92,14 +92,34 @@ export default function HomeScreen() {
               <Lucide name="menu" size={20} color="#373737ff" />
             </TouchableOpacity>
 
-            <Image
-              source={require("@/assets/images/logo.png")}
+            <View
               style={{
-                width: 200,
-                height: "80%",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
               }}
-              resizeMode="contain"
-            />
+            >
+              <Image
+                source={require("@/assets/images/logo/normalScale.jpg")}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 8,
+                }}
+                resizeMode="cover"
+              />
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: '700',
+                  letterSpacing: 0.5,
+                }}
+              >
+                HanGo
+              </Text>
+            </View>
+
 
           </ThemedView>
 

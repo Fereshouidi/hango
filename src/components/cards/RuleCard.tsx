@@ -12,6 +12,11 @@ interface RuleCardProps {
   isPlaying?: boolean;
   onPlayAudio?: (id: number, text: string) => void;
   accentColor?: string;
+  isSelected?: boolean;
+  isSelectionMode?: boolean;
+  onLongPress?: () => void;
+  onPress?: () => void;
+  onOptionsPress?: () => void;
 }
 
 export const RuleCard: React.FC<RuleCardProps> = ({
@@ -21,20 +26,37 @@ export const RuleCard: React.FC<RuleCardProps> = ({
   isPlaying,
   onPlayAudio,
   accentColor = '#d97706',
+  isSelected = false,
+  isSelectionMode = false,
+  onLongPress,
+  onPress,
+  onOptionsPress,
 }) => {
   const router = useRouter();
+  const [localPlaying, setLocalPlaying] = React.useState(false);
+  const activePlaying = isPlaying !== undefined ? isPlaying : localPlaying;
 
-  const handleSpeech = (e: any) => {
-    e.stopPropagation();
+  const handleSpeech = () => {
     if (onPlayAudio && rule.id) {
       onPlayAudio(rule.id, rule.content);
     } else {
-      speakEnglishText(rule.content);
+      setLocalPlaying(true);
+      speakEnglishText(
+        rule.content,
+        () => setLocalPlaying(true),
+        () => setLocalPlaying(false)
+      );
     }
   };
 
   const handlePressCard = () => {
-    router.push(`/pages/ruleDetails/${rule.id}` as any);
+    if (isSelectionMode && onPress) {
+      onPress();
+    } else if (onPress) {
+      onPress();
+    } else {
+      router.push(`/pages/ruleDetails/${rule.id}` as any);
+    }
   };
 
   return (
@@ -42,32 +64,58 @@ export const RuleCard: React.FC<RuleCardProps> = ({
       style={[
         styles.card,
         cardBg ? { backgroundColor: cardBg } : styles.defaultBg,
+        isSelected && { borderColor: '#0f172a', borderWidth: 3.5 },
+        isSelectionMode && !isSelected && { opacity: 0.85 },
       ]}
       onPress={handlePressCard}
+      onLongPress={onLongPress}
       activeOpacity={0.85}
     >
       <View style={styles.header}>
-        <View style={[styles.ruleBadge, cardBg ? styles.whiteBadgeBg : { backgroundColor: accentColor + '20' }]}>
-          <Text style={[styles.ruleBadgeText, cardBg ? styles.whiteText : { color: accentColor }]}>
-            Rule #{rule.id || (index !== undefined ? index + 1 : 1)}
-          </Text>
-        </View>
+        {isSelectionMode ? (
+          <View style={[styles.selectBadge, isSelected ? { backgroundColor: '#0f172a' } : { borderColor: '#ffffff', borderWidth: 1.5, backgroundColor: 'rgba(0,0,0,0.2)' }]}>
+            {isSelected && <Lucide name="check" size={12} color="#ffffff" />}
+          </View>
+        ) : (
+          <View style={[styles.ruleBadge, cardBg ? styles.whiteBadgeBg : { backgroundColor: accentColor + '20' }]}>
+            <Text style={[styles.ruleBadgeText, cardBg ? styles.whiteText : { color: accentColor }]}>
+              Rule #{rule.id || (index !== undefined ? index + 1 : 1)}
+            </Text>
+          </View>
+        )}
 
-        <TouchableOpacity
-          style={[
-            styles.playBtn,
-            cardBg ? styles.whitePlayBtnBg : { backgroundColor: accentColor + '20' },
-            isPlaying && styles.playingBtnActive,
-          ]}
-          onPress={handleSpeech}
-          activeOpacity={0.7}
-        >
-          <Lucide
-            name={isPlaying ? 'volume-2' : 'volume-1'}
-            size={15}
-            color={isPlaying ? '#ffffff' : cardBg ? '#ffffff' : accentColor}
-          />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <TouchableOpacity
+            style={[
+              styles.playBtn,
+              cardBg ? styles.whitePlayBtnBg : { backgroundColor: accentColor + '20' },
+              activePlaying && styles.playingBtnActive,
+            ]}
+            onPress={handleSpeech}
+            activeOpacity={0.7}
+          >
+            <Lucide
+              name={activePlaying ? 'volume-2' : 'volume-1'}
+              size={15}
+              color={activePlaying ? '#ffffff' : cardBg ? '#ffffff' : accentColor}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.playBtn,
+              cardBg ? styles.whitePlayBtnBg : { backgroundColor: accentColor + '20' },
+            ]}
+            onPress={onOptionsPress || onLongPress}
+            activeOpacity={0.7}
+          >
+            <Lucide
+              name="more-vertical"
+              size={15}
+              color={cardBg ? '#ffffff' : accentColor}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Text style={[styles.ruleText, cardBg && styles.whiteText]}>
@@ -83,7 +131,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     gap: 8,
-    marginVertical: 4,
+    marginVertical: 0,
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -111,6 +159,13 @@ const styles = StyleSheet.create({
   ruleBadgeText: {
     fontSize: 11.5,
     fontWeight: '700',
+  },
+  selectBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   playBtn: {
     width: 30,
