@@ -265,11 +265,12 @@ export default function SentencesScreen() {
                     )
                   }
                   activeOpacity={0.7}
+                  style={styles.actionBtnIcon}
                 >
-                  <Lucide name="headphones" size={19} color="#ec4899" style={styles.actionBtnIcon} />
+                  <Lucide name="headphones" size={19} color="#ec4899" />
                 </TouchableOpacity>,
-                <TouchableOpacity key="add" onPress={() => router.push('/pages/addSentence')} activeOpacity={0.7}>
-                  <Lucide name="plus" size={20} color="#373737ff" style={styles.actionBtnIcon} />
+                <TouchableOpacity key="add" onPress={() => router.push('/pages/addSentence')} activeOpacity={0.7} style={styles.actionBtnIcon}>
+                  <Lucide name="plus" size={20} color="#373737ff"/>
                 </TouchableOpacity>,
               ]
         }
@@ -334,7 +335,21 @@ export default function SentencesScreen() {
 }
 
 const styles = StyleSheet.create({
-  actionBtnIcon: { fontSize: 22, backgroundColor: '#e8e8e8ff', borderRadius: 50, width: 40, height: 40, textAlign: 'center', textAlignVertical: 'center', borderWidth: 1, borderColor: '#414040ff' },
+  actionBtnIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
+  },
   headerTrashBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -355,7 +370,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   scrollView: { width: '100%', flex: 1 },
-  scrollContent: { width: '100%', paddingHorizontal: 8, paddingBottom: 24, paddingTop: 8 },
+  scrollContent: { width: '100%', paddingHorizontal: 5, paddingBottom: 24, paddingTop: 5 },
   emptyContainer: { padding: 40, alignItems: 'center', justifyContent: 'center', gap: 12, width: '100%' },
   emptyText: { fontSize: 14, color: '#64748b', textAlign: 'center' },
 });

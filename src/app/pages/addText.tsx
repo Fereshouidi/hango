@@ -21,6 +21,11 @@ import {
   getCharactersCountPaged,
   getRulesPaged,
   getRulesCount,
+  getTextById,
+  updateText,
+  getWordsByTextId,
+  getCharactersByTextId,
+  getRulesByTextId,
   db,
 } from '@/db/utils';
 import Header from '@/components/main/header';
@@ -56,6 +61,10 @@ type ExtractedSentence = {
 const AddText = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const rawEditId = params.textId || (params.id && !params.hskId && !params.lessonId ? params.id : undefined);
+  const editTextId = rawEditId && !isNaN(Number(rawEditId)) ? Number(rawEditId) : null;
+  const isEditing = Boolean(editTextId);
+
   const preselectedHskId = params.hskId ? Number(params.hskId) : null;
   const preselectedLessonId = params.lessonId ? Number(params.lessonId) : null;
 
@@ -137,13 +146,31 @@ const AddText = () => {
         setHsks(hskData || []);
         const lessonData = getAllLessons() as unknown as LessonType[];
         setLessons(lessonData || []);
+
+        if (editTextId) {
+          const existing = getTextById(editTextId);
+          if (existing) {
+            setTitle(existing.title || '');
+            setContent(existing.content || '');
+            setPinyin(existing.pinyin || '');
+            setMeaning(existing.meaning || '');
+            setSelectedHskId(existing.hskId || null);
+            setSelectedLessonId(existing.lessonId || null);
+          }
+          const linkedWords = (getWordsByTextId(editTextId) as any[]) || [];
+          const linkedChars = (getCharactersByTextId(editTextId) as any[]) || [];
+          const linkedRules = (getRulesByTextId(editTextId) as any[]) || [];
+          setSelectedWordIds(new Set(linkedWords.map((w: any) => w.id)));
+          setSelectedCharacterIds(new Set(linkedChars.map((c: any) => c.id)));
+          setSelectedRuleIds(new Set(linkedRules.map((r: any) => r.id)));
+        }
       } catch (e) {
         console.error('Failed to load DB items for addText:', e);
       }
       wordsPage.initialize();
       charactersPage.initialize();
       rulesPage.initialize();
-    }, [])
+    }, [editTextId])
   );
 
   // Extract sentences, pinyins, and meanings dynamically by sentence points (。 ! ? ！ ？ . \n)
@@ -297,6 +324,52 @@ const AddText = () => {
     try {
       const textTitle = title.trim() || content.trim().substring(0, 15) + '...';
 
+      if (isEditing && editTextId) {
+        updateText(editTextId, {
+          title: textTitle,
+          content: content.trim(),
+          pinyin: pinyin.trim(),
+          meaning: meaning.trim(),
+          hskId: selectedHskId ?? undefined,
+          lessonId: selectedLessonId ?? undefined,
+        });
+
+        // Associate selected words
+        for (const id of selectedWordIds) {
+          db.runSync(
+            `UPDATE words SET textId = ?, hskId = COALESCE(hskId, ?) WHERE id = ?`,
+            editTextId,
+            selectedHskId,
+            id
+          );
+        }
+
+        // Associate selected characters
+        for (const id of selectedCharacterIds) {
+          db.runSync(
+            `UPDATE characters SET textId = ?, hskId = COALESCE(hskId, ?) WHERE id = ?`,
+            editTextId,
+            selectedHskId,
+            id
+          );
+        }
+
+        // Associate selected rules
+        for (const id of selectedRuleIds) {
+          db.runSync(
+            `UPDATE rules SET textId = ?, hskId = COALESCE(hskId, ?) WHERE id = ?`,
+            editTextId,
+            selectedHskId,
+            id
+          );
+        }
+
+        Alert.alert('Success', 'Text updated successfully!', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+        return;
+      }
+
       // 1. Insert new Text record into DB
       const result = db.runSync(
         `INSERT INTO texts (title, content, pinyin, meaning, hskId, lessonId) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -389,7 +462,7 @@ const AddText = () => {
       {/* Header */}
       <Header
         useBackArrow={true}
-        label="Create Text"
+        label={isEditing ? 'Edit Text' : 'Create Text'}
         items={[
           <TouchableOpacity
             key="check"

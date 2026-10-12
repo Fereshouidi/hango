@@ -236,7 +236,7 @@ export const deleteHSK = (id: number) => {
 };
 
 export const getAllHSKs = () => {
-    const rows = db.getAllSync("SELECT * FROM hsks");
+    const rows = db.getAllSync("SELECT * FROM hsks ORDER BY id DESC");
     return rows;
 };
 
@@ -264,7 +264,7 @@ export const createLesson = (lesson: LessonType) => {
 };
 
 export const getAllLessons = () => {
-    const rows = db.getAllSync("SELECT * FROM lessons");
+    const rows = db.getAllSync("SELECT * FROM lessons ORDER BY num DESC, id DESC");
     return rows;
 };
 
@@ -277,7 +277,7 @@ export const getLessonsPaged = (
     const q = `%${search.toLowerCase()}%`;
     const unassignedClause = filter === 'unassigned' ? 'AND hskId IS NULL' : '';
     const rows = db.getAllSync<LessonType>(
-        `SELECT * FROM lessons WHERE (lower(title) LIKE ? OR ('lesson ' || num) LIKE ?) ${unassignedClause} ORDER BY num LIMIT ? OFFSET ?`,
+        `SELECT * FROM lessons WHERE (lower(title) LIKE ? OR ('lesson ' || num) LIKE ?) ${unassignedClause} ORDER BY num DESC, id DESC LIMIT ? OFFSET ?`,
         q, q, limit, offset
     );
     return rows;
@@ -296,7 +296,7 @@ export const getLessonsCount = (search: string, filter: 'all' | 'unassigned'): n
 };
 
 export const getLessonsByHSKId = (hskId: number) => {
-    const rows = db.getAllSync("SELECT * FROM lessons WHERE hskId = ?", hskId);
+    const rows = db.getAllSync("SELECT * FROM lessons WHERE hskId = ? ORDER BY num DESC, id DESC", hskId);
     return rows;
 };
 
@@ -332,8 +332,28 @@ export const createText = (text: TextType) => {
     );
 };
 
+export const updateText = (id: number, text: Partial<TextType>) => {
+    return db.runSync(
+        `UPDATE texts 
+        SET title = COALESCE(?, title),
+            content = COALESCE(?, content),
+            pinyin = COALESCE(?, pinyin),
+            meaning = COALESCE(?, meaning),
+            hskId = ?,
+            lessonId = ?
+        WHERE id = ?`,
+        text.title ?? null,
+        text.content ?? null,
+        text.pinyin ?? null,
+        text.meaning ?? null,
+        text.hskId ?? null,
+        text.lessonId ?? null,
+        id
+    );
+};
+
 export const getAllTexts = () => {
-    const rows = db.getAllSync("SELECT * FROM texts");
+    const rows = db.getAllSync("SELECT * FROM texts ORDER BY id DESC");
     return rows;
 };
 
@@ -346,7 +366,7 @@ export const getTextsPaged = (
     const q = `%${search.toLowerCase()}%`;
     const unassignedClause = filter === 'unassigned' ? 'AND hskId IS NULL AND lessonId IS NULL' : '';
     const rows = db.getAllSync<TextType>(
-        `SELECT * FROM texts WHERE (lower(title) LIKE ? OR lower(content) LIKE ? OR lower(meaning) LIKE ?) ${unassignedClause} ORDER BY id LIMIT ? OFFSET ?`,
+        `SELECT * FROM texts WHERE (lower(title) LIKE ? OR lower(content) LIKE ? OR lower(meaning) LIKE ?) ${unassignedClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
         q, q, q, limit, offset
     );
     return rows;
@@ -376,12 +396,12 @@ export const getTextById = (id: number): TextType | null => {
 };
 
 export const getTextsByLessonId = (lessonId: number) => {
-    const rows = db.getAllSync("SELECT * FROM texts WHERE lessonId = ?", lessonId);
+    const rows = db.getAllSync("SELECT * FROM texts WHERE lessonId = ? ORDER BY id DESC", lessonId);
     return rows;
 };
 
 export const getTextsByHSKId = (hskId: number) => {
-    const rows = db.getAllSync("SELECT * FROM texts WHERE hskId = ?", hskId);
+    const rows = db.getAllSync("SELECT * FROM texts WHERE hskId = ? ORDER BY id DESC", hskId);
     return rows;
 };
 
@@ -397,6 +417,7 @@ export const getTextsBySentenceId = (sentenceId: number) => {
             WHERE id IN (SELECT textId FROM sentences WHERE id = ? AND textId IS NOT NULL)
                OR id IN (SELECT textId FROM words WHERE sentenceId = ? AND textId IS NOT NULL)
                OR (length(?) > 0 AND content LIKE '%' || ? || '%')
+            ORDER BY id DESC
         `, numId, numId, cleanContent, cleanContent);
         return rows || [];
     } catch (e) {
@@ -408,12 +429,12 @@ export const getTextsBySentenceId = (sentenceId: number) => {
 
 
 export const getTextsByCharacterId = (characterId: number) => {
-    const rows = db.getAllSync("SELECT * FROM texts WHERE id IN (SELECT textId FROM characters WHERE id = ?)", characterId);
+    const rows = db.getAllSync("SELECT * FROM texts WHERE id IN (SELECT textId FROM characters WHERE id = ?) ORDER BY id DESC", characterId);
     return rows;
 };
 
 export const getTextsByRuleId = (ruleId: number) => {
-    const rows = db.getAllSync("SELECT * FROM texts WHERE id IN (SELECT textId FROM rules WHERE id = ?)", ruleId);
+    const rows = db.getAllSync("SELECT * FROM texts WHERE id IN (SELECT textId FROM rules WHERE id = ?) ORDER BY id DESC", ruleId);
     return rows;
 };
 
@@ -471,7 +492,7 @@ export const updateSentence = (id: number, sentence: Partial<SentenceType>) => {
 };
 
 export const getAllSentences = () => {
-    const rows = db.getAllSync("SELECT * FROM sentences");
+    const rows = db.getAllSync("SELECT * FROM sentences ORDER BY id DESC");
     return rows;
 };
 
@@ -484,7 +505,7 @@ export const getSentencesPaged = (
     const q = `%${search.toLowerCase()}%`;
     const unassignedClause = filter === 'unassigned' ? 'AND hskId IS NULL AND lessonId IS NULL AND textId IS NULL' : '';
     const rows = db.getAllSync<SentenceType>(
-        `SELECT * FROM sentences WHERE (lower(content) LIKE ? OR lower(pinyin) LIKE ? OR lower(meaning) LIKE ?) ${unassignedClause} ORDER BY id LIMIT ? OFFSET ?`,
+        `SELECT * FROM sentences WHERE (lower(content) LIKE ? OR lower(pinyin) LIKE ? OR lower(meaning) LIKE ?) ${unassignedClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
         q, q, q, limit, offset
     );
     return rows;
@@ -503,12 +524,12 @@ export const getSentencesCount = (search: string, filter: 'all' | 'unassigned'):
 };
 
 export const getSentencesByLessonId = (lessonId: number) => {
-    const rows = db.getAllSync("SELECT * FROM sentences WHERE lessonId = ?", lessonId);
+    const rows = db.getAllSync("SELECT * FROM sentences WHERE lessonId = ? ORDER BY id DESC", lessonId);
     return rows;
 };
 
 export const getSentencesByHSKId = (hskId: number) => {
-    const rows = db.getAllSync("SELECT * FROM sentences WHERE hskId = ?", hskId);
+    const rows = db.getAllSync("SELECT * FROM sentences WHERE hskId = ? ORDER BY id DESC", hskId);
     return rows;
 };
 
@@ -523,6 +544,7 @@ export const getSentencesByTextId = (textId: number) => {
             SELECT DISTINCT * FROM sentences 
             WHERE textId = ?
                OR (length(?) > 0 AND instr(?, replace(replace(replace(content, '。', ''), '！', ''), '？', '')) > 0)
+            ORDER BY id DESC
         `, numId, cleanContent, cleanContent);
         return rows || [];
     } catch (e) {
@@ -536,17 +558,18 @@ export const getSentencesByWordId = (wordId: number) => {
         SELECT DISTINCT * FROM sentences 
         WHERE id IN (SELECT sentenceId FROM words WHERE id = ?) 
            OR id IN (SELECT sentenceId FROM word_sentences WHERE wordId = ?)
+        ORDER BY id DESC
     `, wordId, wordId);
     return rows;
 };
 
 export const getSentencesByCharacterId = (characterId: number) => {
-    const rows = db.getAllSync("SELECT * FROM sentences WHERE id IN (SELECT sentenceId FROM characters WHERE id = ?)", characterId);
+    const rows = db.getAllSync("SELECT * FROM sentences WHERE id IN (SELECT sentenceId FROM characters WHERE id = ?) ORDER BY id DESC", characterId);
     return rows;
 };
 
 export const getSentencesByRuleId = (ruleId: number) => {
-    const rows = db.getAllSync("SELECT * FROM sentences WHERE id IN (SELECT sentenceId FROM rules WHERE id = ?)", ruleId);
+    const rows = db.getAllSync("SELECT * FROM sentences WHERE id IN (SELECT sentenceId FROM rules WHERE id = ?) ORDER BY id DESC", ruleId);
     return rows;
 };
 
@@ -566,6 +589,7 @@ export const getHSKsBySentenceId = (sentenceId: number) => {
         SELECT DISTINCT * FROM hsks 
         WHERE id IN (SELECT hskId FROM sentences WHERE id = ?)
            OR id IN (SELECT hskId FROM lessons WHERE id IN (SELECT lessonId FROM sentences WHERE id = ?))
+        ORDER BY id DESC
     `, sentenceId, sentenceId);
     return rows;
 };
@@ -574,6 +598,7 @@ export const getLessonsBySentenceId = (sentenceId: number) => {
     const rows = db.getAllSync(`
         SELECT DISTINCT * FROM lessons 
         WHERE id IN (SELECT lessonId FROM sentences WHERE id = ?)
+        ORDER BY num DESC, id DESC
     `, sentenceId);
     return rows;
 };
@@ -615,7 +640,7 @@ export const createWord = (word: WordType) => {
 };
 
 export const getAllWords = () => {
-    const rows = db.getAllSync("SELECT * FROM words");
+    const rows = db.getAllSync("SELECT * FROM words ORDER BY id DESC");
     return rows;
 };
 
@@ -628,7 +653,7 @@ export const getWordsPaged = (
     const q = `%${search.toLowerCase()}%`;
     const unassignedClause = filter === 'unassigned' ? 'AND hskId IS NULL AND lessonId IS NULL' : '';
     const rows = db.getAllSync<WordType>(
-        `SELECT * FROM words WHERE (lower(content) LIKE ? OR lower(pinyin) LIKE ? OR lower(meaning) LIKE ?) ${unassignedClause} ORDER BY id LIMIT ? OFFSET ?`,
+        `SELECT * FROM words WHERE (lower(content) LIKE ? OR lower(pinyin) LIKE ? OR lower(meaning) LIKE ?) ${unassignedClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
         q, q, q, limit, offset
     );
     return rows;
@@ -658,6 +683,7 @@ export const getWordsBySentenceId = (sentenceId: number) => {
             WHERE sentenceId = ? 
                OR id IN (SELECT wordId FROM word_sentences WHERE sentenceId = ?)
                OR (length(?) > 0 AND instr(?, content) > 0)
+            ORDER BY id DESC
         `, numId, numId, cleanContent, cleanContent);
         return rows || [];
     } catch (e) {
@@ -671,6 +697,7 @@ export const getWordsByLessonId = (lessonId: number) => {
         SELECT DISTINCT * FROM words 
         WHERE lessonId = ? 
            OR id IN (SELECT wordId FROM word_lessons WHERE lessonId = ?)
+        ORDER BY id DESC
     `, lessonId, lessonId);
     return rows;
 };
@@ -681,6 +708,7 @@ export const getWordsByHSKId = (hskId: number) => {
         WHERE hskId = ? 
            OR id IN (SELECT wordId FROM word_hsks WHERE hskId = ?)
            OR lessonId IN (SELECT id FROM lessons WHERE hskId = ?)
+        ORDER BY id DESC
     `, hskId, hskId, hskId);
     return rows;
 };
@@ -690,6 +718,7 @@ export const getWordsByTextId = (textId: number) => {
         SELECT DISTINCT * FROM words 
         WHERE textId = ? 
            OR id IN (SELECT wordId FROM word_texts WHERE textId = ?)
+        ORDER BY id DESC
     `, textId, textId);
     return rows;
 };
@@ -699,6 +728,7 @@ export const getWordsByCharacterId = (characterId: number) => {
         SELECT DISTINCT * FROM words 
         WHERE id IN (SELECT wordId FROM characters WHERE id = ?)
            OR id IN (SELECT wordId FROM word_characters WHERE characterId = ?)
+        ORDER BY id DESC
     `, characterId, characterId);
     return rows;
 };
@@ -708,6 +738,7 @@ export const getWordsByRuleId = (ruleId: number) => {
         SELECT DISTINCT * FROM words 
         WHERE id IN (SELECT wordId FROM rules WHERE id = ?)
            OR id IN (SELECT wordId FROM word_rules WHERE ruleId = ?)
+        ORDER BY id DESC
     `, ruleId, ruleId);
     return rows;
 };
@@ -717,6 +748,7 @@ export const getHSKsByWordId = (wordId: number) => {
         SELECT DISTINCT * FROM hsks 
         WHERE id IN (SELECT hskId FROM words WHERE id = ? AND hskId IS NOT NULL)
            OR id IN (SELECT hskId FROM word_hsks WHERE wordId = ?)
+        ORDER BY id DESC
     `, wordId, wordId);
     return rows;
 };
@@ -726,6 +758,7 @@ export const getLessonsByWordId = (wordId: number) => {
         SELECT DISTINCT * FROM lessons 
         WHERE id IN (SELECT lessonId FROM words WHERE id = ? AND lessonId IS NOT NULL)
            OR id IN (SELECT lessonId FROM word_lessons WHERE wordId = ?)
+        ORDER BY num DESC, id DESC
     `, wordId, wordId);
     return rows;
 };
@@ -735,6 +768,7 @@ export const getTextsByWordId = (wordId: number) => {
         SELECT DISTINCT * FROM texts 
         WHERE id IN (SELECT textId FROM words WHERE id = ? AND textId IS NOT NULL)
            OR id IN (SELECT textId FROM word_texts WHERE wordId = ?)
+        ORDER BY id DESC
     `, wordId, wordId);
     return rows;
 };
@@ -940,10 +974,10 @@ export const updateCharacterRelations = (
 
 export const getAllCharacters = (limit?: number, offset: number = 0) => {
     if (limit !== undefined && limit > 0) {
-        const rows = db.getAllSync("SELECT * FROM characters LIMIT ? OFFSET ?", limit, offset);
+        const rows = db.getAllSync("SELECT * FROM characters ORDER BY id DESC LIMIT ? OFFSET ?", limit, offset);
         return rows;
     }
-    const rows = db.getAllSync("SELECT * FROM characters");
+    const rows = db.getAllSync("SELECT * FROM characters ORDER BY id DESC");
     return rows;
 };
 
@@ -965,7 +999,7 @@ export const getCharactersPaged = (
     const q = `%${search.toLowerCase()}%`;
     const unassignedClause = filter === 'unassigned' ? 'AND hskId IS NULL AND lessonId IS NULL' : '';
     const rows = db.getAllSync<CharacterType>(
-        `SELECT * FROM characters WHERE (lower(content) LIKE ? OR lower(pinyin) LIKE ? OR lower(meaning) LIKE ?) ${unassignedClause} ORDER BY id LIMIT ? OFFSET ?`,
+        `SELECT * FROM characters WHERE (lower(content) LIKE ? OR lower(pinyin) LIKE ? OR lower(meaning) LIKE ?) ${unassignedClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
         q, q, q, limit, offset
     );
     return rows;
@@ -984,7 +1018,7 @@ export const getCharactersCountPaged = (search: string, filter: 'all' | 'unassig
 };
 
 export const getCharactersByTextId = (textId: number) => {
-    const rows = db.getAllSync("SELECT * FROM characters WHERE textId = ?", textId);
+    const rows = db.getAllSync("SELECT * FROM characters WHERE textId = ? ORDER BY id DESC", textId);
     return rows;
 };
 
@@ -994,6 +1028,7 @@ export const getCharactersByHSKId = (hskId: number, limit?: number, offset: numb
             SELECT DISTINCT * FROM characters
             WHERE hskId = ?
                OR id IN (SELECT characterId FROM character_hsks WHERE hskId = ?)
+            ORDER BY id DESC
             LIMIT ? OFFSET ?
         `, hskId, hskId, limit, offset);
         return rows;
@@ -1002,6 +1037,7 @@ export const getCharactersByHSKId = (hskId: number, limit?: number, offset: numb
         SELECT DISTINCT * FROM characters
         WHERE hskId = ?
            OR id IN (SELECT characterId FROM character_hsks WHERE hskId = ?)
+        ORDER BY id DESC
     `, hskId, hskId);
     return rows;
 };
@@ -1033,6 +1069,7 @@ export const getCharactersBySentenceId = (sentenceId: number) => {
                    SELECT id FROM words WHERE sentenceId = ? OR id IN (SELECT wordId FROM word_sentences WHERE sentenceId = ?)
                ))
                OR (length(?) > 0 AND instr(?, content) > 0)
+            ORDER BY id DESC
         `, numId, numId, numId, cleanContent, cleanContent);
         return rows || [];
     } catch (e) {
@@ -1046,6 +1083,7 @@ export const getCharactersByWordId = (wordId: number) => {
         SELECT DISTINCT * FROM characters 
         WHERE wordId = ? 
            OR id IN (SELECT characterId FROM word_characters WHERE wordId = ?)
+        ORDER BY id DESC
     `, wordId, wordId);
     return rows;
 };
@@ -1054,6 +1092,7 @@ export const getCharactersByRuleId = (ruleId: number) => {
     const rows = db.getAllSync(`
         SELECT DISTINCT * FROM characters 
         WHERE id IN (SELECT characterId FROM rule_characters WHERE ruleId = ?)
+        ORDER BY id DESC
     `, ruleId);
     return rows;
 };
@@ -1092,7 +1131,7 @@ export const createRule = (rule: RuleType) => {
 };
 
 export const getAllRules = () => {
-    const rows = db.getAllSync("SELECT * FROM rules");
+    const rows = db.getAllSync("SELECT * FROM rules ORDER BY id DESC");
     return rows;
 };
 
@@ -1105,7 +1144,7 @@ export const getRulesPaged = (
     const q = `%${search.toLowerCase()}%`;
     const unassignedClause = filter === 'unassigned' ? 'AND hskId IS NULL AND lessonId IS NULL' : '';
     const rows = db.getAllSync<RuleType>(
-        `SELECT * FROM rules WHERE lower(content) LIKE ? ${unassignedClause} ORDER BY id LIMIT ? OFFSET ?`,
+        `SELECT * FROM rules WHERE lower(content) LIKE ? ${unassignedClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
         q, limit, offset
     );
     return rows;
@@ -1129,6 +1168,7 @@ export const getRulesByHSKId = (hskId: number) => {
         WHERE hskId = ? 
            OR id IN (SELECT ruleId FROM rule_hsks WHERE hskId = ?)
            OR lessonId IN (SELECT id FROM lessons WHERE hskId = ?)
+        ORDER BY id DESC
     `, hskId, hskId, hskId);
     return rows;
 };
@@ -1138,6 +1178,7 @@ export const getRulesByLessonId = (lessonId: number) => {
         SELECT DISTINCT * FROM rules 
         WHERE lessonId = ? 
            OR id IN (SELECT ruleId FROM rule_lessons WHERE lessonId = ?)
+        ORDER BY id DESC
     `, lessonId, lessonId);
     return rows;
 };
@@ -1147,6 +1188,7 @@ export const getRulesByTextId = (textId: number) => {
         SELECT DISTINCT * FROM rules 
         WHERE textId = ? 
            OR id IN (SELECT ruleId FROM rule_texts WHERE textId = ?)
+        ORDER BY id DESC
     `, textId, textId);
     return rows;
 };
@@ -1156,6 +1198,7 @@ export const getRulesBySentenceId = (sentenceId: number) => {
         SELECT DISTINCT * FROM rules 
         WHERE sentenceId = ? 
            OR id IN (SELECT ruleId FROM rule_sentences WHERE sentenceId = ?)
+        ORDER BY id DESC
     `, sentenceId, sentenceId);
     return rows;
 };
@@ -1166,6 +1209,7 @@ export const getRulesByWordId = (wordId: number) => {
         WHERE wordId = ? 
            OR id IN (SELECT ruleId FROM rule_words WHERE wordId = ?)
            OR id IN (SELECT ruleId FROM word_rules WHERE wordId = ?)
+        ORDER BY id DESC
     `, wordId, wordId, wordId);
     return rows;
 };
@@ -1176,6 +1220,7 @@ export const getRulesByCharacterId = (characterId: number) => {
         WHERE id IN (SELECT ruleId FROM rule_characters WHERE characterId = ?)
            OR sentenceId IN (SELECT sentenceId FROM words WHERE id IN (SELECT wordId FROM word_characters WHERE characterId = ?))
            OR wordId IN (SELECT wordId FROM word_characters WHERE characterId = ?)
+        ORDER BY id DESC
     `, characterId, characterId, characterId);
     return rows;
 };
@@ -1196,6 +1241,7 @@ export const getHSKsByRuleId = (ruleId: number) => {
         SELECT DISTINCT * FROM hsks 
         WHERE id IN (SELECT hskId FROM rules WHERE id = ? AND hskId IS NOT NULL)
            OR id IN (SELECT hskId FROM rule_hsks WHERE ruleId = ?)
+        ORDER BY id DESC
     `, ruleId, ruleId);
     return rows;
 };
@@ -1205,6 +1251,7 @@ export const getLessonsByRuleId = (ruleId: number) => {
         SELECT DISTINCT * FROM lessons 
         WHERE id IN (SELECT lessonId FROM rules WHERE id = ? AND lessonId IS NOT NULL)
            OR id IN (SELECT lessonId FROM rule_lessons WHERE ruleId = ?)
+        ORDER BY num DESC, id DESC
     `, ruleId, ruleId);
     return rows;
 };
@@ -1248,14 +1295,16 @@ export const getCharactersByLessonId = (lessonId: number, limit?: number, offset
             SELECT DISTINCT * FROM characters
             WHERE lessonId = ?
                OR id IN (SELECT characterId FROM character_lessons WHERE lessonId = ?)
+            ORDER BY id DESC
             LIMIT ? OFFSET ?
         `, lessonId, lessonId, limit, offset);
         return rows;
     }
     const rows = db.getAllSync<CharacterType>(`
-        SELECT DISTINCT * FROM characters
-        WHERE lessonId = ?
-           OR id IN (SELECT characterId FROM character_lessons WHERE lessonId = ?)
+            SELECT DISTINCT * FROM characters
+            WHERE lessonId = ?
+               OR id IN (SELECT characterId FROM character_lessons WHERE lessonId = ?)
+            ORDER BY id DESC
     `, lessonId, lessonId);
     return rows;
 };
@@ -1278,6 +1327,7 @@ export const getHSKsByCharacterId = (characterId: number) => {
         SELECT DISTINCT * FROM hsks
         WHERE id IN (SELECT hskId FROM characters WHERE id = ? AND hskId IS NOT NULL)
            OR id IN (SELECT hskId FROM character_hsks WHERE characterId = ?)
+        ORDER BY id DESC
     `, characterId, characterId);
     return rows;
 };
@@ -1287,6 +1337,7 @@ export const getLessonsByCharacterId = (characterId: number) => {
         SELECT DISTINCT * FROM lessons
         WHERE id IN (SELECT lessonId FROM characters WHERE id = ? AND lessonId IS NOT NULL)
            OR id IN (SELECT lessonId FROM character_lessons WHERE characterId = ?)
+        ORDER BY num DESC, id DESC
     `, characterId, characterId);
     return rows;
 };

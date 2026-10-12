@@ -61,4 +61,10 @@ export const homeScreenItems = [
         color: "#ec4899e8",
         target: "pages/listeningLoop",
     },
+    {
+        label: "Instructions",
+        icon: "circle-help",
+        color: "#059669e8",
+        target: "pages/instructions",
+    },
 ];

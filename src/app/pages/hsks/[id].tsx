@@ -1,4 +1,14 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
+import Header from '@/components/main/header';
+import { Bg1 } from '@/components/sub/bg1';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { randomColors } from '@/constants/theme';
+import { deleteHSK, deleteHSKs, getAllHSKs } from '@/db/utils';
+import { HSKType } from '@/types';
+import Lucide from '@react-native-vector-icons/lucide';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   BackHandler,
@@ -9,16 +19,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { deleteHSK, deleteHSKs, getAllHSKs } from '@/db/utils';
-import { HSKType } from '@/types';
-import Header from '@/components/main/header';
-import { Bg1 } from '@/components/sub/bg1';
-import { randomColors } from '@/constants/theme';
-import Lucide from '@react-native-vector-icons/lucide';
-import { router, useFocusEffect } from 'expo-router';
-import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
 
 const HSKs = () => {
   const [hsks, setHsks] = useState<HSKType[]>([]);
@@ -166,9 +166,9 @@ const HSKs = () => {
       ...(isSelectionMode
         ? [{ id: 'cancel', label: 'Cancel Selection', iconName: 'x-circle', color: '#64748b', onPress: () => { exitSelectionMode(); setMenuVisible(false); } }]
         : [
-            { id: 'startSelect', label: 'Select Items', iconName: 'check-square', color: '#2563eb', onPress: () => { setIsSelectionMode(true); setMenuVisible(false); } },
-            { id: 'add', label: 'Add New HSK', iconName: 'plus-circle', color: '#2563eb', onPress: () => { setMenuVisible(false); router.push('/pages/addHSK'); } },
-          ]),
+          { id: 'startSelect', label: 'Select Items', iconName: 'check-square', color: '#2563eb', onPress: () => { setIsSelectionMode(true); setMenuVisible(false); } },
+          { id: 'add', label: 'Add New HSK', iconName: 'plus-circle', color: '#2563eb', onPress: () => { setMenuVisible(false); router.push('/pages/addHSK'); } },
+        ]),
     ];
   };
 
@@ -188,27 +188,29 @@ const HSKs = () => {
         items={
           isSelectionMode
             ? [
-                <TouchableOpacity
-                  key="trash"
-                  onPress={handleDeleteSelected}
-                  activeOpacity={0.8}
-                  style={styles.headerTrashBtn}
-                >
-                  <Lucide name="trash-2" size={18} color="#ffffff" />
-                  <Text style={styles.headerTrashText}>
-                    Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
-                  </Text>
-                </TouchableOpacity>,
-              ]
+              <TouchableOpacity
+                key="trash"
+                onPress={handleDeleteSelected}
+                activeOpacity={0.8}
+                style={styles.headerTrashBtn}
+              >
+                <Lucide name="trash-2" size={18} color="#ffffff" />
+                <Text style={styles.headerTrashText}>
+                  Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                </Text>
+              </TouchableOpacity>,
+            ]
             : [
-                <TouchableOpacity
-                  key="add"
-                  onPress={() => router.push('/pages/addHSK')}
-                  activeOpacity={0.7}
-                >
-                  <Lucide name="plus" size={20} color="#373737ff" style={styles.actionBtnIcon} />
-                </TouchableOpacity>,
-              ]
+              <TouchableOpacity
+                key="add"
+                onPress={() => router.push('/pages/addHSK')}
+                style={styles.actionBtnIcon}
+                activeOpacity={0.7}
+              >
+                <Lucide name="plus" size={20} color="#373737ff" />
+              </TouchableOpacity>,
+
+            ]
         }
       />
 
@@ -311,16 +313,27 @@ const HSKs = () => {
 export default HSKs;
 
 const styles = StyleSheet.create({
+  rightContainer: {
+    minWidth: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    backgroundColor: "red"
+  },
   actionBtnIcon: {
-    fontSize: 22,
-    backgroundColor: '#e8e8e8ff',
-    borderRadius: 50,
-    width: 40,
-    height: 40,
-    textAlign: 'center',
-    textAlignVertical: 'center',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#414040ff',
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   headerTrashBtn: {
     flexDirection: 'row',

@@ -4,8 +4,8 @@ import { TextCard } from '@/components/cards/TextCard';
 import { WordCard } from '@/components/cards/WordCard';
 import { CategoryTabType } from '@/components/common/CategoryTabs';
 import { DetailControlPanel } from '@/components/common/DetailControlPanel';
-import { ViewAllButton } from '@/components/common/ViewAllButton';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { ViewAllButton } from '@/components/common/ViewAllButton';
 import { CharacterDetailSection } from '@/components/details/CharacterDetailSection';
 import { CharacterHeroCard } from '@/components/details/CharacterHeroCard';
 import Header from '@/components/main/header';
@@ -396,14 +396,14 @@ const CharacterDetails = () => {
           >
             <View style={styles.wordsGrid}>
               {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((word, idx) => (
-                // <View key={word.id || idx} style={{ width: '48%' }}>
-                  <WordCard
-                    word={word}
-                    showPinyin={showPinyin}
-                    showMeaning={showMeaning}
-                    isPlaying={playingItemId === `word-${word.id}`}
-                    onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
-                  />
+                // <View key={word.id || idx} style={{ width: '48.5%' }}>
+                <WordCard
+                  word={word}
+                  showPinyin={showPinyin}
+                  showMeaning={showMeaning}
+                  isPlaying={playingItemId === `word-${word.id}`}
+                  onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
+                />
                 // </View>
               ))}
             </View>

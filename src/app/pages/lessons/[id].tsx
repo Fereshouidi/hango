@@ -272,8 +272,9 @@ const Lessons = () => {
                   key="add"
                   onPress={() => router.push('/pages/addLesson')}
                   activeOpacity={0.7}
+                  style={styles.actionBtnIcon}
                 >
-                  <Lucide name="plus" size={20} color="#373737ff" style={styles.actionBtnIcon} />
+                  <Lucide name="plus" size={20} color="#373737ff" />
                 </TouchableOpacity>,
               ]
         }
@@ -379,15 +380,19 @@ export default Lessons;
 
 const styles = StyleSheet.create({
   actionBtnIcon: {
-    fontSize: 22,
-    backgroundColor: '#e8e8e8ff',
-    borderRadius: 50,
-    width: 40,
-    height: 40,
-    textAlign: 'center',
-    textAlignVertical: 'center',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#414040ff',
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   headerTrashBtn: {
     flexDirection: 'row',

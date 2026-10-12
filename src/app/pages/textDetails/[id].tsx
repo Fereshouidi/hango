@@ -221,6 +221,14 @@ const TextDetails = () => {
         // subtitle={textObj?.meaning ? handleLongText(textObj?.pinyin, 30) : undefined}
         items={[
           <TouchableOpacity
+            key="edit"
+            style={styles.headerIconBtn}
+            onPress={() => router.push(`/pages/addText?textId=${textId}` as any)}
+            activeOpacity={0.7}
+          >
+            <Lucide name="pencil" size={17} color="#0284c7" />
+          </TouchableOpacity>,
+          <TouchableOpacity
             key="tts"
             style={[styles.headerAudioBtn, isPlayingPassage && styles.headerAudioBtnPlaying]}
             onPress={handlePlayPassage}
@@ -358,14 +366,14 @@ const TextDetails = () => {
               <>
                 <View style={styles.wordsGrid}>
                   {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((w) => (
-                    // <View key={w.id} style={{ width: '48%' }}>
-                      <WordCard
-                        word={w}
-                        showPinyin={showPinyin}
-                        showMeaning={showMeaning}
-                        isPlaying={playingItemId === `word-${w.id}`}
-                        onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
-                      />
+                    // <View key={w.id} style={{ width: '48.5%' }}>
+                    <WordCard
+                      word={w}
+                      showPinyin={showPinyin}
+                      showMeaning={showMeaning}
+                      isPlaying={playingItemId === `word-${w.id}`}
+                      onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
+                    />
                     // </View>
                   ))}
                 </View>
@@ -422,7 +430,7 @@ const TextDetails = () => {
               <>
                 <View style={styles.charactersGrid}>
                   {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((c) => (
-                    <View key={c.id} style={{ width: '48%' }}>
+                    <View key={c.id} style={{ width: '48.5%' }}>
                       <CharacterCard
                         char={c}
                         showPinyin={showPinyin}
@@ -552,6 +560,16 @@ const styles = StyleSheet.create({
   headerAudioBtnPlaying: {
     backgroundColor: '#0284c7',
     borderColor: '#0369a1',
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#0284c718',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#0284c740',
   },
 
   sectionContainer: {

@@ -4,8 +4,8 @@ import { SentenceCard } from '@/components/cards/SentenceCard';
 import { TextCard } from '@/components/cards/TextCard';
 import { CategoryTabType } from '@/components/common/CategoryTabs';
 import { DetailControlPanel } from '@/components/common/DetailControlPanel';
-import { ViewAllButton } from '@/components/common/ViewAllButton';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { ViewAllButton } from '@/components/common/ViewAllButton';
 import { CharacterDetailSection } from '@/components/details/CharacterDetailSection';
 import { WordHeroCard } from '@/components/details/WordHeroCard';
 import Header from '@/components/main/header';
@@ -430,7 +430,7 @@ const WordDetails = () => {
           >
             <View style={styles.charsGrid}>
               {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((charObj, idx) => (
-                <View key={charObj.id || idx} style={{ width: '48%' }}>
+                <View key={charObj.id || idx} style={{ width: '48.5%' }}>
                   {charObj && (
                     <CharacterCard
                       character={charObj as unknown as CharacterType}
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
   charsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    // gap: 8,
     justifyContent: 'space-between',
   },
   emptyContainer: {

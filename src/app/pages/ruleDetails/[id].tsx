@@ -420,7 +420,7 @@ const RuleDetails = () => {
               <>
                 <View style={styles.wordsGrid}>
                   {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((w) => (
-                    <View key={w.id} style={{ width: '48%' }}>
+                    <View key={w.id} style={{ width: '48.5%' }}>
                       <WordCard
                         word={w}
                         showPinyin={showPinyin}
@@ -484,7 +484,7 @@ const RuleDetails = () => {
               <>
                 <View style={styles.charactersGrid}>
                   {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((c) => (
-                    <View key={c.id} style={{ width: '48%' }}>
+                    <View key={c.id} style={{ width: '48.5%' }}>
                       <CharacterCard
                         char={c}
                         showPinyin={showPinyin}

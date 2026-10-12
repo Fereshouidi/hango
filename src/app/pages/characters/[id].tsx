@@ -1,4 +1,31 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { CharacterCard } from '@/components/cards/CharacterCard';
+import {
+  CollapsibleControlBar,
+  HeaderFilterButton,
+} from '@/components/common/CollapsibleControlBar';
+import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
+import Header from '@/components/main/header';
+import { Bg1 } from '@/components/sub/bg1';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { randomColors } from '@/constants/theme';
+import {
+  deleteCharacter,
+  deleteCharacters,
+  getAllCharacters,
+  getCharactersByHSKId,
+  getCharactersByLessonId,
+  getCharactersByRuleId,
+  getCharactersBySentenceId,
+  getCharactersByTextId,
+  getCharactersByWordId
+} from '@/db/utils';
+import { CharacterType } from '@/types';
+import { speakChineseText } from '@/utils/tts';
+import Lucide from '@react-native-vector-icons/lucide';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   BackHandler,
@@ -9,40 +36,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import {
-  deleteCharacter,
-  deleteCharacters,
-  getAllCharacters,
-  getCharacterById,
-  getCharactersByHSKId,
-  getCharactersByLessonId,
-  getCharactersByRuleId,
-  getCharactersBySentenceId,
-  getCharactersByTextId,
-  getCharactersByWordId,
-  getHSKById,
-  getLessonById,
-  getRuleById,
-  getSentenceById,
-  getTextById,
-  getWordById,
-} from '@/db/utils';
-import { CharacterType } from '@/types';
-import Header from '@/components/main/header';
-import { Bg1 } from '@/components/sub/bg1';
-import { randomColors } from '@/constants/theme';
-import Lucide from '@react-native-vector-icons/lucide';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { CharacterCard } from '@/components/cards/CharacterCard';
-import {
-  CollapsibleControlBar,
-  HeaderFilterButton,
-} from '@/components/common/CollapsibleControlBar';
-import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
-import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
-import { speakChineseText } from '@/utils/tts';
 
 const PAGE_SIZE = 10;
 
@@ -305,9 +298,9 @@ export default function CharactersScreen() {
       ...(isSelectionMode
         ? [{ id: 'cancel', label: 'Cancel Selection', iconName: 'x-circle', color: '#64748b', onPress: () => { exitSelectionMode(); setMenuVisible(false); } }]
         : [
-            { id: 'startSelect', label: 'Select Items', iconName: 'check-square', color: '#ec4899', onPress: () => { setIsSelectionMode(true); setMenuVisible(false); } },
-            { id: 'add', label: 'Add New Character', iconName: 'plus-circle', color: '#ec4899', onPress: () => { setMenuVisible(false); router.push('/pages/addCharacter'); } },
-          ]),
+          { id: 'startSelect', label: 'Select Items', iconName: 'check-square', color: '#ec4899', onPress: () => { setIsSelectionMode(true); setMenuVisible(false); } },
+          { id: 'add', label: 'Add New Character', iconName: 'plus-circle', color: '#ec4899', onPress: () => { setMenuVisible(false); router.push('/pages/addCharacter'); } },
+        ]),
     ];
   };
 
@@ -323,34 +316,35 @@ export default function CharactersScreen() {
         items={
           isSelectionMode
             ? [
-                <TouchableOpacity
-                  key="trash"
-                  onPress={handleDeleteSelected}
-                  activeOpacity={0.8}
-                  style={styles.headerTrashBtn}
-                >
-                  <Lucide name="trash-2" size={18} color="#ffffff" />
-                  <Text style={styles.headerTrashText}>
-                    Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
-                  </Text>
-                </TouchableOpacity>,
-              ]
+              <TouchableOpacity
+                key="trash"
+                onPress={handleDeleteSelected}
+                activeOpacity={0.8}
+                style={styles.headerTrashBtn}
+              >
+                <Lucide name="trash-2" size={18} color="#ffffff" />
+                <Text style={styles.headerTrashText}>
+                  Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                </Text>
+              </TouchableOpacity>,
+            ]
             : [
-                <HeaderFilterButton
-                  key="filter-toggle"
-                  isOpen={isControlBarOpen}
-                  onToggle={() => setIsControlBarOpen((prev) => !prev)}
-                  hasActiveFilter={Boolean(searchQuery)}
-                  accentColor="#ec4899"
-                />,
-                <TouchableOpacity
-                  key="add"
-                  onPress={() => router.push('/pages/addCharacter')}
-                  activeOpacity={0.7}
-                >
-                  <Lucide name="plus" size={20} color="#373737ff" style={styles.actionBtnIcon} />
-                </TouchableOpacity>,
-              ]
+              <HeaderFilterButton
+                key="filter-toggle"
+                isOpen={isControlBarOpen}
+                onToggle={() => setIsControlBarOpen((prev) => !prev)}
+                hasActiveFilter={Boolean(searchQuery)}
+                accentColor="#ec4899"
+              />,
+              <TouchableOpacity
+                key="add"
+                onPress={() => router.push('/pages/addCharacter')}
+                activeOpacity={0.7}
+                style={styles.actionBtnIcon}
+              >
+                <Lucide name="plus" size={20} color="#373737ff" />
+              </TouchableOpacity>,
+            ]
         }
       />
 
@@ -395,7 +389,7 @@ export default function CharactersScreen() {
                 const isSelected = selectedIds.has(charId);
 
                 return (
-                  <View key={charId || index} style={{ width: '49%' }}>
+                  <View key={charId || index} style={{ width: '48.5%' }}>
                     <CharacterCard
                       char={char}
                       index={index}
@@ -431,8 +425,8 @@ export default function CharactersScreen() {
               {searchQuery
                 ? 'No matching characters found'
                 : activeFilterLabel
-                ? `No characters found for ${activeFilterLabel}`
-                : 'No characters available'}
+                  ? `No characters found for ${activeFilterLabel}`
+                  : 'No characters available'}
             </ThemedText>
           </View>
         )}
@@ -450,15 +444,19 @@ export default function CharactersScreen() {
 
 const styles = StyleSheet.create({
   actionBtnIcon: {
-    fontSize: 22,
-    backgroundColor: '#e8e8e8ff',
-    borderRadius: 50,
-    width: 40,
-    height: 40,
-    textAlign: 'center',
-    textAlignVertical: 'center',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#414040ff',
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   headerTrashBtn: {
     flexDirection: 'row',

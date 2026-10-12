@@ -190,6 +190,10 @@ export default function TabLayout() {
                     name="pages/rules/index"
                     options={{ headerShown: false }}
                 />
+                <Stack.Screen
+                    name="pages/instructions/index"
+                    options={{ headerShown: false }}
+                />
 
             </Stack>
           </ThemedView>

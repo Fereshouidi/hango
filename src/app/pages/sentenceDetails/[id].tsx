@@ -4,8 +4,8 @@ import { TextCard } from '@/components/cards/TextCard';
 import { WordCard } from '@/components/cards/WordCard';
 import { CategoryTabType } from '@/components/common/CategoryTabs';
 import { DetailControlPanel } from '@/components/common/DetailControlPanel';
-import { ViewAllButton } from '@/components/common/ViewAllButton';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { ViewAllButton } from '@/components/common/ViewAllButton';
 import { SentenceHeroCard } from '@/components/details/SentenceHeroCard';
 import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
@@ -405,15 +405,15 @@ const SentenceDetails = () => {
               <>
                 <View style={styles.wordsGrid}>
                   {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((w) => (
-                    <View key={w.id} style={{ width: '48%' }}>
-                      <WordCard
-                        word={w}
-                        showPinyin={showPinyin}
-                        showMeaning={showMeaning}
-                        isPlaying={playingItemId === `word-${w.id}`}
-                        onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
-                      />
-                    </View>
+                    // <View key={w.id} style={{ width: '48.5%' }}>
+                    <WordCard
+                      word={w}
+                      showPinyin={showPinyin}
+                      showMeaning={showMeaning}
+                      isPlaying={playingItemId === `word-${w.id}`}
+                      onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
+                    />
+                    // </View>
                   ))}
                 </View>
                 {activeTab === 'all' && filteredWords.length > ITEM_LIMIT && (
@@ -469,7 +469,7 @@ const SentenceDetails = () => {
               <>
                 <View style={styles.wordsGrid}>
                   {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((c) => (
-                    <View key={c.id} style={{ width: '48%' }}>
+                    <View key={c.id} style={{ width: '49%', marginVertical: 5 }}>
                       <CharacterCard
                         char={c}
                         showPinyin={showPinyin}
@@ -593,8 +593,8 @@ export default SentenceDetails;
 
 const styles = StyleSheet.create({
   scrollContent: {
-    padding: 10,
-    paddingHorizontal: 10,
+    padding: 5,
+    paddingHorizontal: 5,
     gap: 5,
   },
   headerIconBtn: {
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
   wordsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    // gap: 10,
     justifyContent: 'space-between',
   },
   emptyContainer: {

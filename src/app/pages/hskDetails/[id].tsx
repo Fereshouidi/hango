@@ -552,14 +552,14 @@ const HSKDetails = () => {
                 <View style={styles.wordsGrid}>
                   {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((word, idx) => (
                     // <View key={word.id || idx} style={{ width: '40%' }}>
-                      <WordCard
-                        key={word.id || idx}
-                        word={word}
-                        showPinyin={showPinyin}
-                        showMeaning={showMeaning}
-                        isPlaying={playingItemId === `word-${word.id}`}
-                        onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
-                      />
+                    <WordCard
+                      key={word.id || idx}
+                      word={word}
+                      showPinyin={showPinyin}
+                      showMeaning={showMeaning}
+                      isPlaying={playingItemId === `word-${word.id}`}
+                      onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
+                    />
                     // </View>
                   ))}
                 </View>
@@ -623,7 +623,7 @@ const HSKDetails = () => {
               <>
                 <View style={styles.charsGrid}>
                   {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((char, idx) => (
-                    <View key={char.id || idx} style={{ width: '48%' }}>
+                    <View key={char.id || idx} style={{ width: '48.5%' }}>
                       <CharacterCard
                         char={char}
                         showPinyin={showPinyin}

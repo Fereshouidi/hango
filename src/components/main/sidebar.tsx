@@ -117,6 +117,15 @@ export const sidebarItems: SidebarItem[] = [
     target: '/pages/listeningLoop',
     description: 'Loop sentences & texts with repeat and shadowing',
   },
+  {
+    id: 'instructions',
+    label: 'Instructions & Guide',
+    chineseLabel: '使用指南 / 关于',
+    icon: 'circle-help',
+    color: '#059669',
+    target: '/pages/instructions',
+    description: 'Comprehensive app manual, study roadmaps & tips',
+  },
 ];
 
 type SidebarProps = {
@@ -525,8 +534,17 @@ export const Sidebar = ({ isOpen, onClose, onOpen, children }: SidebarProps) => 
             onPress={handleGoHome}
             activeOpacity={0.7}
           >
-            <Lucide name="house" size={17} color="#2563eb" />
-            <Text style={styles.homeBtnText}>Home Dashboard</Text>
+            <View
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                gap: 10
+              }}
+            >
+              <Lucide name="house" size={17} color="#2563eb" />
+              <Text style={styles.homeBtnText}>Home Dashboard</Text>
+            </View>
+            <Lucide name="chevron-right" size={17} color="#2563eb" />
           </TouchableOpacity>
 
         </View>
@@ -696,10 +714,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   homeBtn: {
+    display: "flex",
+    justifyContent: "space-between",
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#eff6ff',
+    // backgroundColor: '#eff6ff',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,

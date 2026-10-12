@@ -84,9 +84,9 @@
       "hskId": 1,
       "lessonId": 1,
       "title": "来自哪里",
-      "content": "你是哪国人？我是中国的学生。我也很喜欢学习中文。",
-      "pinyin": "Nǐ shì nǎ guó rén? Wǒ shì Zhōngguó de xuésheng. Wǒ yě hěn xǐhuan xuéxí Zhōngwén.",
-      "meaning": "What country are you from? I am a student from China. I also really like studying Chinese."
+      "content": "你是哪国人？我是中国人。我也很喜欢学习中文。",
+      "pinyin": "Nǐ shì nǎ guó rén? Wǒ shì Zhōngguó rén. Wǒ yě hěn xǐhuan xuéxí Zhōngwén.",
+      "meaning": "What country are you from? I am Chinese. I also really like studying Chinese."
     },
     {
       "id": 3,
@@ -167,7 +167,7 @@
       "title": "买水果",
       "content": "今天的苹果多少钱一斤？这个太贵了，有便宜一点的吗？那我买两个，谢谢。",
       "pinyin": "Jīntiān de píngguǒ duōshao qián yì jīn? Zhège tài guì le, yǒu piányi yìdiǎn de ma? Nà wǒ mǎi liǎng ge, xièxie.",
-      "meaning": "How much are the apples per half-kilo today? This is too expensive. Is there a cheaper one? Then I'll buy two. Thank you."
+      "meaning": "How much are the apples per 500 grams today? These are too expensive. Is there a cheaper option? Then I’ll buy two. Thank you."
     },
     {
       "id": 12,
@@ -176,7 +176,7 @@
       "title": "在商店",
       "content": "我想买一件白色的衣服。这件衣服有大一点的吗？可以，我试一下。",
       "pinyin": "Wǒ xiǎng mǎi yí jiàn báisè de yīfu. Zhè jiàn yīfu yǒu dà yìdiǎn de ma? Kěyǐ, wǒ shì yíxià.",
-      "meaning": "I want to buy a white piece of clothing. Do you have this clothing in a larger size? Okay, I'll try it on."
+      "meaning": "I want to buy a white item of clothing. Do you have this in a larger size? Sure, I’ll try it on."
     },
     {
       "id": 13,
@@ -257,7 +257,7 @@
       "title": "解决问题",
       "content": "机器出了问题，我们马上去检查。我们先找到原因，再决定怎么修。只要认真工作，很多问题都可以解决。",
       "pinyin": "Jīqì chū le wèntí, wǒmen mǎshàng qù jiǎnchá. Wǒmen xiān zhǎodào yuányīn, zài juédìng zěnme xiū. Zhǐyào rènzhēn gōngzuò, hěn duō wèntí dōu kěyǐ jiějué.",
-      "meaning": "The machine has a problem, so we immediately go check it. We first find the cause, then decide how to repair it. As long as we work carefully, many problems can be solved."
+      "meaning": "The machine has developed a problem, so we go to inspect it right away. First we find the cause, then decide how to repair it. If we work carefully, many problems can be solved."
     },
     {
       "id": 22,
@@ -302,7 +302,7 @@
       "title": "在北京",
       "content": "到了北京以后，我先去酒店。第二天我想去看看长城。如果时间够，我们也可以去博物馆。",
       "pinyin": "Dàole Běijīng yǐhòu, wǒ xiān qù jiǔdiàn. Dì èr tiān wǒ xiǎng qù kànkan Chángchéng. Rúguǒ shíjiān gòu, wǒmen yě kěyǐ qù bówùguǎn.",
-      "meaning": "After arriving in Beijing, I will first go to the hotel. The next day I want to go see the Great Wall. If there is enough time, we can also go to a museum."
+      "meaning": "After arriving in Beijing, I’ll go to the hotel first. The next day, I want to visit the Great Wall. If we have enough time, we can also visit a museum."
     },
     {
       "id": 27,
@@ -311,7 +311,7 @@
       "title": "旅行结束以后",
       "content": "这次旅行让我学到了很多东西。我觉得旅行不只是看风景。认识不同的人和地方也很有意思。",
       "pinyin": "Zhè cì lǚxíng ràng wǒ xuédào le hěn duō dōngxi. Wǒ juéde lǚxíng bù zhǐshì kàn fēngjǐng. Rènshi bùtóng de rén hé dìfang yě hěn yǒu yìsi.",
-      "meaning": "This trip taught me many things. I think traveling is not only about seeing scenery. Meeting different people and places is also very interesting."
+      "meaning": "This trip taught me a lot. I think travelling is not only about seeing scenery. Meeting different people and discovering different places are interesting too."
     }
   ],
   "sentences": [
@@ -3519,7 +3519,7 @@
       "wordId": 1,
       "content": "好",
       "pinyin": "hǎo",
-      "tone": "1",
+      "tone": "3",
       "meaning": "good / like"
     },
     {
@@ -3531,7 +3531,7 @@
       "wordId": 2,
       "content": "我",
       "pinyin": "wǒ",
-      "tone": "4",
+      "tone": "3",
       "meaning": "I / me"
     },
     {
@@ -3543,7 +3543,7 @@
       "wordId": 3,
       "content": "叫",
       "pinyin": "jiào",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -3555,7 +3555,7 @@
       "wordId": 4,
       "content": "王",
       "pinyin": "Wáng",
-      "tone": "1",
+      "tone": "2",
       "meaning": "character"
     },
     {
@@ -3567,7 +3567,7 @@
       "wordId": 4,
       "content": "明",
       "pinyin": "Míng",
-      "tone": "3",
+      "tone": "2",
       "meaning": "character"
     },
     {
@@ -3603,7 +3603,7 @@
       "wordId": 6,
       "content": "很",
       "pinyin": "hěn",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -3639,7 +3639,7 @@
       "wordId": 8,
       "content": "认",
       "pinyin": "rènshi",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -3651,7 +3651,7 @@
       "wordId": 8,
       "content": "识",
       "pinyin": "rènshi",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -3699,7 +3699,7 @@
       "wordId": 11,
       "content": "名",
       "pinyin": "míngzi",
-      "tone": "3",
+      "tone": "2",
       "meaning": "character"
     },
     {
@@ -3711,7 +3711,7 @@
       "wordId": 11,
       "content": "字",
       "pinyin": "míngzi",
-      "tone": "3",
+      "tone": "2",
       "meaning": "character"
     },
     {
@@ -3723,7 +3723,7 @@
       "wordId": 12,
       "content": "哪",
       "pinyin": "nǎ",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -3735,7 +3735,7 @@
       "wordId": 13,
       "content": "国",
       "pinyin": "guó",
-      "tone": "4",
+      "tone": "2",
       "meaning": "country"
     },
     {
@@ -3795,7 +3795,7 @@
       "wordId": 17,
       "content": "也",
       "pinyin": "yě",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -3903,7 +3903,7 @@
       "wordId": 22,
       "content": "我",
       "pinyin": "wǒmen",
-      "tone": "4",
+      "tone": "3",
       "meaning": "I / me"
     },
     {
@@ -3915,7 +3915,7 @@
       "wordId": 22,
       "content": "们",
       "pinyin": "wǒmen",
-      "tone": "4",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -3927,7 +3927,7 @@
       "wordId": 23,
       "content": "今",
       "pinyin": "jīntiān",
-      "tone": "3",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -3939,7 +3939,7 @@
       "wordId": 23,
       "content": "天",
       "pinyin": "jīntiān",
-      "tone": "3",
+      "tone": "1",
       "meaning": "day / sky"
     },
     {
@@ -4023,7 +4023,7 @@
       "wordId": 28,
       "content": "书",
       "pinyin": "shū",
-      "tone": "5",
+      "tone": "1",
       "meaning": "book"
     },
     {
@@ -4047,7 +4047,7 @@
       "wordId": 30,
       "content": "有",
       "pinyin": "yǒu",
-      "tone": "4",
+      "tone": "3",
       "meaning": "have"
     },
     {
@@ -4059,7 +4059,7 @@
       "wordId": 31,
       "content": "四",
       "pinyin": "sì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "four"
     },
     {
@@ -4095,7 +4095,7 @@
       "wordId": 33,
       "content": "爸",
       "pinyin": "bàba",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -4107,7 +4107,7 @@
       "wordId": 33,
       "content": "爸",
       "pinyin": "bàba",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -4119,7 +4119,7 @@
       "wordId": 34,
       "content": "医",
       "pinyin": "yīshēng",
-      "tone": "3",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -4131,7 +4131,7 @@
       "wordId": 34,
       "content": "生",
       "pinyin": "yīshēng",
-      "tone": "3",
+      "tone": "1",
       "meaning": "life / student suffix"
     },
     {
@@ -4167,7 +4167,7 @@
       "wordId": 36,
       "content": "还",
       "pinyin": "hái",
-      "tone": "1",
+      "tone": "2",
       "meaning": "still / also"
     },
     {
@@ -4179,7 +4179,7 @@
       "wordId": 37,
       "content": "妹",
       "pinyin": "mèimei",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -4191,7 +4191,7 @@
       "wordId": 37,
       "content": "妹",
       "pinyin": "mèimei",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -4227,7 +4227,7 @@
       "wordId": 39,
       "content": "不",
       "pinyin": "bù",
-      "tone": "5",
+      "tone": "4",
       "meaning": "not"
     },
     {
@@ -4239,7 +4239,7 @@
       "wordId": 40,
       "content": "大",
       "pinyin": "dà",
-      "tone": "1",
+      "tone": "4",
       "meaning": "big"
     },
     {
@@ -4251,7 +4251,7 @@
       "wordId": 41,
       "content": "但",
       "pinyin": "dànshì",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -4263,7 +4263,7 @@
       "wordId": 41,
       "content": "是",
       "pinyin": "dànshì",
-      "tone": "1",
+      "tone": "4",
       "meaning": "to be"
     },
     {
@@ -4299,7 +4299,7 @@
       "wordId": 43,
       "content": "桌",
       "pinyin": "zhuōzi",
-      "tone": "4",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -4311,7 +4311,7 @@
       "wordId": 43,
       "content": "子",
       "pinyin": "zhuōzi",
-      "tone": "4",
+      "tone": "1",
       "meaning": "child / suffix"
     },
     {
@@ -4323,7 +4323,7 @@
       "wordId": 44,
       "content": "上",
       "pinyin": "shàng",
-      "tone": "1",
+      "tone": "4",
       "meaning": "on / up"
     },
     {
@@ -4335,7 +4335,7 @@
       "wordId": 45,
       "content": "一",
       "pinyin": "yì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "one"
     },
     {
@@ -4347,7 +4347,7 @@
       "wordId": 45,
       "content": "本",
       "pinyin": "běn",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -4407,7 +4407,7 @@
       "wordId": 48,
       "content": "一",
       "pinyin": "yì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "one"
     },
     {
@@ -4419,7 +4419,7 @@
       "wordId": 48,
       "content": "把",
       "pinyin": "bǎ",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -4455,7 +4455,7 @@
       "wordId": 50,
       "content": "晚",
       "pinyin": "wǎnshang",
-      "tone": "1",
+      "tone": "3",
       "meaning": "late"
     },
     {
@@ -4467,7 +4467,7 @@
       "wordId": 50,
       "content": "上",
       "pinyin": "wǎnshang",
-      "tone": "1",
+      "tone": "3",
       "meaning": "on / up"
     },
     {
@@ -4479,7 +4479,7 @@
       "wordId": 51,
       "content": "一",
       "pinyin": "yì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "one"
     },
     {
@@ -4635,7 +4635,7 @@
       "wordId": 57,
       "content": "喝",
       "pinyin": "hē",
-      "tone": "2",
+      "tone": "1",
       "meaning": "to drink"
     },
     {
@@ -4647,7 +4647,7 @@
       "wordId": 58,
       "content": "茶",
       "pinyin": "chá",
-      "tone": "1",
+      "tone": "2",
       "meaning": "tea"
     },
     {
@@ -4683,7 +4683,7 @@
       "wordId": 60,
       "content": "早",
       "pinyin": "zǎoshang",
-      "tone": "1",
+      "tone": "3",
       "meaning": "early"
     },
     {
@@ -4695,7 +4695,7 @@
       "wordId": 60,
       "content": "上",
       "pinyin": "zǎoshang",
-      "tone": "1",
+      "tone": "3",
       "meaning": "on / up"
     },
     {
@@ -4707,7 +4707,7 @@
       "wordId": 61,
       "content": "七",
       "pinyin": "qī",
-      "tone": "3",
+      "tone": "1",
       "meaning": "seven"
     },
     {
@@ -4719,7 +4719,7 @@
       "wordId": 61,
       "content": "点",
       "pinyin": "diǎn",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -4779,7 +4779,7 @@
       "wordId": 64,
       "content": "脸",
       "pinyin": "liǎn",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -4851,7 +4851,7 @@
       "wordId": 67,
       "content": "点",
       "pinyin": "diǎn",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -4863,7 +4863,7 @@
       "wordId": 68,
       "content": "去",
       "pinyin": "qù",
-      "tone": "5",
+      "tone": "4",
       "meaning": "to go"
     },
     {
@@ -4947,7 +4947,7 @@
       "wordId": 73,
       "content": "课",
       "pinyin": "kè",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -5067,7 +5067,7 @@
       "wordId": 79,
       "content": "五",
       "pinyin": "wǔ",
-      "tone": "5",
+      "tone": "3",
       "meaning": "five"
     },
     {
@@ -5079,7 +5079,7 @@
       "wordId": 79,
       "content": "点",
       "pinyin": "diǎn",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -5091,7 +5091,7 @@
       "wordId": 80,
       "content": "回",
       "pinyin": "huí",
-      "tone": "3",
+      "tone": "2",
       "meaning": "to return"
     },
     {
@@ -5151,7 +5151,7 @@
       "wordId": 82,
       "content": "看",
       "pinyin": "kàn",
-      "tone": "1",
+      "tone": "4",
       "meaning": "to look / read"
     },
     {
@@ -5163,7 +5163,7 @@
       "wordId": 82,
       "content": "书",
       "pinyin": "shū",
-      "tone": "5",
+      "tone": "1",
       "meaning": "book"
     },
     {
@@ -5175,7 +5175,7 @@
       "wordId": 83,
       "content": "十",
       "pinyin": "shí",
-      "tone": "3",
+      "tone": "2",
       "meaning": "ten"
     },
     {
@@ -5187,7 +5187,7 @@
       "wordId": 83,
       "content": "点",
       "pinyin": "diǎn",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -5199,7 +5199,7 @@
       "wordId": 83,
       "content": "半",
       "pinyin": "bàn",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -5259,7 +5259,7 @@
       "wordId": 86,
       "content": "想",
       "pinyin": "xiǎng",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -5283,7 +5283,7 @@
       "wordId": 87,
       "content": "肉",
       "pinyin": "miàn",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -5307,7 +5307,7 @@
       "wordId": 88,
       "content": "给",
       "pinyin": "gěi",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -5319,7 +5319,7 @@
       "wordId": 89,
       "content": "一",
       "pinyin": "yì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "one"
     },
     {
@@ -5331,7 +5331,7 @@
       "wordId": 89,
       "content": "杯",
       "pinyin": "bēi",
-      "tone": "2",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -5355,7 +5355,7 @@
       "wordId": 91,
       "content": "多",
       "pinyin": "duōshao",
-      "tone": "4",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -5367,7 +5367,7 @@
       "wordId": 91,
       "content": "少",
       "pinyin": "qián",
-      "tone": "1",
+      "tone": "2",
       "meaning": "character"
     },
     {
@@ -5391,7 +5391,7 @@
       "wordId": 92,
       "content": "一",
       "pinyin": "yì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "one"
     },
     {
@@ -5403,7 +5403,7 @@
       "wordId": 92,
       "content": "斤",
       "pinyin": "jīn",
-      "tone": "3",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -5415,7 +5415,7 @@
       "wordId": 93,
       "content": "太",
       "pinyin": "tài",
-      "tone": "1",
+      "tone": "4",
       "meaning": "too / very"
     },
     {
@@ -5427,7 +5427,7 @@
       "wordId": 94,
       "content": "贵",
       "pinyin": "guì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "expensive"
     },
     {
@@ -5439,7 +5439,7 @@
       "wordId": 95,
       "content": "便",
       "pinyin": "piányi",
-      "tone": "1",
+      "tone": "2",
       "meaning": "convenient / cheap"
     },
     {
@@ -5451,7 +5451,7 @@
       "wordId": 95,
       "content": "宜",
       "pinyin": "piányi",
-      "tone": "1",
+      "tone": "2",
       "meaning": "suitable / cheap"
     },
     {
@@ -5487,7 +5487,7 @@
       "wordId": 97,
       "content": "那",
       "pinyin": "nà",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -5499,7 +5499,7 @@
       "wordId": 98,
       "content": "买",
       "pinyin": "mǎi",
-      "tone": "1",
+      "tone": "3",
       "meaning": "to buy"
     },
     {
@@ -5511,7 +5511,7 @@
       "wordId": 99,
       "content": "两",
       "pinyin": "liǎng",
-      "tone": "1",
+      "tone": "3",
       "meaning": "two"
     },
     {
@@ -5535,7 +5535,7 @@
       "wordId": 100,
       "content": "谢",
       "pinyin": "xièxie",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -5547,7 +5547,7 @@
       "wordId": 100,
       "content": "谢",
       "pinyin": "xièxie",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -5559,7 +5559,7 @@
       "wordId": 101,
       "content": "一",
       "pinyin": "yí",
-      "tone": "3",
+      "tone": "2",
       "meaning": "one"
     },
     {
@@ -5571,7 +5571,7 @@
       "wordId": 101,
       "content": "件",
       "pinyin": "jiàn",
-      "tone": "1",
+      "tone": "4",
       "meaning": "measure word"
     },
     {
@@ -5607,7 +5607,7 @@
       "wordId": 103,
       "content": "衣",
       "pinyin": "yīfu",
-      "tone": "3",
+      "tone": "1",
       "meaning": "clothes"
     },
     {
@@ -5619,7 +5619,7 @@
       "wordId": 103,
       "content": "服",
       "pinyin": "yīfu",
-      "tone": "3",
+      "tone": "1",
       "meaning": "clothes"
     },
     {
@@ -5631,7 +5631,7 @@
       "wordId": 104,
       "content": "这",
       "pinyin": "zhè",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -5643,7 +5643,7 @@
       "wordId": 104,
       "content": "件",
       "pinyin": "jiàn",
-      "tone": "1",
+      "tone": "4",
       "meaning": "measure word"
     },
     {
@@ -5655,7 +5655,7 @@
       "wordId": 105,
       "content": "大",
       "pinyin": "dà",
-      "tone": "1",
+      "tone": "4",
       "meaning": "big"
     },
     {
@@ -5691,7 +5691,7 @@
       "wordId": 106,
       "content": "可",
       "pinyin": "kěyǐ",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -5703,7 +5703,7 @@
       "wordId": 106,
       "content": "以",
       "pinyin": "kěyǐ",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -5715,7 +5715,7 @@
       "wordId": 107,
       "content": "试",
       "pinyin": "shì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -5847,7 +5847,7 @@
       "wordId": 112,
       "content": "会",
       "pinyin": "huì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -5883,7 +5883,7 @@
       "wordId": 114,
       "content": "所",
       "pinyin": "suǒyǐ",
-      "tone": "4",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -5895,7 +5895,7 @@
       "wordId": 114,
       "content": "以",
       "pinyin": "suǒyǐ",
-      "tone": "4",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -5907,7 +5907,7 @@
       "wordId": 115,
       "content": "带",
       "pinyin": "dài",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -5919,7 +5919,7 @@
       "wordId": 116,
       "content": "雨",
       "pinyin": "yǔsǎn",
-      "tone": "5",
+      "tone": "3",
       "meaning": "rain"
     },
     {
@@ -5931,7 +5931,7 @@
       "wordId": 116,
       "content": "伞",
       "pinyin": "yǔsǎn",
-      "tone": "5",
+      "tone": "3",
       "meaning": "umbrella"
     },
     {
@@ -5943,7 +5943,7 @@
       "wordId": 117,
       "content": "怎",
       "pinyin": "zěnme",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -5955,7 +5955,7 @@
       "wordId": 117,
       "content": "么",
       "pinyin": "zěnme",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -6123,7 +6123,7 @@
       "wordId": 124,
       "content": "骑",
       "pinyin": "qí",
-      "tone": "3",
+      "tone": "2",
       "meaning": "to ride"
     },
     {
@@ -6195,7 +6195,7 @@
       "wordId": 127,
       "content": "要",
       "pinyin": "yào",
-      "tone": "1",
+      "tone": "4",
       "meaning": "want / need"
     },
     {
@@ -6327,7 +6327,7 @@
       "wordId": 133,
       "content": "回",
       "pinyin": "huí",
-      "tone": "3",
+      "tone": "2",
       "meaning": "to return"
     },
     {
@@ -6351,7 +6351,7 @@
       "wordId": 134,
       "content": "最",
       "pinyin": "zuì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -6363,7 +6363,7 @@
       "wordId": 135,
       "content": "听",
       "pinyin": "tīng",
-      "tone": "3",
+      "tone": "1",
       "meaning": "to listen"
     },
     {
@@ -6423,7 +6423,7 @@
       "wordId": 138,
       "content": "打",
       "pinyin": "dǎ",
-      "tone": "1",
+      "tone": "3",
       "meaning": "to hit / play"
     },
     {
@@ -6435,7 +6435,7 @@
       "wordId": 138,
       "content": "篮",
       "pinyin": "lánqiú",
-      "tone": "1",
+      "tone": "2",
       "meaning": "basket"
     },
     {
@@ -6459,7 +6459,7 @@
       "wordId": 139,
       "content": "爱",
       "pinyin": "àihào",
-      "tone": "1",
+      "tone": "4",
       "meaning": "love"
     },
     {
@@ -6471,7 +6471,7 @@
       "wordId": 139,
       "content": "好",
       "pinyin": "àihào",
-      "tone": "1",
+      "tone": "4",
       "meaning": "good / like"
     },
     {
@@ -6507,7 +6507,7 @@
       "wordId": 141,
       "content": "一",
       "pinyin": "yì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "one"
     },
     {
@@ -6519,7 +6519,7 @@
       "wordId": 141,
       "content": "年",
       "pinyin": "nián",
-      "tone": "1",
+      "tone": "2",
       "meaning": "year"
     },
     {
@@ -6531,7 +6531,7 @@
       "wordId": 142,
       "content": "现",
       "pinyin": "xiànzài",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -6543,7 +6543,7 @@
       "wordId": 142,
       "content": "在",
       "pinyin": "xiànzài",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -6603,7 +6603,7 @@
       "wordId": 145,
       "content": "句",
       "pinyin": "jùzi",
-      "tone": "5",
+      "tone": "4",
       "meaning": "sentence"
     },
     {
@@ -6615,7 +6615,7 @@
       "wordId": 145,
       "content": "子",
       "pinyin": "jùzi",
-      "tone": "5",
+      "tone": "4",
       "meaning": "child / suffix"
     },
     {
@@ -6651,7 +6651,7 @@
       "wordId": 147,
       "content": "难",
       "pinyin": "nán",
-      "tone": "1",
+      "tone": "2",
       "meaning": "difficult"
     },
     {
@@ -6663,7 +6663,7 @@
       "wordId": 148,
       "content": "但",
       "pinyin": "dànshì",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -6675,7 +6675,7 @@
       "wordId": 148,
       "content": "是",
       "pinyin": "dànshì",
-      "tone": "1",
+      "tone": "4",
       "meaning": "to be"
     },
     {
@@ -6687,7 +6687,7 @@
       "wordId": 149,
       "content": "放",
       "pinyin": "fàngqì",
-      "tone": "1",
+      "tone": "4",
       "meaning": "to release"
     },
     {
@@ -6699,7 +6699,7 @@
       "wordId": 149,
       "content": "弃",
       "pinyin": "fàngqì",
-      "tone": "1",
+      "tone": "4",
       "meaning": "abandon"
     },
     {
@@ -6735,7 +6735,7 @@
       "wordId": 151,
       "content": "计",
       "pinyin": "jìhuà",
-      "tone": "3",
+      "tone": "4",
       "meaning": "plan / calculate"
     },
     {
@@ -6747,7 +6747,7 @@
       "wordId": 151,
       "content": "划",
       "pinyin": "jìhuà",
-      "tone": "3",
+      "tone": "4",
       "meaning": "plan / draw"
     },
     {
@@ -6783,7 +6783,7 @@
       "wordId": 153,
       "content": "休",
       "pinyin": "xiūxi",
-      "tone": "5",
+      "tone": "1",
       "meaning": "rest"
     },
     {
@@ -6795,7 +6795,7 @@
       "wordId": 153,
       "content": "息",
       "pinyin": "xiūxi",
-      "tone": "5",
+      "tone": "1",
       "meaning": "rest / breath"
     },
     {
@@ -6807,7 +6807,7 @@
       "wordId": 154,
       "content": "一",
       "pinyin": "yì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "one"
     },
     {
@@ -6819,7 +6819,7 @@
       "wordId": 154,
       "content": "本",
       "pinyin": "běn",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -6831,7 +6831,7 @@
       "wordId": 154,
       "content": "书",
       "pinyin": "shū",
-      "tone": "5",
+      "tone": "1",
       "meaning": "book"
     },
     {
@@ -6867,7 +6867,7 @@
       "wordId": 156,
       "content": "还",
       "pinyin": "hái",
-      "tone": "1",
+      "tone": "2",
       "meaning": "still / also"
     },
     {
@@ -6879,7 +6879,7 @@
       "wordId": 157,
       "content": "踢",
       "pinyin": "tī",
-      "tone": "3",
+      "tone": "1",
       "meaning": "to kick"
     },
     {
@@ -6891,7 +6891,7 @@
       "wordId": 157,
       "content": "足",
       "pinyin": "zúqiú",
-      "tone": "5",
+      "tone": "2",
       "meaning": "foot"
     },
     {
@@ -6915,7 +6915,7 @@
       "wordId": 158,
       "content": "为",
       "pinyin": "wèile",
-      "tone": "2",
+      "tone": "4",
       "meaning": "become / for"
     },
     {
@@ -6927,7 +6927,7 @@
       "wordId": 158,
       "content": "了",
       "pinyin": "wèile",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -6987,7 +6987,7 @@
       "wordId": 161,
       "content": "把",
       "pinyin": "bǎ",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -7023,7 +7023,7 @@
       "wordId": 163,
       "content": "写",
       "pinyin": "xiě",
-      "tone": "2",
+      "tone": "3",
       "meaning": "to write"
     },
     {
@@ -7035,7 +7035,7 @@
       "wordId": 164,
       "content": "本",
       "pinyin": "běnzi",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -7047,7 +7047,7 @@
       "wordId": 164,
       "content": "子",
       "pinyin": "běnzi",
-      "tone": "2",
+      "tone": "3",
       "meaning": "child / suffix"
     },
     {
@@ -7059,7 +7059,7 @@
       "wordId": 165,
       "content": "读",
       "pinyin": "dú",
-      "tone": "5",
+      "tone": "2",
       "meaning": "to read"
     },
     {
@@ -7119,7 +7119,7 @@
       "wordId": 168,
       "content": "现",
       "pinyin": "xiànzài",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -7131,7 +7131,7 @@
       "wordId": 168,
       "content": "在",
       "pinyin": "xiànzài",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -7143,7 +7143,7 @@
       "wordId": 169,
       "content": "一",
       "pinyin": "yì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "one"
     },
     {
@@ -7371,7 +7371,7 @@
       "wordId": 178,
       "content": "出",
       "pinyin": "chū",
-      "tone": "5",
+      "tone": "1",
       "meaning": "to go out"
     },
     {
@@ -7503,7 +7503,7 @@
       "wordId": 183,
       "content": "再",
       "pinyin": "zài",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -7539,7 +7539,7 @@
       "wordId": 185,
       "content": "修",
       "pinyin": "xiū",
-      "tone": "5",
+      "tone": "1",
       "meaning": "repair"
     },
     {
@@ -7599,7 +7599,7 @@
       "wordId": 188,
       "content": "很",
       "pinyin": "hěn",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -7611,7 +7611,7 @@
       "wordId": 188,
       "content": "多",
       "pinyin": "duō",
-      "tone": "4",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -7647,7 +7647,7 @@
       "wordId": 190,
       "content": "最",
       "pinyin": "zuìjìn",
-      "tone": "3",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -7659,7 +7659,7 @@
       "wordId": 190,
       "content": "近",
       "pinyin": "zuìjìn",
-      "tone": "3",
+      "tone": "4",
       "meaning": "near / recent"
     },
     {
@@ -7671,7 +7671,7 @@
       "wordId": 191,
       "content": "有",
       "pinyin": "yǒudiǎn",
-      "tone": "4",
+      "tone": "3",
       "meaning": "have"
     },
     {
@@ -7683,7 +7683,7 @@
       "wordId": 191,
       "content": "点",
       "pinyin": "yǒudiǎn",
-      "tone": "4",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -7695,7 +7695,7 @@
       "wordId": 192,
       "content": "累",
       "pinyin": "lèi",
-      "tone": "2",
+      "tone": "4",
       "meaning": "tired"
     },
     {
@@ -7707,7 +7707,7 @@
       "wordId": 193,
       "content": "早",
       "pinyin": "zǎodiǎn",
-      "tone": "1",
+      "tone": "3",
       "meaning": "early"
     },
     {
@@ -7719,7 +7719,7 @@
       "wordId": 193,
       "content": "点",
       "pinyin": "zǎodiǎn",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -7731,7 +7731,7 @@
       "wordId": 194,
       "content": "很",
       "pinyin": "hěn",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -7743,7 +7743,7 @@
       "wordId": 194,
       "content": "多",
       "pinyin": "duō",
-      "tone": "4",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -7863,7 +7863,7 @@
       "wordId": 200,
       "content": "运",
       "pinyin": "yùndòng",
-      "tone": "5",
+      "tone": "4",
       "meaning": "move / exercise"
     },
     {
@@ -7875,7 +7875,7 @@
       "wordId": 200,
       "content": "动",
       "pinyin": "yùndòng",
-      "tone": "5",
+      "tone": "4",
       "meaning": "move"
     },
     {
@@ -7887,7 +7887,7 @@
       "wordId": 201,
       "content": "每",
       "pinyin": "měi",
-      "tone": "2",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -7899,7 +7899,7 @@
       "wordId": 201,
       "content": "周",
       "pinyin": "zhōu",
-      "tone": "4",
+      "tone": "1",
       "meaning": "week"
     },
     {
@@ -7947,7 +7947,7 @@
       "wordId": 203,
       "content": "次",
       "pinyin": "cì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "time / occurrence"
     },
     {
@@ -8007,7 +8007,7 @@
       "wordId": 206,
       "content": "精",
       "pinyin": "jīngshen",
-      "tone": "3",
+      "tone": "1",
       "meaning": "essence / energy"
     },
     {
@@ -8019,7 +8019,7 @@
       "wordId": 206,
       "content": "神",
       "pinyin": "jīngshen",
-      "tone": "3",
+      "tone": "1",
       "meaning": "spirit"
     },
     {
@@ -8031,7 +8031,7 @@
       "wordId": 207,
       "content": "除",
       "pinyin": "chúle",
-      "tone": "5",
+      "tone": "2",
       "meaning": "character"
     },
     {
@@ -8043,7 +8043,7 @@
       "wordId": 207,
       "content": "了",
       "pinyin": "chúle",
-      "tone": "5",
+      "tone": "2",
       "meaning": "character"
     },
     {
@@ -8055,7 +8055,7 @@
       "wordId": 208,
       "content": "注",
       "pinyin": "zhùyì",
-      "tone": "5",
+      "tone": "4",
       "meaning": "pay attention"
     },
     {
@@ -8067,7 +8067,7 @@
       "wordId": 208,
       "content": "意",
       "pinyin": "zhùyì",
-      "tone": "5",
+      "tone": "4",
       "meaning": "meaning / attention"
     },
     {
@@ -8103,7 +8103,7 @@
       "wordId": 210,
       "content": "少",
       "pinyin": "shǎo",
-      "tone": "1",
+      "tone": "3",
       "meaning": "character"
     },
     {
@@ -8115,7 +8115,7 @@
       "wordId": 211,
       "content": "甜",
       "pinyin": "tián",
-      "tone": "1",
+      "tone": "2",
       "meaning": "sweet"
     },
     {
@@ -8151,7 +8151,7 @@
       "wordId": 213,
       "content": "多",
       "pinyin": "duō",
-      "tone": "4",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -8187,7 +8187,7 @@
       "wordId": 215,
       "content": "这",
       "pinyin": "zhèyàng",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -8199,7 +8199,7 @@
       "wordId": 215,
       "content": "样",
       "pinyin": "zhèyàng",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -8235,7 +8235,7 @@
       "wordId": 217,
       "content": "对",
       "pinyin": "duì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "toward / correct"
     },
     {
@@ -8271,7 +8271,7 @@
       "wordId": 219,
       "content": "下",
       "pinyin": "xià",
-      "tone": "1",
+      "tone": "4",
       "meaning": "down / below"
     },
     {
@@ -8295,7 +8295,7 @@
       "wordId": 219,
       "content": "月",
       "pinyin": "yuè",
-      "tone": "2",
+      "tone": "4",
       "meaning": "month / moon"
     },
     {
@@ -8403,7 +8403,7 @@
       "wordId": 224,
       "content": "买",
       "pinyin": "mǎi",
-      "tone": "1",
+      "tone": "3",
       "meaning": "to buy"
     },
     {
@@ -8415,7 +8415,7 @@
       "wordId": 224,
       "content": "好",
       "pinyin": "hǎo",
-      "tone": "1",
+      "tone": "3",
       "meaning": "good / like"
     },
     {
@@ -8439,7 +8439,7 @@
       "wordId": 225,
       "content": "车",
       "pinyin": "piào",
-      "tone": "1",
+      "tone": "4",
       "meaning": "vehicle"
     },
     {
@@ -8463,7 +8463,7 @@
       "wordId": 226,
       "content": "出",
       "pinyin": "chūfā",
-      "tone": "5",
+      "tone": "1",
       "meaning": "to go out"
     },
     {
@@ -8475,7 +8475,7 @@
       "wordId": 226,
       "content": "发",
       "pinyin": "chūfā",
-      "tone": "5",
+      "tone": "1",
       "meaning": "send / start"
     },
     {
@@ -8487,7 +8487,7 @@
       "wordId": 227,
       "content": "还",
       "pinyin": "hái",
-      "tone": "1",
+      "tone": "2",
       "meaning": "still / also"
     },
     {
@@ -8499,7 +8499,7 @@
       "wordId": 227,
       "content": "要",
       "pinyin": "yào",
-      "tone": "1",
+      "tone": "4",
       "meaning": "want / need"
     },
     {
@@ -8511,7 +8511,7 @@
       "wordId": 228,
       "content": "行",
       "pinyin": "xíngli",
-      "tone": "3",
+      "tone": "2",
       "meaning": "travel / walk"
     },
     {
@@ -8523,7 +8523,7 @@
       "wordId": 228,
       "content": "李",
       "pinyin": "xíngli",
-      "tone": "3",
+      "tone": "2",
       "meaning": "plum / luggage component"
     },
     {
@@ -8535,7 +8535,7 @@
       "wordId": 229,
       "content": "到",
       "pinyin": "dàole",
-      "tone": "1",
+      "tone": "4",
       "meaning": "arrive / reach"
     },
     {
@@ -8547,7 +8547,7 @@
       "wordId": 229,
       "content": "了",
       "pinyin": "dàole",
-      "tone": "1",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -8583,7 +8583,7 @@
       "wordId": 231,
       "content": "第",
       "pinyin": "dì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "ordinal prefix"
     },
     {
@@ -8595,7 +8595,7 @@
       "wordId": 231,
       "content": "二",
       "pinyin": "èr",
-      "tone": "2",
+      "tone": "4",
       "meaning": "two"
     },
     {
@@ -8619,7 +8619,7 @@
       "wordId": 232,
       "content": "看",
       "pinyin": "kànkan",
-      "tone": "1",
+      "tone": "4",
       "meaning": "to look / read"
     },
     {
@@ -8631,7 +8631,7 @@
       "wordId": 232,
       "content": "看",
       "pinyin": "kànkan",
-      "tone": "1",
+      "tone": "4",
       "meaning": "to look / read"
     },
     {
@@ -8643,7 +8643,7 @@
       "wordId": 233,
       "content": "长",
       "pinyin": "Chángchéng",
-      "tone": "1",
+      "tone": "2",
       "meaning": "long"
     },
     {
@@ -8655,7 +8655,7 @@
       "wordId": 233,
       "content": "城",
       "pinyin": "Chángchéng",
-      "tone": "1",
+      "tone": "2",
       "meaning": "city wall"
     },
     {
@@ -8739,7 +8739,7 @@
       "wordId": 237,
       "content": "这",
       "pinyin": "zhè",
-      "tone": "2",
+      "tone": "4",
       "meaning": "character"
     },
     {
@@ -8751,7 +8751,7 @@
       "wordId": 237,
       "content": "次",
       "pinyin": "cì",
-      "tone": "3",
+      "tone": "4",
       "meaning": "time / occurrence"
     },
     {
@@ -8763,7 +8763,7 @@
       "wordId": 238,
       "content": "让",
       "pinyin": "ràng",
-      "tone": "1",
+      "tone": "4",
       "meaning": "let / make"
     },
     {
@@ -8799,7 +8799,7 @@
       "wordId": 240,
       "content": "东",
       "pinyin": "dōngxi",
-      "tone": "4",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -8811,7 +8811,7 @@
       "wordId": 240,
       "content": "西",
       "pinyin": "dōngxi",
-      "tone": "4",
+      "tone": "1",
       "meaning": "character"
     },
     {
@@ -8823,7 +8823,7 @@
       "wordId": 241,
       "content": "不",
       "pinyin": "bù",
-      "tone": "5",
+      "tone": "4",
       "meaning": "not"
     },
     {
@@ -8907,7 +8907,7 @@
       "wordId": 244,
       "content": "地",
       "pinyin": "dìfang",
-      "tone": "3",
+      "tone": "4",
       "meaning": "earth / place"
     },
     {
@@ -8919,7 +8919,7 @@
       "wordId": 244,
       "content": "方",
       "pinyin": "dìfang",
-      "tone": "3",
+      "tone": "4",
       "meaning": "direction / place"
     },
     {
@@ -8931,7 +8931,7 @@
       "wordId": 245,
       "content": "有",
       "pinyin": "yǒu",
-      "tone": "4",
+      "tone": "3",
       "meaning": "have"
     },
     {
@@ -8943,7 +8943,7 @@
       "wordId": 245,
       "content": "意",
       "pinyin": "yìsi",
-      "tone": "3",
+      "tone": "4",
       "meaning": "meaning / attention"
     },
     {
@@ -8967,7 +8967,7 @@
       "textId": null,
       "sentenceId": null,
       "wordId": null,
-      "content": "吗 (ma) is placed at the end of a statement to form a yes/no question."
+      "content": "吗 (ma) is added to the end of a yes/no question. Example: 你是学生吗？(Nǐ shì xuésheng ma?) — Are you a student?"
     },
     {
       "id": 2,
@@ -8976,7 +8976,7 @@
       "textId": null,
       "sentenceId": null,
       "wordId": null,
-      "content": "不 (bù) is placed before a verb or adjective to make a sentence negative."
+      "content": "不 (bù) usually comes before a verb or adjective to make it negative. Before a fourth-tone syllable, 不 is commonly pronounced bú. Example: 我不去。(Wǒ bú qù.) — I am not going."
     },
     {
       "id": 3,
@@ -8985,7 +8985,7 @@
       "textId": null,
       "sentenceId": null,
       "wordId": null,
-      "content": "的 (de) connects a person or thing with something that belongs to or describes it."
+      "content": "的 (de) commonly links a possessor to something owned, and can also describe a noun. Example: 我的书 (wǒ de shū) — my book."
     },
     {
       "id": 4,
@@ -8994,7 +8994,7 @@
       "textId": null,
       "sentenceId": null,
       "wordId": null,
-      "content": "过 (guo) is placed after a verb to show that someone has had an experience before."
+      "content": "过 (guo), placed after a verb, indicates a past experience. Example: 我去过北京。(Wǒ qùguo Běijīng.) — I have been to Beijing."
     },
     {
       "id": 5,
@@ -9003,7 +9003,7 @@
       "textId": null,
       "sentenceId": null,
       "wordId": null,
-      "content": "正在 (zhèngzài) is placed before a verb to show that an action is happening now."
+      "content": "正在 (zhèngzài) comes before a verb to emphasize that an action is in progress. Example: 我正在学习。(Wǒ zhèngzài xuéxí.) — I am studying right now."
     },
     {
       "id": 6,
@@ -9012,7 +9012,7 @@
       "textId": null,
       "sentenceId": null,
       "wordId": null,
-      "content": "比 (bǐ) is used to compare two people or things."
+      "content": "比 (bǐ) introduces the comparison standard. Common pattern: A + 比 + B + adjective. Example: 今天比昨天冷。(Jīntiān bǐ zuótiān lěng.) — Today is colder than yesterday."
     },
     {
       "id": 7,
@@ -9021,7 +9021,7 @@
       "textId": null,
       "sentenceId": null,
       "wordId": null,
-      "content": "把 (bǎ) moves the object before the verb when emphasizing what happens to that object."
+      "content": "把 (bǎ) introduces an object before the verb when the sentence focuses on what is done to that object. The verb phrase usually needs additional information about the result, direction, or action. Example: 请把门关上。(Qǐng bǎ mén guān shàng.) — Please close the door."
     },
     {
       "id": 8,
@@ -9030,7 +9030,7 @@
       "textId": null,
       "sentenceId": null,
       "wordId": null,
-      "content": "虽然 (suīrán) introduces a contrast and is commonly followed by 但是 (dànshì)."
+      "content": "虽然 (suīrán) means “although.” It is often paired with 但是 (dànshì, “but”), though 但是 can be omitted. Example: 虽然很累，但是我还要学习。— Although I am tired, I still need to study."
     },
     {
       "id": 9,
@@ -9039,7 +9039,7 @@
       "textId": null,
       "sentenceId": null,
       "wordId": null,
-      "content": "只要 (zhǐyào) means 'as long as' and introduces a condition for something to happen."
+      "content": "只要 (zhǐyào) means “as long as” and introduces a sufficient condition. Example: 只要努力，就会进步。— As long as you work hard, you will improve."
     }
   ]
 }
