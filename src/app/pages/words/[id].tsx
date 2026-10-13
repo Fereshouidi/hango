@@ -14,6 +14,8 @@ import { ThemedText } from '@/components/themed-text';
 import {
   deleteWords,
   getAllWords,
+  getHSKById,
+  getLessonById,
   getWordsByCharacterId,
   getWordsByHSKId,
   getWordsByLessonId,
@@ -199,6 +201,53 @@ export default function WordsScreen() {
     );
   };
 
+  const handleOpenListeningLoop = () => {
+    let effLessonId = lessonId > 0 ? lessonId : 0;
+    let effHskId = hskId > 0 ? hskId : 0;
+
+    if (!effLessonId && genericId > 0) {
+      const l = getLessonById(genericId);
+      if (l) {
+        effLessonId = l.id;
+        if (!effHskId && l.hskId) effHskId = l.hskId;
+      } else {
+        const h = getHSKById(genericId);
+        if (h) effHskId = h.id;
+      }
+    } else if (effLessonId > 0 && !effHskId) {
+      const l = getLessonById(effLessonId);
+      if (l?.hskId) effHskId = l.hskId;
+    }
+
+    const targetScope = effLessonId > 0 ? 'lesson' : 'hsk';
+    const idsParam = filteredWords.map((w) => w.id).filter(Boolean).join(',');
+
+    const queryParams: Record<string, string> = {
+      type: 'words',
+      scope: targetScope,
+    };
+    if (effHskId > 0) queryParams.hskId = String(effHskId);
+    if (effLessonId > 0) queryParams.lessonId = String(effLessonId);
+    if (textId > 0) queryParams.textId = String(textId);
+    if (sentenceId > 0) queryParams.sentenceId = String(sentenceId);
+    if (characterId > 0) queryParams.characterId = String(characterId);
+    if (ruleId > 0) queryParams.ruleId = String(ruleId);
+    if (searchQuery.trim()) queryParams.search = searchQuery.trim();
+    if (idsParam) queryParams.wordIds = idsParam;
+    if (activeFilterLabel) {
+      queryParams.filterLabel = searchQuery.trim()
+        ? `${activeFilterLabel} • "${searchQuery.trim()}"`
+        : activeFilterLabel;
+    } else if (searchQuery.trim()) {
+      queryParams.filterLabel = `Search: "${searchQuery.trim()}"`;
+    }
+
+    router.push({
+      pathname: '/pages/listeningLoop',
+      params: queryParams,
+    } as any);
+  };
+
   // ── Selection mode helpers ──────────────────────────────────────────────
   const enterSelectionMode = (id: number) => {
     setIsSelectionMode(true);
@@ -223,8 +272,19 @@ export default function WordsScreen() {
     });
   };
 
+  const isAllSelected = filteredWords.length > 0 && selectedIds.size === filteredWords.length;
+
   const selectAll = () => {
+    setIsSelectionMode(true);
     setSelectedIds(new Set(filteredWords.map((w) => w.id!).filter(Boolean)));
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      selectAll();
+    }
   };
 
   const handleDeleteSelected = () => {
@@ -374,15 +434,28 @@ export default function WordsScreen() {
           isSelectionMode
             ? [
                 <TouchableOpacity
+                  key="selectAll"
+                  onPress={toggleSelectAll}
+                  activeOpacity={0.8}
+                  style={[
+                    styles.headerSelectAllBtn,
+                    isAllSelected && styles.headerSelectAllBtnActive,
+                  ]}
+                >
+                  <Lucide
+                    name={isAllSelected ? "check-check" : "check-square"}
+                    size={19}
+                    color={isAllSelected ? "#2563eb" : "#475569"}
+                  />
+                </TouchableOpacity>,
+                <TouchableOpacity
                   key="trash"
                   onPress={handleDeleteSelected}
                   activeOpacity={0.8}
-                  style={styles.headerTrashBtn}
+                  style={[styles.headerTrashBtn, selectedIds.size === 0 && { opacity: 0.4 }]}
+                  disabled={selectedIds.size === 0}
                 >
-                  <Lucide name="trash-2" size={18} color="#ffffff" />
-                  <Text style={styles.headerTrashText}>
-                    Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
-                  </Text>
+                  <Lucide name="trash-2" size={19} color="#ffffff" />
                 </TouchableOpacity>,
               ]
             : [
@@ -393,6 +466,14 @@ export default function WordsScreen() {
                   hasActiveFilter={Boolean(searchQuery)}
                   accentColor="#059669"
                 />,
+                <TouchableOpacity
+                  key="loop"
+                  onPress={handleOpenListeningLoop}
+                  activeOpacity={0.7}
+                  style={styles.actionBtnIcon}
+                >
+                  <Lucide name="headphones" size={19} color="#ec4899" />
+                </TouchableOpacity>,
                 <TouchableOpacity
                   key="add"
                   onPress={() => router.push('/pages/addWord')}
@@ -513,24 +594,37 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  headerTrashBtn: {
-    flexDirection: 'row',
+  headerSelectAllBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  headerSelectAllBtnActive: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+  },
+  headerTrashBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: '#ef4444',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    elevation: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#ef4444',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-  headerTrashText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 13,
+    elevation: 2,
   },
   scrollView: {
     width: '100%',

@@ -17,6 +17,8 @@ interface LoopFilterBarProps {
   allLessons: LessonType[];
   breakTextsIntoSentences: boolean;
   onToggleBreakTexts: () => void;
+  customFilterLabel?: string | null;
+  onClearCustomFilter?: () => void;
 }
 
 export const LoopFilterBar: React.FC<LoopFilterBarProps> = ({
@@ -32,11 +34,60 @@ export const LoopFilterBar: React.FC<LoopFilterBarProps> = ({
   allLessons,
   breakTextsIntoSentences,
   onToggleBreakTexts,
+  customFilterLabel,
+  onClearCustomFilter,
 }) => {
+  const visibleLessons = React.useMemo(() => {
+    if (selectedHskId !== null) {
+      return allLessons.filter((l) => l.hskId === selectedHskId);
+    }
+    return allLessons;
+  }, [allLessons, selectedHskId]);
+
+  const activeHsk = allHsks.find((h) => h.id === selectedHskId);
+
   return (
     <View style={styles.card}>
-      {/* Row 1: Content Type Switcher (Sentences vs Texts) */}
+      {/* Custom Filter Banner if coming from Sentences page */}
+      {customFilterLabel ? (
+        <View style={styles.customFilterBanner}>
+          <View style={styles.customFilterLeft}>
+            <Lucide name="list-filter" size={13} color="#8b5cf6" />
+            <Text style={styles.customFilterText} numberOfLines={1}>
+              Filtered: <Text style={styles.customFilterBold}>{customFilterLabel}</Text>
+            </Text>
+          </View>
+          {onClearCustomFilter && (
+            <TouchableOpacity
+              onPress={onClearCustomFilter}
+              style={styles.clearCustomBtn}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.clearCustomBtnText}>Reset</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : null}
+
+      {/* Row 1: Content Type Switcher (Words vs Sentences vs Texts) */}
       <View style={styles.typeSwitcherRow}>
+        <TouchableOpacity
+          style={[styles.typeBtn, contentType === 'words' && styles.typeBtnActive]}
+          onPress={() => onSelectContentType('words')}
+          activeOpacity={0.7}
+        >
+          <Lucide
+            name="languages"
+            size={13}
+            color={contentType === 'words' ? '#ffffff' : '#64748b'}
+          />
+          <Text
+            style={[styles.typeBtnText, contentType === 'words' && styles.typeBtnTextActive]}
+          >
+            Words (生词)
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.typeBtn, contentType === 'sentences' && styles.typeBtnActive]}
           onPress={() => onSelectContentType('sentences')}
@@ -148,40 +199,69 @@ export const LoopFilterBar: React.FC<LoopFilterBarProps> = ({
           })}
         </ScrollView>
       ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsScroll}
-        >
-          <TouchableOpacity
-            style={[styles.chip, selectedLessonId === null && styles.chipActive]}
-            onPress={() => onSelectLessonId(null)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.chipText, selectedLessonId === null && styles.chipTextActive]}>
-              All Lessons
-            </Text>
-          </TouchableOpacity>
-
-          {allLessons.map((l) => {
-            const isSelected = selectedLessonId === l.id;
-            return (
+        <View style={styles.lessonsContainer}>
+          {selectedHskId !== null && (
+            <View style={styles.hskFilterTagRow}>
+              <View style={styles.hskFilterTag}>
+                <Lucide name="layers" size={11} color="#8b5cf6" />
+                <Text style={styles.hskFilterTagText}>
+                  {activeHsk?.name || `HSK ${selectedHskId}`}
+                </Text>
+              </View>
               <TouchableOpacity
-                key={`lesson-${l.id}`}
-                style={[styles.chip, isSelected && styles.chipActive]}
-                onPress={() => onSelectLessonId(isSelected ? null : l.id)}
+                onPress={() => onSelectHskId(null)}
+                style={styles.showAllHsksBtn}
                 activeOpacity={0.7}
               >
-                <Text
-                  style={[styles.chipText, isSelected && styles.chipTextActive]}
-                  numberOfLines={1}
-                >
-                  L{l.num}: {l.title}
-                </Text>
+                <Text style={styles.showAllHsksBtnText}>All HSKs</Text>
+                <Lucide name="x" size={11} color="#64748b" />
               </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+            </View>
+          )}
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsScroll}
+          >
+            <TouchableOpacity
+              style={[styles.chip, selectedLessonId === null && styles.chipActive]}
+              onPress={() => onSelectLessonId(null)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.chipText, selectedLessonId === null && styles.chipTextActive]}>
+                {selectedHskId !== null
+                  ? `All ${activeHsk?.name || `HSK ${selectedHskId}`} Lessons`
+                  : 'All Lessons'}
+              </Text>
+            </TouchableOpacity>
+
+            {visibleLessons.length === 0 ? (
+              <View style={styles.noLessonsChip}>
+                <Text style={styles.noLessonsText}>No lessons in this HSK</Text>
+              </View>
+            ) : (
+              visibleLessons.map((l) => {
+                const isSelected = selectedLessonId === l.id;
+                return (
+                  <TouchableOpacity
+                    key={`lesson-${l.id}`}
+                    style={[styles.chip, isSelected && styles.chipActive]}
+                    onPress={() => onSelectLessonId(isSelected ? null : l.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[styles.chipText, isSelected && styles.chipTextActive]}
+                      numberOfLines={1}
+                    >
+                      L{l.num}: {l.title}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </ScrollView>
+        </View>
       )}
     </View>
   );
@@ -212,8 +292,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 4,
     paddingVertical: 7,
+    paddingHorizontal: 2,
     borderRadius: 9,
   },
   typeBtnActive: {
@@ -225,7 +306,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   typeBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#64748b',
   },
@@ -315,5 +396,92 @@ const styles = StyleSheet.create({
   chipTextActive: {
     color: '#ffffff',
     fontWeight: '700',
+  },
+  customFilterBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f5f3ff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: '#ddd6fe',
+  },
+  customFilterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  customFilterText: {
+    fontSize: 11,
+    color: '#6d28d9',
+    fontWeight: '500',
+  },
+  customFilterBold: {
+    fontWeight: '700',
+    color: '#5b21b6',
+  },
+  clearCustomBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: '#8b5cf6',
+    borderRadius: 6,
+  },
+  clearCustomBtnText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  lessonsContainer: {
+    gap: 6,
+  },
+  hskFilterTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+  },
+  hskFilterTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f3e8ff',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  hskFilterTagText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#7c3aed',
+  },
+  showAllHsksBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: '#f1f5f9',
+  },
+  showAllHsksBtnText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  noLessonsChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  noLessonsText: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontStyle: 'italic',
   },
 });

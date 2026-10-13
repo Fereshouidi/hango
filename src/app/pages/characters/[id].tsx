@@ -224,8 +224,19 @@ export default function CharactersScreen() {
     });
   };
 
+  const isAllSelected = filteredCharacters.length > 0 && selectedIds.size === filteredCharacters.length;
+
   const selectAll = () => {
+    setIsSelectionMode(true);
     setSelectedIds(new Set(filteredCharacters.map((c) => c.id!).filter(Boolean)));
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      selectAll();
+    }
   };
 
   const handleDeleteSelected = () => {
@@ -316,18 +327,31 @@ export default function CharactersScreen() {
         items={
           isSelectionMode
             ? [
-              <TouchableOpacity
-                key="trash"
-                onPress={handleDeleteSelected}
-                activeOpacity={0.8}
-                style={styles.headerTrashBtn}
-              >
-                <Lucide name="trash-2" size={18} color="#ffffff" />
-                <Text style={styles.headerTrashText}>
-                  Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
-                </Text>
-              </TouchableOpacity>,
-            ]
+                <TouchableOpacity
+                  key="selectAll"
+                  onPress={toggleSelectAll}
+                  activeOpacity={0.8}
+                  style={[
+                    styles.headerSelectAllBtn,
+                    isAllSelected && styles.headerSelectAllBtnActive,
+                  ]}
+                >
+                  <Lucide
+                    name={isAllSelected ? "check-check" : "check-square"}
+                    size={19}
+                    color={isAllSelected ? "#2563eb" : "#475569"}
+                  />
+                </TouchableOpacity>,
+                <TouchableOpacity
+                  key="trash"
+                  onPress={handleDeleteSelected}
+                  activeOpacity={0.8}
+                  style={[styles.headerTrashBtn, selectedIds.size === 0 && { opacity: 0.4 }]}
+                  disabled={selectedIds.size === 0}
+                >
+                  <Lucide name="trash-2" size={19} color="#ffffff" />
+                </TouchableOpacity>,
+              ]
             : [
               <HeaderFilterButton
                 key="filter-toggle"
@@ -458,24 +482,37 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  headerTrashBtn: {
-    flexDirection: 'row',
+  headerSelectAllBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  headerSelectAllBtnActive: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+  },
+  headerTrashBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: '#ef4444',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    elevation: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#ef4444',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-  headerTrashText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 13,
+    elevation: 2,
   },
   scrollView: {
     width: '100%',

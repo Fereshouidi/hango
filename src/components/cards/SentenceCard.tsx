@@ -83,7 +83,7 @@ export const SentenceCard: React.FC<SentenceCardProps> = ({
         ) : index !== undefined ? (
           <View style={[styles.indexBadge, cardBg ? styles.whiteBadgeBg : { backgroundColor: accentColor + '20' }]}>
             <Text style={[styles.indexBadgeText, cardBg ? styles.whiteText : { color: accentColor }]}>
-              #{index + 1}
+              #{sentence.id || (index !== undefined ? index + 1 : 1)}
             </Text>
           </View>
         ) : (

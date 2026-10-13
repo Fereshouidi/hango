@@ -1,3 +1,4 @@
+import React, { useCallback, useState } from 'react';
 import * as Device from 'expo-device';
 import { Platform, ScrollView, StyleSheet, Text, Image, useColorScheme, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,27 +12,9 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { homeScreenItems } from '@/constants/data';
 import { Lucide } from '@react-native-vector-icons/lucide';
 import Header from '@/components/main/header';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Bg1 } from '@/components/sub/bg1';
-
-// function getDevMenuHint() {
-//   if (Platform.OS === 'web') {
-//     return <ThemedText type="small">use browser devtools</ThemedText>;
-//   }
-//   if (Device.isDevice) {
-//     return (
-//       <ThemedText type="small">
-//         shake device or press <ThemedText type="code">m</ThemedText> in terminal
-//       </ThemedText>
-//     );
-//   }
-//   const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-//   return (
-//     <ThemedText type="small">
-//       press <ThemedText type="code">{shortcut}</ThemedText>
-//     </ThemedText>
-//   );
-// }
+import { getStoredUser, User } from '@/services/authSyncService';
 
 import { useSidebar } from '@/context/sidebar-context';
 
@@ -40,6 +23,13 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { openSidebar } = useSidebar();
+  const [user, setUser] = useState<User | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      getStoredUser().then(setUser);
+    }, [])
+  );
   
   return (
     <ThemedView style={styles.container}>
@@ -120,6 +110,40 @@ export default function HomeScreen() {
               </Text>
             </View>
 
+            {/* Account & Sync button */}
+            <TouchableOpacity
+              onPress={() => router.push('/pages/sync' as any)}
+              style={{
+                position: 'absolute',
+                right: 10,
+                width: 40,
+                height: 40,
+                borderRadius: 50,
+                backgroundColor: "#e8e8e8ff",
+                borderWidth: 1,
+                borderColor: "#414040ff",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              activeOpacity={0.7}
+            >
+              <Lucide name="user" size={20} color="#373737ff" />
+              {user && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    width: 9,
+                    height: 9,
+                    borderRadius: 5,
+                    backgroundColor: '#16a34a',
+                    borderWidth: 1.5,
+                    borderColor: '#ffffff',
+                  }}
+                />
+              )}
+            </TouchableOpacity>
 
           </ThemedView>
 

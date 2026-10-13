@@ -84,7 +84,7 @@ export const TextCard: React.FC<TextCardProps> = ({
           ) : index !== undefined && (
             <View style={[styles.indexBadge, cardBg ? styles.whiteBadgeBg : { backgroundColor: accentColor + '20' }]}>
               <Text style={[styles.indexBadgeText, cardBg ? styles.whiteText : { color: accentColor }]}>
-                Text #{index + 1}
+                Text #{textObj.id || (index !== undefined ? index + 1 : 1)}
               </Text>
             </View>
           )}

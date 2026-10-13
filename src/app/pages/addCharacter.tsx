@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ThemedView } from '@/components/themed-view';
 import {
   getAllHSKs,
@@ -33,7 +33,7 @@ import {
 import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
 import Lucide from '@react-native-vector-icons/lucide';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   HSKType,
   LessonType,
@@ -131,57 +131,59 @@ const AddCharacter = () => {
   }>({ visible: false, charContent: '', itemCount: 0, details: '' });
 
   // Load DB items and prefill if editing
-  useEffect(() => {
-    try {
-      setHsks((getAllHSKs() as unknown as HSKType[]) || []);
-      setLessons((getAllLessons() as unknown as LessonType[]) || []);
-      setTexts((getAllTexts() as unknown as TextType[]) || []);
-      setSentences((getAllSentences() as unknown as SentenceType[]) || []);
-      setWords((getAllWords() as unknown as WordType[]) || []);
-      setAllRules((getAllRules() as unknown as RuleType[]) || []);
+  useFocusEffect(
+    useCallback(() => {
+      try {
+        setHsks((getAllHSKs() as unknown as HSKType[]) || []);
+        setLessons((getAllLessons() as unknown as LessonType[]) || []);
+        setTexts((getAllTexts() as unknown as TextType[]) || []);
+        setSentences((getAllSentences() as unknown as SentenceType[]) || []);
+        setWords((getAllWords() as unknown as WordType[]) || []);
+        setAllRules((getAllRules() as unknown as RuleType[]) || []);
 
-      if (editCharacterId) {
-        const charData = getCharacterById(editCharacterId);
-        if (charData) {
-          setContent(charData.content || '');
-          setPinyin(charData.pinyin || '');
-          setTone(charData.tone || '1');
-          setMeaning(charData.meaning || '');
+        if (editCharacterId) {
+          const charData = getCharacterById(editCharacterId);
+          if (charData) {
+            setContent(charData.content || '');
+            setPinyin(charData.pinyin || '');
+            setTone(charData.tone || '1');
+            setMeaning(charData.meaning || '');
 
-          const charHsks = (getHSKsByCharacterId(editCharacterId) as unknown as HSKType[]) || [];
-          const charLessons = (getLessonsByCharacterId(editCharacterId) as unknown as LessonType[]) || [];
-          const charTexts = (getTextsByCharacterId(editCharacterId) as unknown as TextType[]) || [];
-          const charSentences = (getSentencesByCharacterId(editCharacterId) as unknown as SentenceType[]) || [];
-          const charWords = (getWordsByCharacterId(editCharacterId) as unknown as WordType[]) || [];
-          const charRules = (getRulesByCharacterId(editCharacterId) as unknown as RuleType[]) || [];
+            const charHsks = (getHSKsByCharacterId(editCharacterId) as unknown as HSKType[]) || [];
+            const charLessons = (getLessonsByCharacterId(editCharacterId) as unknown as LessonType[]) || [];
+            const charTexts = (getTextsByCharacterId(editCharacterId) as unknown as TextType[]) || [];
+            const charSentences = (getSentencesByCharacterId(editCharacterId) as unknown as SentenceType[]) || [];
+            const charWords = (getWordsByCharacterId(editCharacterId) as unknown as WordType[]) || [];
+            const charRules = (getRulesByCharacterId(editCharacterId) as unknown as RuleType[]) || [];
 
-          const hskSet = new Set(charHsks.map((h) => h.id));
-          if (charData.hskId) hskSet.add(charData.hskId);
-          setSelectedHskIds(hskSet);
+            const hskSet = new Set(charHsks.map((h) => h.id));
+            if (charData.hskId) hskSet.add(charData.hskId);
+            setSelectedHskIds(hskSet);
 
-          const lessonSet = new Set(charLessons.map((l) => l.id));
-          if (charData.lessonId) lessonSet.add(charData.lessonId);
-          setSelectedLessonIds(lessonSet);
+            const lessonSet = new Set(charLessons.map((l) => l.id));
+            if (charData.lessonId) lessonSet.add(charData.lessonId);
+            setSelectedLessonIds(lessonSet);
 
-          const textSet = new Set(charTexts.map((t) => t.id));
-          if (charData.textId) textSet.add(charData.textId);
-          setSelectedTextIds(textSet);
+            const textSet = new Set(charTexts.map((t) => t.id));
+            if (charData.textId) textSet.add(charData.textId);
+            setSelectedTextIds(textSet);
 
-          const sentenceSet = new Set(charSentences.map((s) => s.id));
-          if (charData.sentenceId) sentenceSet.add(charData.sentenceId);
-          setSelectedSentenceIds(sentenceSet);
+            const sentenceSet = new Set(charSentences.map((s) => s.id));
+            if (charData.sentenceId) sentenceSet.add(charData.sentenceId);
+            setSelectedSentenceIds(sentenceSet);
 
-          const wordSet = new Set(charWords.map((w) => w.id));
-          if (charData.wordId) wordSet.add(charData.wordId);
-          setSelectedWordIds(wordSet);
+            const wordSet = new Set(charWords.map((w) => w.id));
+            if (charData.wordId) wordSet.add(charData.wordId);
+            setSelectedWordIds(wordSet);
 
-          setSelectedRuleIds(new Set(charRules.map((r) => r.id)));
+            setSelectedRuleIds(new Set(charRules.map((r) => r.id)));
+          }
         }
+      } catch (e) {
+        console.error('Failed to load DB items for addCharacter:', e);
       }
-    } catch (e) {
-      console.error('Failed to load DB items for addCharacter:', e);
-    }
-  }, [editCharacterId]);
+    }, [editCharacterId])
+  );
 
   // Helper: toggle id in a Set
   const toggleId = (set: Set<number>, id: number): Set<number> => {
@@ -525,6 +527,11 @@ const AddCharacter = () => {
             selectedCount={selectedRuleIds.size}
             expanded={expandedSections.rules}
             onToggle={() => toggleSection('rules')}
+            onAddNew={() => {
+              const hskParam = selectedHskIds.size > 0 ? `?hskId=${Array.from(selectedHskIds)[0]}` : '';
+              router.push(`/pages/addRule${hskParam}` as any);
+            }}
+            addNewLabel="+ Rule"
             onSelectAll={handleSelectAllRules}
             onClearAll={() => setSelectedRuleIds(new Set())}
             searchQuery={searchRules}

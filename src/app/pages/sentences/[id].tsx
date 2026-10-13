@@ -15,6 +15,8 @@ import {
   deleteSentence,
   deleteSentences,
   getAllSentences,
+  getHSKById,
+  getLessonById,
   getSentencesByCharacterId,
   getSentencesByHSKId,
   getSentencesByLessonId,
@@ -151,6 +153,53 @@ export default function SentencesScreen() {
     speakChineseText(text, () => setPlayingId(id), () => setPlayingId(null));
   };
 
+  const handleOpenListeningLoop = () => {
+    let effLessonId = lessonId > 0 ? lessonId : 0;
+    let effHskId = hskId > 0 ? hskId : 0;
+
+    if (!effLessonId && genericId > 0) {
+      const l = getLessonById(genericId);
+      if (l) {
+        effLessonId = l.id;
+        if (!effHskId && l.hskId) effHskId = l.hskId;
+      } else {
+        const h = getHSKById(genericId);
+        if (h) effHskId = h.id;
+      }
+    } else if (effLessonId > 0 && !effHskId) {
+      const l = getLessonById(effLessonId);
+      if (l?.hskId) effHskId = l.hskId;
+    }
+
+    const targetScope = effLessonId > 0 ? 'lesson' : 'hsk';
+    const idsParam = filteredSentences.map((s) => s.id).filter(Boolean).join(',');
+
+    const queryParams: Record<string, string> = {
+      type: 'sentences',
+      scope: targetScope,
+    };
+    if (effHskId > 0) queryParams.hskId = String(effHskId);
+    if (effLessonId > 0) queryParams.lessonId = String(effLessonId);
+    if (textId > 0) queryParams.textId = String(textId);
+    if (wordId > 0) queryParams.wordId = String(wordId);
+    if (characterId > 0) queryParams.characterId = String(characterId);
+    if (ruleId > 0) queryParams.ruleId = String(ruleId);
+    if (searchQuery.trim()) queryParams.search = searchQuery.trim();
+    if (idsParam) queryParams.sentenceIds = idsParam;
+    if (activeFilterLabel) {
+      queryParams.filterLabel = searchQuery.trim()
+        ? `${activeFilterLabel} • "${searchQuery.trim()}"`
+        : activeFilterLabel;
+    } else if (searchQuery.trim()) {
+      queryParams.filterLabel = `Search: "${searchQuery.trim()}"`;
+    }
+
+    router.push({
+      pathname: '/pages/listeningLoop',
+      params: queryParams,
+    } as any);
+  };
+
   const exitSelectionMode = () => { setIsSelectionMode(false); setSelectedIds(new Set()); setActiveCardSentence(null); };
   const enterSelectionMode = (id: number) => { setIsSelectionMode(true); setSelectedIds(new Set([id])); };
   const toggleSelection = (id: number) => {
@@ -164,7 +213,21 @@ export default function SentencesScreen() {
       return next;
     });
   };
-  const selectAll = () => setSelectedIds(new Set(filteredSentences.map((s) => s.id!).filter(Boolean)));
+
+  const isAllSelected = filteredSentences.length > 0 && selectedIds.size === filteredSentences.length;
+
+  const selectAll = () => {
+    setIsSelectionMode(true);
+    setSelectedIds(new Set(filteredSentences.map((s) => s.id!).filter(Boolean)));
+  };
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      selectAll();
+    }
+  };
 
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
@@ -238,15 +301,28 @@ export default function SentencesScreen() {
           isSelectionMode
             ? [
                 <TouchableOpacity
+                  key="selectAll"
+                  onPress={toggleSelectAll}
+                  activeOpacity={0.8}
+                  style={[
+                    styles.headerSelectAllBtn,
+                    isAllSelected && styles.headerSelectAllBtnActive,
+                  ]}
+                >
+                  <Lucide
+                    name={isAllSelected ? "check-check" : "check-square"}
+                    size={19}
+                    color={isAllSelected ? "#2563eb" : "#475569"}
+                  />
+                </TouchableOpacity>,
+                <TouchableOpacity
                   key="trash"
                   onPress={handleDeleteSelected}
                   activeOpacity={0.8}
-                  style={styles.headerTrashBtn}
+                  style={[styles.headerTrashBtn, selectedIds.size === 0 && { opacity: 0.4 }]}
+                  disabled={selectedIds.size === 0}
                 >
-                  <Lucide name="trash-2" size={18} color="#ffffff" />
-                  <Text style={styles.headerTrashText}>
-                    Delete {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
-                  </Text>
+                  <Lucide name="trash-2" size={19} color="#ffffff" />
                 </TouchableOpacity>,
               ]
             : [
@@ -259,11 +335,7 @@ export default function SentencesScreen() {
                 />,
                 <TouchableOpacity
                   key="loop"
-                  onPress={() =>
-                    router.push(
-                      `/pages/listeningLoop?type=sentences${hskId ? `&hskId=${hskId}` : ''}${lessonId ? `&lessonId=${lessonId}` : ''}${textId ? `&textId=${textId}` : ''}` as any
-                    )
-                  }
+                  onPress={handleOpenListeningLoop}
                   activeOpacity={0.7}
                   style={styles.actionBtnIcon}
                 >
@@ -350,24 +422,37 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  headerTrashBtn: {
-    flexDirection: 'row',
+  headerSelectAllBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  headerSelectAllBtnActive: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+  },
+  headerTrashBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     backgroundColor: '#ef4444',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    elevation: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#ef4444',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-  headerTrashText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 13,
+    elevation: 2,
   },
   scrollView: { width: '100%', flex: 1 },
   scrollContent: { width: '100%', paddingHorizontal: 5, paddingBottom: 24, paddingTop: 5 },

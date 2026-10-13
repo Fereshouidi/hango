@@ -13,11 +13,22 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { ThemedView } from '@/components/themed-view';
 import {
   getAllHSKs,
+  getAllHSKsCount,
   getAllLessons,
+  getAllLessonsCount,
+  getLessonsPaged,
   getAllTexts,
+  getAllTextsCount,
+  getTextsPaged,
   getAllSentences,
+  getAllSentencesCount,
+  getSentencesPaged,
   getAllWords,
+  getAllWordsCount,
+  getWordsPaged,
   getAllCharacters,
+  getAllCharactersCount,
+  getCharactersPaged,
   getRuleById,
   getHSKsByRuleId,
   getLessonsByRuleId,
@@ -69,13 +80,42 @@ const AddRule = () => {
   // Rule Form fields
   const [content, setContent] = useState('');
 
-  // All entities from DB
+  // All entities from DB with 10 by 10 pagination states
   const [hsks, setHsks] = useState<HSKType[]>([]);
+  const [hskOffset, setHskOffset] = useState(10);
+  const [totalHskCount, setTotalHskCount] = useState(0);
+  const [loadingMoreHsks, setLoadingMoreHsks] = useState(false);
+  const [hasMoreHsks, setHasMoreHsks] = useState(true);
+
   const [lessons, setLessons] = useState<LessonType[]>([]);
+  const [lessonOffset, setLessonOffset] = useState(10);
+  const [totalLessonCount, setTotalLessonCount] = useState(0);
+  const [loadingMoreLessons, setLoadingMoreLessons] = useState(false);
+  const [hasMoreLessons, setHasMoreLessons] = useState(true);
+
   const [texts, setTexts] = useState<TextType[]>([]);
+  const [textOffset, setTextOffset] = useState(10);
+  const [totalTextCount, setTotalTextCount] = useState(0);
+  const [loadingMoreTexts, setLoadingMoreTexts] = useState(false);
+  const [hasMoreTexts, setHasMoreTexts] = useState(true);
+
   const [sentences, setSentences] = useState<SentenceType[]>([]);
+  const [sentenceOffset, setSentenceOffset] = useState(10);
+  const [totalSentenceCount, setTotalSentenceCount] = useState(0);
+  const [loadingMoreSentences, setLoadingMoreSentences] = useState(false);
+  const [hasMoreSentences, setHasMoreSentences] = useState(true);
+
   const [words, setWords] = useState<WordType[]>([]);
+  const [wordOffset, setWordOffset] = useState(10);
+  const [totalWordCount, setTotalWordCount] = useState(0);
+  const [loadingMoreWords, setLoadingMoreWords] = useState(false);
+  const [hasMoreWords, setHasMoreWords] = useState(true);
+
   const [characters, setCharacters] = useState<CharacterType[]>([]);
+  const [charOffset, setCharOffset] = useState(10);
+  const [totalCharCount, setTotalCharCount] = useState(0);
+  const [loadingMoreChars, setLoadingMoreChars] = useState(false);
+  const [hasMoreChars, setHasMoreChars] = useState(true);
 
   // Selected multi-entity IDs
   const [selectedHskIds, setSelectedHskIds] = useState<Set<number>>(
@@ -142,22 +182,51 @@ const AddRule = () => {
     }));
   };
 
-  // Load DB items on focus
+  // Load DB items on focus (10 by 10 for each section)
   useFocusEffect(
     useCallback(() => {
       try {
-        const hskData = getAllHSKs() as unknown as HSKType[];
-        setHsks(hskData || []);
-        const lessonData = getAllLessons() as unknown as LessonType[];
-        setLessons(lessonData || []);
-        const textData = getAllTexts() as unknown as TextType[];
-        setTexts(textData || []);
-        const sentenceData = getAllSentences() as unknown as SentenceType[];
-        setSentences(sentenceData || []);
-        const wordData = getAllWords() as unknown as WordType[];
-        setWords(wordData || []);
-        const charData = getAllCharacters() as unknown as CharacterType[];
-        setCharacters(charData || []);
+        // HSKs 10 by 10
+        const initialHsks = (getAllHSKs(10, 0) as unknown as HSKType[]) || [];
+        const hskCount = getAllHSKsCount();
+        setTotalHskCount(hskCount);
+        setHskOffset(10);
+        setHasMoreHsks(initialHsks.length < hskCount);
+
+        // Lessons 10 by 10
+        const initialLessons = (getAllLessons(10, 0) as unknown as LessonType[]) || [];
+        const lessonCount = getAllLessonsCount();
+        setTotalLessonCount(lessonCount);
+        setLessonOffset(10);
+        setHasMoreLessons(initialLessons.length < lessonCount);
+
+        // Texts 10 by 10
+        const initialTexts = (getAllTexts(10, 0) as unknown as TextType[]) || [];
+        const textCount = getAllTextsCount();
+        setTotalTextCount(textCount);
+        setTextOffset(10);
+        setHasMoreTexts(initialTexts.length < textCount);
+
+        // Sentences 10 by 10
+        const initialSentences = (getAllSentences(10, 0) as unknown as SentenceType[]) || [];
+        const sentenceCount = getAllSentencesCount();
+        setTotalSentenceCount(sentenceCount);
+        setSentenceOffset(10);
+        setHasMoreSentences(initialSentences.length < sentenceCount);
+
+        // Words 10 by 10
+        const initialWords = (getAllWords(10, 0) as unknown as WordType[]) || [];
+        const wordCount = getAllWordsCount();
+        setTotalWordCount(wordCount);
+        setWordOffset(10);
+        setHasMoreWords(initialWords.length < wordCount);
+
+        // Characters 10 by 10
+        const initialChars = (getAllCharacters(10, 0) as unknown as CharacterType[]) || [];
+        const charCount = getAllCharactersCount();
+        setTotalCharCount(charCount);
+        setCharOffset(10);
+        setHasMoreChars(initialChars.length < charCount);
 
         // If editing, pre-fill form with existing rule data
         if (editRuleId) {
@@ -177,12 +246,315 @@ const AddRule = () => {
           setSelectedSentenceIds(new Set(existingSentences.map((s: any) => s.id)));
           setSelectedWordIds(new Set(existingWords.map((w: any) => w.id)));
           setSelectedCharacterIds(new Set(existingChars.map((c: any) => c.id)));
+
+          // Merge existing linked items into arrays so they don't disappear
+          const hskIds = new Set(initialHsks.map((h) => h.id));
+          setHsks([...initialHsks, ...existingHsks.filter((h: any) => !hskIds.has(h.id))]);
+
+          const lessonIds = new Set(initialLessons.map((l) => l.id));
+          setLessons([...initialLessons, ...existingLessons.filter((l: any) => !lessonIds.has(l.id))]);
+
+          const textIds = new Set(initialTexts.map((t) => t.id));
+          setTexts([...initialTexts, ...existingTexts.filter((t: any) => !textIds.has(t.id))]);
+
+          const sentenceIds = new Set(initialSentences.map((s) => s.id));
+          setSentences([...initialSentences, ...existingSentences.filter((s: any) => !sentenceIds.has(s.id))]);
+
+          const wordIds = new Set(initialWords.map((w) => w.id));
+          setWords([...initialWords, ...existingWords.filter((w: any) => !wordIds.has(w.id))]);
+
+          const charIds = new Set(initialChars.map((c) => c.id));
+          setCharacters([...initialChars, ...existingChars.filter((c: any) => !charIds.has(c.id))]);
+        } else {
+          setHsks(initialHsks);
+          setLessons(initialLessons);
+          setTexts(initialTexts);
+          setSentences(initialSentences);
+          setWords(initialWords);
+          setCharacters(initialChars);
         }
       } catch (e) {
         console.error('Failed to load DB items for addRule:', e);
       }
     }, [editRuleId])
   );
+
+  // Pagination Load More handlers for each section
+  const loadMoreHsks = () => {
+    if (loadingMoreHsks || !hasMoreHsks) return;
+    setLoadingMoreHsks(true);
+    try {
+      const nextBatch = (getAllHSKs(10, hskOffset) as unknown as HSKType[]) || [];
+      if (nextBatch.length === 0) {
+        setHasMoreHsks(false);
+      } else {
+        setHsks((prev) => {
+          const existingIds = new Set(prev.map((h) => h.id));
+          const newItems = nextBatch.filter((h) => !existingIds.has(h.id));
+          return [...prev, ...newItems];
+        });
+        setHskOffset((prev) => prev + nextBatch.length);
+        if (nextBatch.length < 10 || hskOffset + nextBatch.length >= totalHskCount) {
+          setHasMoreHsks(false);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load more HSKs:', e);
+    } finally {
+      setLoadingMoreHsks(false);
+    }
+  };
+
+  const loadMoreLessons = () => {
+    if (loadingMoreLessons || !hasMoreLessons) return;
+    setLoadingMoreLessons(true);
+    try {
+      const nextBatch = (getAllLessons(10, lessonOffset) as unknown as LessonType[]) || [];
+      if (nextBatch.length === 0) {
+        setHasMoreLessons(false);
+      } else {
+        setLessons((prev) => {
+          const existingIds = new Set(prev.map((l) => l.id));
+          const newItems = nextBatch.filter((l) => !existingIds.has(l.id));
+          return [...prev, ...newItems];
+        });
+        setLessonOffset((prev) => prev + nextBatch.length);
+        if (nextBatch.length < 10 || lessonOffset + nextBatch.length >= totalLessonCount) {
+          setHasMoreLessons(false);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load more lessons:', e);
+    } finally {
+      setLoadingMoreLessons(false);
+    }
+  };
+
+  const loadMoreTexts = () => {
+    if (loadingMoreTexts || !hasMoreTexts) return;
+    setLoadingMoreTexts(true);
+    try {
+      const nextBatch = (getAllTexts(10, textOffset) as unknown as TextType[]) || [];
+      if (nextBatch.length === 0) {
+        setHasMoreTexts(false);
+      } else {
+        setTexts((prev) => {
+          const existingIds = new Set(prev.map((t) => t.id));
+          const newItems = nextBatch.filter((t) => !existingIds.has(t.id));
+          return [...prev, ...newItems];
+        });
+        setTextOffset((prev) => prev + nextBatch.length);
+        if (nextBatch.length < 10 || textOffset + nextBatch.length >= totalTextCount) {
+          setHasMoreTexts(false);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load more texts:', e);
+    } finally {
+      setLoadingMoreTexts(false);
+    }
+  };
+
+  const loadMoreSentences = () => {
+    if (loadingMoreSentences || !hasMoreSentences) return;
+    setLoadingMoreSentences(true);
+    try {
+      const nextBatch = (getAllSentences(10, sentenceOffset) as unknown as SentenceType[]) || [];
+      if (nextBatch.length === 0) {
+        setHasMoreSentences(false);
+      } else {
+        setSentences((prev) => {
+          const existingIds = new Set(prev.map((s) => s.id));
+          const newItems = nextBatch.filter((s) => !existingIds.has(s.id));
+          return [...prev, ...newItems];
+        });
+        setSentenceOffset((prev) => prev + nextBatch.length);
+        if (nextBatch.length < 10 || sentenceOffset + nextBatch.length >= totalSentenceCount) {
+          setHasMoreSentences(false);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load more sentences:', e);
+    } finally {
+      setLoadingMoreSentences(false);
+    }
+  };
+
+  const loadMoreWords = () => {
+    if (loadingMoreWords || !hasMoreWords) return;
+    setLoadingMoreWords(true);
+    try {
+      const nextBatch = (getAllWords(10, wordOffset) as unknown as WordType[]) || [];
+      if (nextBatch.length === 0) {
+        setHasMoreWords(false);
+      } else {
+        setWords((prev) => {
+          const existingIds = new Set(prev.map((w) => w.id));
+          const newItems = nextBatch.filter((w) => !existingIds.has(w.id));
+          return [...prev, ...newItems];
+        });
+        setWordOffset((prev) => prev + nextBatch.length);
+        if (nextBatch.length < 10 || wordOffset + nextBatch.length >= totalWordCount) {
+          setHasMoreWords(false);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load more words:', e);
+    } finally {
+      setLoadingMoreWords(false);
+    }
+  };
+
+  const loadMoreCharacters = () => {
+    if (loadingMoreChars || !hasMoreChars) return;
+    setLoadingMoreChars(true);
+    try {
+      const nextBatch = (getAllCharacters(10, charOffset) as unknown as CharacterType[]) || [];
+      if (nextBatch.length === 0) {
+        setHasMoreChars(false);
+      } else {
+        setCharacters((prev) => {
+          const existingIds = new Set(prev.map((c) => c.id));
+          const newItems = nextBatch.filter((c) => !existingIds.has(c.id));
+          return [...prev, ...newItems];
+        });
+        setCharOffset((prev) => prev + nextBatch.length);
+        if (nextBatch.length < 10 || charOffset + nextBatch.length >= totalCharCount) {
+          setHasMoreChars(false);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load more characters:', e);
+    } finally {
+      setLoadingMoreChars(false);
+    }
+  };
+
+  // Search input change handlers with 10-item DB lookup
+  const handleSearchLessonsChange = (text: string) => {
+    setSearchLessons(text);
+    if (!text.trim()) {
+      const initial = (getAllLessons(10, 0) as unknown as LessonType[]) || [];
+      setLessonOffset(10);
+      setHasMoreLessons(initial.length < totalLessonCount);
+      setLessons((prev) => {
+        const initIds = new Set(initial.map((l) => l.id));
+        const selectedKept = prev.filter((l) => selectedLessonIds.has(l.id) && !initIds.has(l.id));
+        return [...initial, ...selectedKept];
+      });
+    } else {
+      try {
+        const results = (getLessonsPaged(text.trim(), 'all', 10, 0) as unknown as LessonType[]) || [];
+        setLessons((prev) => {
+          const resIds = new Set(results.map((l) => l.id));
+          const selectedKept = prev.filter((l) => selectedLessonIds.has(l.id) && !resIds.has(l.id));
+          return [...results, ...selectedKept];
+        });
+      } catch (e) {
+        console.error('Failed to search lessons:', e);
+      }
+    }
+  };
+
+  const handleSearchTextsChange = (text: string) => {
+    setSearchTexts(text);
+    if (!text.trim()) {
+      const initial = (getAllTexts(10, 0) as unknown as TextType[]) || [];
+      setTextOffset(10);
+      setHasMoreTexts(initial.length < totalTextCount);
+      setTexts((prev) => {
+        const initIds = new Set(initial.map((t) => t.id));
+        const selectedKept = prev.filter((t) => selectedTextIds.has(t.id) && !initIds.has(t.id));
+        return [...initial, ...selectedKept];
+      });
+    } else {
+      try {
+        const results = (getTextsPaged(text.trim(), 'all', 10, 0) as unknown as TextType[]) || [];
+        setTexts((prev) => {
+          const resIds = new Set(results.map((t) => t.id));
+          const selectedKept = prev.filter((t) => selectedTextIds.has(t.id) && !resIds.has(t.id));
+          return [...results, ...selectedKept];
+        });
+      } catch (e) {
+        console.error('Failed to search texts:', e);
+      }
+    }
+  };
+
+  const handleSearchSentencesChange = (text: string) => {
+    setSearchSentences(text);
+    if (!text.trim()) {
+      const initial = (getAllSentences(10, 0) as unknown as SentenceType[]) || [];
+      setSentenceOffset(10);
+      setHasMoreSentences(initial.length < totalSentenceCount);
+      setSentences((prev) => {
+        const initIds = new Set(initial.map((s) => s.id));
+        const selectedKept = prev.filter((s) => selectedSentenceIds.has(s.id) && !initIds.has(s.id));
+        return [...initial, ...selectedKept];
+      });
+    } else {
+      try {
+        const results = (getSentencesPaged(text.trim(), 'all', 10, 0) as unknown as SentenceType[]) || [];
+        setSentences((prev) => {
+          const resIds = new Set(results.map((s) => s.id));
+          const selectedKept = prev.filter((s) => selectedSentenceIds.has(s.id) && !resIds.has(s.id));
+          return [...results, ...selectedKept];
+        });
+      } catch (e) {
+        console.error('Failed to search sentences:', e);
+      }
+    }
+  };
+
+  const handleSearchWordsChange = (text: string) => {
+    setSearchWords(text);
+    if (!text.trim()) {
+      const initial = (getAllWords(10, 0) as unknown as WordType[]) || [];
+      setWordOffset(10);
+      setHasMoreWords(initial.length < totalWordCount);
+      setWords((prev) => {
+        const initIds = new Set(initial.map((w) => w.id));
+        const selectedKept = prev.filter((w) => selectedWordIds.has(w.id) && !initIds.has(w.id));
+        return [...initial, ...selectedKept];
+      });
+    } else {
+      try {
+        const results = (getWordsPaged(text.trim(), 'all', 10, 0) as unknown as WordType[]) || [];
+        setWords((prev) => {
+          const resIds = new Set(results.map((w) => w.id));
+          const selectedKept = prev.filter((w) => selectedWordIds.has(w.id) && !resIds.has(w.id));
+          return [...results, ...selectedKept];
+        });
+      } catch (e) {
+        console.error('Failed to search words:', e);
+      }
+    }
+  };
+
+  const handleSearchCharactersChange = (text: string) => {
+    setSearchCharacters(text);
+    if (!text.trim()) {
+      const initialChars = (getAllCharacters(10, 0) as unknown as CharacterType[]) || [];
+      setCharOffset(10);
+      setHasMoreChars(initialChars.length < totalCharCount);
+      setCharacters((prev) => {
+        const initialIds = new Set(initialChars.map((c) => c.id));
+        const selectedKept = prev.filter((c) => selectedCharacterIds.has(c.id) && !initialIds.has(c.id));
+        return [...initialChars, ...selectedKept];
+      });
+    } else {
+      try {
+        const results = (getCharactersPaged(text.trim(), 'all', 10, 0) as unknown as CharacterType[]) || [];
+        setCharacters((prev) => {
+          const resultIds = new Set(results.map((c) => c.id));
+          const selectedKept = prev.filter((c) => selectedCharacterIds.has(c.id) && !resultIds.has(c.id));
+          return [...results, ...selectedKept];
+        });
+      } catch (e) {
+        console.error('Failed to search characters:', e);
+      }
+    }
+  };
 
   // Helper toggle ID
   const toggleId = (set: Set<number>, id: number): Set<number> => {
@@ -476,7 +848,7 @@ const AddRule = () => {
             title="HSK Levels"
             icon="layers"
             color="#6366f1"
-            totalCount={hsks.length}
+            totalCount={totalHskCount || hsks.length}
             selectedCount={selectedHskIds.size}
             expanded={expandedSections.hsks}
             onToggle={() => toggleSection('hsks')}
@@ -495,6 +867,13 @@ const AddRule = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    loadMoreHsks();
+                  }
+                }}
+                scrollEventThrottle={150}
               >
                 {filteredHsks.map((h) => (
                   <ItemCard
@@ -508,6 +887,25 @@ const AddRule = () => {
                     isChineseTitle={false}
                   />
                 ))}
+                {hasMoreHsks && (
+                  <TouchableOpacity
+                    style={[
+                      styles.loadMoreCard,
+                      { width: 140, minHeight: 90, borderColor: '#6366f1', backgroundColor: '#eef2ff' },
+                    ]}
+                    onPress={loadMoreHsks}
+                    activeOpacity={0.7}
+                  >
+                    <Lucide
+                      name={loadingMoreHsks ? 'loader' : 'plus'}
+                      size={20}
+                      color="#6366f1"
+                    />
+                    <Text style={[styles.loadMoreCardText, { color: '#6366f1' }]}>
+                      {loadingMoreHsks ? 'Loading…' : '+10 More'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -517,14 +915,14 @@ const AddRule = () => {
             title="Lessons"
             icon="book-open"
             color="#2563eb"
-            totalCount={lessons.length}
+            totalCount={totalLessonCount || lessons.length}
             selectedCount={selectedLessonIds.size}
             expanded={expandedSections.lessons}
             onToggle={() => toggleSection('lessons')}
             onSelectAll={handleSelectAllLessons}
             onClearAll={() => setSelectedLessonIds(new Set())}
             searchQuery={searchLessons}
-            onSearchChange={setSearchLessons}
+            onSearchChange={handleSearchLessonsChange}
             filterMode={filterLessons}
             onFilterChange={setFilterLessons}
             hasHskSelected={selectedHskIds.size > 0}
@@ -536,6 +934,13 @@ const AddRule = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    loadMoreLessons();
+                  }
+                }}
+                scrollEventThrottle={150}
               >
                 {filteredLessons.map((l) => (
                   <ItemCard
@@ -550,6 +955,25 @@ const AddRule = () => {
                     isChineseTitle={false}
                   />
                 ))}
+                {hasMoreLessons && (
+                  <TouchableOpacity
+                    style={[
+                      styles.loadMoreCard,
+                      { width: 160, minHeight: 90, borderColor: '#2563eb', backgroundColor: '#eff6ff' },
+                    ]}
+                    onPress={loadMoreLessons}
+                    activeOpacity={0.7}
+                  >
+                    <Lucide
+                      name={loadingMoreLessons ? 'loader' : 'plus'}
+                      size={20}
+                      color="#2563eb"
+                    />
+                    <Text style={[styles.loadMoreCardText, { color: '#2563eb' }]}>
+                      {loadingMoreLessons ? 'Loading…' : '+10 More'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -559,7 +983,7 @@ const AddRule = () => {
             title="Reading Texts"
             icon="file-text"
             color="#0284c7"
-            totalCount={texts.length}
+            totalCount={totalTextCount || texts.length}
             selectedCount={selectedTextIds.size}
             expanded={expandedSections.texts}
             onToggle={() => toggleSection('texts')}
@@ -574,7 +998,7 @@ const AddRule = () => {
             onSelectAll={handleSelectAllTexts}
             onClearAll={() => setSelectedTextIds(new Set())}
             searchQuery={searchTexts}
-            onSearchChange={setSearchTexts}
+            onSearchChange={handleSearchTextsChange}
             filterMode={filterTexts}
             onFilterChange={setFilterTexts}
             hasHskSelected={selectedHskIds.size > 0}
@@ -586,6 +1010,13 @@ const AddRule = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    loadMoreTexts();
+                  }
+                }}
+                scrollEventThrottle={150}
               >
                 {filteredTexts.map((t) => (
                   <ItemCard
@@ -599,6 +1030,25 @@ const AddRule = () => {
                     width={200}
                   />
                 ))}
+                {hasMoreTexts && (
+                  <TouchableOpacity
+                    style={[
+                      styles.loadMoreCard,
+                      { width: 200, minHeight: 100, borderColor: '#0284c7', backgroundColor: '#f0f9ff' },
+                    ]}
+                    onPress={loadMoreTexts}
+                    activeOpacity={0.7}
+                  >
+                    <Lucide
+                      name={loadingMoreTexts ? 'loader' : 'plus'}
+                      size={20}
+                      color="#0284c7"
+                    />
+                    <Text style={[styles.loadMoreCardText, { color: '#0284c7' }]}>
+                      {loadingMoreTexts ? 'Loading…' : '+10 More'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -608,7 +1058,7 @@ const AddRule = () => {
             title="Sentences"
             icon="message-square-text"
             color="#8b5cf6"
-            totalCount={sentences.length}
+            totalCount={totalSentenceCount || sentences.length}
             selectedCount={selectedSentenceIds.size}
             expanded={expandedSections.sentences}
             onToggle={() => toggleSection('sentences')}
@@ -623,7 +1073,7 @@ const AddRule = () => {
             onSelectAll={handleSelectAllSentences}
             onClearAll={() => setSelectedSentenceIds(new Set())}
             searchQuery={searchSentences}
-            onSearchChange={setSearchSentences}
+            onSearchChange={handleSearchSentencesChange}
             filterMode={filterSentences}
             onFilterChange={setFilterSentences}
             hasHskSelected={selectedHskIds.size > 0}
@@ -635,6 +1085,13 @@ const AddRule = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    loadMoreSentences();
+                  }
+                }}
+                scrollEventThrottle={150}
               >
                 {filteredSentences.map((s) => (
                   <ItemCard
@@ -648,6 +1105,25 @@ const AddRule = () => {
                     width={200}
                   />
                 ))}
+                {hasMoreSentences && (
+                  <TouchableOpacity
+                    style={[
+                      styles.loadMoreCard,
+                      { width: 200, minHeight: 100, borderColor: '#8b5cf6', backgroundColor: '#f5f3ff' },
+                    ]}
+                    onPress={loadMoreSentences}
+                    activeOpacity={0.7}
+                  >
+                    <Lucide
+                      name={loadingMoreSentences ? 'loader' : 'plus'}
+                      size={20}
+                      color="#8b5cf6"
+                    />
+                    <Text style={[styles.loadMoreCardText, { color: '#8b5cf6' }]}>
+                      {loadingMoreSentences ? 'Loading…' : '+10 More'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -657,7 +1133,7 @@ const AddRule = () => {
             title="Words"
             icon="languages"
             color="#059669"
-            totalCount={words.length}
+            totalCount={totalWordCount || words.length}
             selectedCount={selectedWordIds.size}
             expanded={expandedSections.words}
             onToggle={() => toggleSection('words')}
@@ -672,7 +1148,7 @@ const AddRule = () => {
             onSelectAll={handleSelectAllWords}
             onClearAll={() => setSelectedWordIds(new Set())}
             searchQuery={searchWords}
-            onSearchChange={setSearchWords}
+            onSearchChange={handleSearchWordsChange}
             filterMode={filterWords}
             onFilterChange={setFilterWords}
             hasHskSelected={selectedHskIds.size > 0}
@@ -684,6 +1160,13 @@ const AddRule = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    loadMoreWords();
+                  }
+                }}
+                scrollEventThrottle={150}
               >
                 {filteredWords.map((w) => (
                   <ItemCard
@@ -697,6 +1180,25 @@ const AddRule = () => {
                     width={150}
                   />
                 ))}
+                {hasMoreWords && (
+                  <TouchableOpacity
+                    style={[
+                      styles.loadMoreCard,
+                      { width: 150, minHeight: 90, borderColor: '#059669', backgroundColor: '#ecfdf5' },
+                    ]}
+                    onPress={loadMoreWords}
+                    activeOpacity={0.7}
+                  >
+                    <Lucide
+                      name={loadingMoreWords ? 'loader' : 'plus'}
+                      size={20}
+                      color="#059669"
+                    />
+                    <Text style={[styles.loadMoreCardText, { color: '#059669' }]}>
+                      {loadingMoreWords ? 'Loading…' : '+10 More'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -706,7 +1208,7 @@ const AddRule = () => {
             title="Characters"
             icon="spell-check"
             color="#ec489a"
-            totalCount={characters.length}
+            totalCount={totalCharCount || characters.length}
             selectedCount={selectedCharacterIds.size}
             expanded={expandedSections.characters}
             onToggle={() => toggleSection('characters')}
@@ -721,7 +1223,7 @@ const AddRule = () => {
             onSelectAll={handleSelectAllCharacters}
             onClearAll={() => setSelectedCharacterIds(new Set())}
             searchQuery={searchCharacters}
-            onSearchChange={setSearchCharacters}
+            onSearchChange={handleSearchCharactersChange}
             filterMode={filterCharacters}
             onFilterChange={setFilterCharacters}
             hasHskSelected={selectedHskIds.size > 0}
@@ -733,6 +1235,13 @@ const AddRule = () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.slider}
+                onScroll={(e) => {
+                  const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+                  if (layoutMeasurement.width + contentOffset.x >= contentSize.width - 60) {
+                    loadMoreCharacters();
+                  }
+                }}
+                scrollEventThrottle={150}
               >
                 {filteredCharacters.map((c) => (
                   <CharacterCard
@@ -744,6 +1253,22 @@ const AddRule = () => {
                     }
                   />
                 ))}
+                {hasMoreChars && (
+                  <TouchableOpacity
+                    style={styles.loadMoreCard}
+                    onPress={loadMoreCharacters}
+                    activeOpacity={0.7}
+                  >
+                    <Lucide
+                      name={loadingMoreChars ? 'loader' : 'plus'}
+                      size={20}
+                      color="#ec489a"
+                    />
+                    <Text style={styles.loadMoreCardText}>
+                      {loadingMoreChars ? 'Loading…' : '+10 More'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             )}
           </SliderSection>
@@ -872,5 +1397,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  loadMoreCard: {
+    width: 95,
+    height: 115,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#ec489a',
+    backgroundColor: '#fdf2f8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginRight: 4,
+  },
+  loadMoreCardText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#ec489a',
   },
 });

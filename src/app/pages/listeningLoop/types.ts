@@ -1,4 +1,4 @@
-export type LoopContentType = 'sentences' | 'texts';
+export type LoopContentType = 'words' | 'sentences' | 'texts';
 
 export type LoopMode = 'repeat-all' | 'repeat-one' | 'shuffle';
 
@@ -11,7 +11,7 @@ export type LoopSpeed = 0.75 | 0.85 | 1.0 | 1.2;
 export interface LoopItem {
   id: string;
   originalId: number;
-  type: 'sentence' | 'text' | 'text-sentence';
+  type: 'word' | 'sentence' | 'text' | 'text-sentence';
   content: string;
   pinyin: string;
   meaning: string;

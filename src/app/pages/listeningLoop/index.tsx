@@ -10,14 +10,18 @@ import {
   getAllLessons,
   getAllSentences,
   getAllTexts,
+  getAllWords,
   getLessonsByHSKId,
   getSentencesByHSKId,
   getSentencesByLessonId,
   getSentencesByTextId,
   getTextsByHSKId,
   getTextsByLessonId,
+  getWordsByHSKId,
+  getWordsByLessonId,
+  getWordsByTextId,
 } from '@/db/utils';
-import { HSKType, LessonType, SentenceType, TextType } from '@/types';
+import { HSKType, LessonType, SentenceType, TextType, WordType } from '@/types';
 import { LoopFilterBar } from './components/LoopFilterBar';
 import { LoopHeroPlayer } from './components/LoopHeroPlayer';
 import { LoopPlaylistQueue } from './components/LoopPlaylistQueue';
@@ -29,21 +33,57 @@ export default function ListeningLoopScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     type?: string;
+    scope?: string;
     hskId?: string;
     lessonId?: string;
     textId?: string;
+    sentenceIds?: string;
+    wordIds?: string;
+    filterLabel?: string;
   }>();
 
   const parseNum = (val?: string) => (val && !isNaN(Number(val)) ? Number(val) : null);
 
+  const initialScope =
+    params.scope === 'lesson' || Boolean(params.lessonId) ? 'lesson' : 'hsk';
+  const initialHskId = parseNum(params.hskId);
+  const initialLessonId = parseNum(params.lessonId);
+
   // Content Selection state
-  const [contentType, setContentType] = useState<LoopContentType>(
-    params.type === 'texts' ? 'texts' : 'sentences'
-  );
-  const [scope, setScope] = useState<'hsk' | 'lesson'>('hsk');
-  const [selectedHskId, setSelectedHskId] = useState<number | null>(parseNum(params.hskId));
-  const [selectedLessonId, setSelectedLessonId] = useState<number | null>(parseNum(params.lessonId));
+  const [contentType, setContentType] = useState<LoopContentType>(() => {
+    if (params.type === 'words' || params.wordIds) return 'words';
+    if (params.type === 'texts') return 'texts';
+    return 'sentences';
+  });
+  const [scope, setScope] = useState<'hsk' | 'lesson'>(initialScope);
+  const [selectedHskId, setSelectedHskId] = useState<number | null>(initialHskId);
+  const [selectedLessonId, setSelectedLessonId] = useState<number | null>(initialLessonId);
   const [breakTextsIntoSentences, setBreakTextsIntoSentences] = useState(true);
+
+  // Custom filter from sentences or words page
+  const [customSentenceIds, setCustomSentenceIds] = useState<number[] | null>(() => {
+    if (params.sentenceIds) {
+      const parsed = params.sentenceIds
+        .split(',')
+        .map(Number)
+        .filter((n) => !isNaN(n) && n > 0);
+      return parsed.length > 0 ? parsed : null;
+    }
+    return null;
+  });
+  const [customWordIds, setCustomWordIds] = useState<number[] | null>(() => {
+    if (params.wordIds) {
+      const parsed = params.wordIds
+        .split(',')
+        .map(Number)
+        .filter((n) => !isNaN(n) && n > 0);
+      return parsed.length > 0 ? parsed : null;
+    }
+    return null;
+  });
+  const [customFilterLabel, setCustomFilterLabel] = useState<string | null>(
+    params.filterLabel || null
+  );
 
   // Metadata
   const [allHsks, setAllHsks] = useState<HSKType[]>([]);
@@ -53,6 +93,7 @@ export default function ListeningLoopScreen() {
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
 
   // Raw DB data
+  const [dbWords, setDbWords] = useState<WordType[]>([]);
   const [dbSentences, setDbSentences] = useState<SentenceType[]>([]);
   const [dbTexts, setDbTexts] = useState<TextType[]>([]);
 
@@ -72,13 +113,76 @@ export default function ListeningLoopScreen() {
     loadMetadata();
   }, [loadMetadata]);
 
-  // ── Fetch Sentences & Texts based on filters ───────────────────────────────
+  // Synchronize selectedHskId if a lesson was provided without hskId
+  useEffect(() => {
+    if (selectedLessonId !== null && selectedHskId === null && allLessons.length > 0) {
+      const found = allLessons.find((l) => l.id === selectedLessonId);
+      if (found?.hskId) {
+        setSelectedHskId(found.hskId);
+      }
+    }
+  }, [selectedLessonId, selectedHskId, allLessons]);
+
+  // ── Fetch Sentences, Words & Texts based on filters ───────────────────────
   const fetchContent = useCallback(() => {
     try {
+      // 1. Words mode
+      if (contentType === 'words') {
+        if (customWordIds && customWordIds.length > 0) {
+          const idSet = new Set(customWordIds);
+          const all = (getAllWords() as WordType[]) || [];
+          const matched = all.filter((w) => idSet.has(w.id));
+          const orderMap = new Map(customWordIds.map((id, idx) => [id, idx]));
+          matched.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+          setDbWords(matched);
+          return;
+        }
+
+        if (params.textId) {
+          const tId = Number(params.textId);
+          const w = (getWordsByTextId(tId) as WordType[]) || [];
+          setDbWords([...w].reverse());
+          return;
+        }
+
+        if (scope === 'hsk') {
+          if (selectedHskId !== null) {
+            const w = (getWordsByHSKId(selectedHskId) as WordType[]) || [];
+            setDbWords([...w].reverse());
+          } else {
+            const w = (getAllWords() as WordType[]) || [];
+            setDbWords([...w].reverse());
+          }
+        } else {
+          if (selectedLessonId !== null) {
+            const w = (getWordsByLessonId(selectedLessonId) as WordType[]) || [];
+            setDbWords([...w].reverse());
+          } else if (selectedHskId !== null) {
+            const w = (getWordsByHSKId(selectedHskId) as WordType[]) || [];
+            setDbWords([...w].reverse());
+          } else {
+            const w = (getAllWords() as WordType[]) || [];
+            setDbWords([...w].reverse());
+          }
+        }
+        return;
+      }
+
+      // 2. Sentences mode with custom sentence IDs
+      if (customSentenceIds && customSentenceIds.length > 0 && contentType === 'sentences') {
+        const idSet = new Set(customSentenceIds);
+        const all = (getAllSentences() as SentenceType[]) || [];
+        const matched = all.filter((s) => idSet.has(s.id));
+        const orderMap = new Map(customSentenceIds.map((id, idx) => [id, idx]));
+        matched.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+        setDbSentences(matched);
+        return;
+      }
+
       if (params.textId) {
         const tId = Number(params.textId);
         const s = (getSentencesByTextId(tId) as SentenceType[]) || [];
-        setDbSentences(s);
+        setDbSentences([...s].reverse());
         return;
       }
 
@@ -86,31 +190,44 @@ export default function ListeningLoopScreen() {
         if (selectedHskId !== null) {
           const s = (getSentencesByHSKId(selectedHskId) as SentenceType[]) || [];
           const t = (getTextsByHSKId(selectedHskId) as TextType[]) || [];
-          setDbSentences(s);
-          setDbTexts(t);
+          setDbSentences([...s].reverse());
+          setDbTexts([...t].reverse());
         } else {
           const s = (getAllSentences() as SentenceType[]) || [];
           const t = (getAllTexts() as TextType[]) || [];
-          setDbSentences(s);
-          setDbTexts(t);
+          setDbSentences([...s].reverse());
+          setDbTexts([...t].reverse());
         }
       } else {
         if (selectedLessonId !== null) {
           const s = (getSentencesByLessonId(selectedLessonId) as SentenceType[]) || [];
           const t = (getTextsByLessonId(selectedLessonId) as TextType[]) || [];
-          setDbSentences(s);
-          setDbTexts(t);
+          setDbSentences([...s].reverse());
+          setDbTexts([...t].reverse());
+        } else if (selectedHskId !== null) {
+          const s = (getSentencesByHSKId(selectedHskId) as SentenceType[]) || [];
+          const t = (getTextsByHSKId(selectedHskId) as TextType[]) || [];
+          setDbSentences([...s].reverse());
+          setDbTexts([...t].reverse());
         } else {
           const s = (getAllSentences() as SentenceType[]) || [];
           const t = (getAllTexts() as TextType[]) || [];
-          setDbSentences(s);
-          setDbTexts(t);
+          setDbSentences([...s].reverse());
+          setDbTexts([...t].reverse());
         }
       }
     } catch (e) {
       console.error('fetchContent error in ListeningLoop:', e);
     }
-  }, [scope, selectedHskId, selectedLessonId, params.textId]);
+  }, [
+    customWordIds,
+    customSentenceIds,
+    contentType,
+    scope,
+    selectedHskId,
+    selectedLessonId,
+    params.textId,
+  ]);
 
   useEffect(() => {
     fetchContent();
@@ -118,6 +235,20 @@ export default function ListeningLoopScreen() {
 
   // ── Build Loop Items ───────────────────────────────────────────────────────
   const loopItems: LoopItem[] = useMemo(() => {
+    if (contentType === 'words') {
+      return dbWords.map((w, idx) => ({
+        id: `word-${w.id ?? idx}`,
+        originalId: w.id ?? idx,
+        type: 'word' as const,
+        content: (w.content || '').trim(),
+        pinyin: w.pinyin || '',
+        meaning: w.meaning || '',
+        hskId: w.hskId,
+        lessonId: w.lessonId,
+        textId: w.textId,
+      }));
+    }
+
     if (contentType === 'sentences') {
       return dbSentences.map((s, idx) => ({
         id: `sentence-${s.id ?? idx}`,
@@ -171,7 +302,7 @@ export default function ListeningLoopScreen() {
     });
 
     return brokenItems;
-  }, [contentType, dbSentences, dbTexts, breakTextsIntoSentences]);
+  }, [contentType, dbWords, dbSentences, dbTexts, breakTextsIntoSentences]);
 
   // ── 10 by 10 Pagination & Batching State ────────────────────────────────────
   const PAGE_SIZE = 10;
@@ -218,11 +349,67 @@ export default function ListeningLoopScreen() {
     jumpToIndex,
   } = useListeningLoop(initialBatchItems);
 
+  // Filter selection handlers
+  const handleSelectContentType = (type: LoopContentType) => {
+    setContentType(type);
+    setCustomSentenceIds(null);
+    setCustomWordIds(null);
+    setCustomFilterLabel(null);
+  };
+
+  const handleSelectScope = (newScope: 'hsk' | 'lesson') => {
+    setScope(newScope);
+    setCustomSentenceIds(null);
+    setCustomWordIds(null);
+    setCustomFilterLabel(null);
+  };
+
+  const handleSelectHskId = (id: number | null) => {
+    setSelectedHskId(id);
+    setCustomSentenceIds(null);
+    setCustomWordIds(null);
+    setCustomFilterLabel(null);
+    if (id !== null && selectedLessonId !== null) {
+      const currentLesson = allLessons.find((l) => l.id === selectedLessonId);
+      if (currentLesson && currentLesson.hskId !== id) {
+        setSelectedLessonId(null);
+      }
+    }
+  };
+
+  const handleSelectLessonId = (id: number | null) => {
+    setSelectedLessonId(id);
+    setCustomSentenceIds(null);
+    setCustomWordIds(null);
+    setCustomFilterLabel(null);
+    if (id !== null) {
+      const lesson = allLessons.find((l) => l.id === id);
+      if (lesson?.hskId) {
+        setSelectedHskId(lesson.hskId);
+      }
+    }
+  };
+
+  const handleClearCustomFilter = () => {
+    setCustomSentenceIds(null);
+    setCustomWordIds(null);
+    setCustomFilterLabel(null);
+  };
+
   // When filter inputs change, reset to batch 0
   useEffect(() => {
     setCurrentBatch(0);
     setLoadedCount(PAGE_SIZE);
-  }, [contentType, scope, selectedHskId, selectedLessonId, breakTextsIntoSentences, params.textId]);
+  }, [
+    contentType,
+    scope,
+    selectedHskId,
+    selectedLessonId,
+    breakTextsIntoSentences,
+    params.textId,
+    customSentenceIds,
+    customWordIds,
+  ]);
 
   // When loopItems or batch changes, load that batch of 10 items
   useEffect(() => {
@@ -338,17 +525,19 @@ export default function ListeningLoopScreen() {
         {/* Content & Scope Filter Bar */}
         <LoopFilterBar
           contentType={contentType}
-          onSelectContentType={setContentType}
+          onSelectContentType={handleSelectContentType}
           scope={scope}
-          onSelectScope={setScope}
+          onSelectScope={handleSelectScope}
           selectedHskId={selectedHskId}
-          onSelectHskId={setSelectedHskId}
+          onSelectHskId={handleSelectHskId}
           selectedLessonId={selectedLessonId}
-          onSelectLessonId={setSelectedLessonId}
+          onSelectLessonId={handleSelectLessonId}
           allHsks={allHsks}
           allLessons={allLessons}
           breakTextsIntoSentences={breakTextsIntoSentences}
           onToggleBreakTexts={() => setBreakTextsIntoSentences((p) => !p)}
+          customFilterLabel={customFilterLabel}
+          onClearCustomFilter={handleClearCustomFilter}
         />
 
         {/* Scrollable Playlist Queue with Active Item Highlight & 10-by-10 Batch Controls */}

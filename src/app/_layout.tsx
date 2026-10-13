@@ -26,7 +26,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    
+    // resetDatabase()
     initDatabase();
   }, [])
 
@@ -192,6 +192,10 @@ export default function TabLayout() {
                 />
                 <Stack.Screen
                     name="pages/instructions/index"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="pages/sync/index"
                     options={{ headerShown: false }}
                 />
 

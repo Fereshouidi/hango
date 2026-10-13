@@ -5,6 +5,7 @@ import defaultData from "./initData.json";
 export const db = SQLite.openDatabaseSync("app.db");
 
 export function initDatabase() {
+    createSettingsTable();
     createHSKTable();
     createLessonTable();
     createTextTable();
@@ -16,6 +17,38 @@ export function initDatabase() {
     seedDefaultData();
     repairDatabaseRelations();
 }
+
+// --------- Settings table (key-value store) ------------
+
+export const createSettingsTable = () => {
+    db.execSync(`
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+    `);
+};
+
+export const getSetting = (key: string, defaultValue: string = ''): string => {
+    try {
+        const row = db.getFirstSync<{ value: string }>(`SELECT value FROM settings WHERE key = ?`, key);
+        return row?.value ?? defaultValue;
+    } catch {
+        return defaultValue;
+    }
+};
+
+export const setSetting = (key: string, value: string): void => {
+    try {
+        db.runSync(
+            `INSERT INTO settings (key, value) VALUES (?, ?)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+            key, value
+        );
+    } catch (e) {
+        console.warn('setSetting error:', e);
+    }
+};
 
 export function repairDatabaseRelations() {
     try {
@@ -100,6 +133,10 @@ export async function resetDatabase() {
 }
 
 export function seedDefaultData() {
+    // Check user preference — if they turned off starter content, skip seeding
+    const useInitData = getSetting('use_init_data', 'true');
+    if (useInitData === 'false') return;
+
     const hskCount = db.getFirstSync<{ count: number }>(
         "SELECT COUNT(*) as count FROM hsks"
     );
@@ -209,7 +246,127 @@ export function seedDefaultData() {
 
 }
 
-// --------- HSKs table ------------
+/**
+ * Removes all rows that were part of the original initData.json seed.
+ * Only deletes rows whose IDs match the seed (safe - won't touch user-added content
+ * unless the user happened to add data at those same IDs, which is rare).
+ */
+export function removeInitData(): void {
+    if (!defaultData) return;
+    try {
+        db.withTransactionSync(() => {
+            // Delete seeded rules
+            const ruleIds = (defaultData.rules as any[]).map((r) => r.id).filter(Boolean);
+            if (ruleIds.length) {
+                db.runSync(`DELETE FROM rules WHERE id IN (${ruleIds.join(',')})`);
+            }
+
+            // Delete seeded characters
+            const charIds = (defaultData.characters as any[]).map((c) => c.id).filter(Boolean);
+            if (charIds.length) {
+                db.runSync(`DELETE FROM characters WHERE id IN (${charIds.join(',')})`);
+            }
+
+            // Delete seeded words
+            const wordIds = (defaultData.words as any[]).map((w) => w.id).filter(Boolean);
+            if (wordIds.length) {
+                db.runSync(`DELETE FROM words WHERE id IN (${wordIds.join(',')})`);
+            }
+
+            // Delete seeded sentences
+            const sentenceIds = (defaultData.sentences as any[]).map((s) => s.id).filter(Boolean);
+            if (sentenceIds.length) {
+                db.runSync(`DELETE FROM sentences WHERE id IN (${sentenceIds.join(',')})`);
+            }
+
+            // Delete seeded texts
+            const textIds = (defaultData.texts as any[]).map((t) => t.id).filter(Boolean);
+            if (textIds.length) {
+                db.runSync(`DELETE FROM texts WHERE id IN (${textIds.join(',')})`);
+            }
+
+            // Delete seeded lessons
+            const lessonIds = (defaultData.lessons as any[]).map((l) => l.id).filter(Boolean);
+            if (lessonIds.length) {
+                db.runSync(`DELETE FROM lessons WHERE id IN (${lessonIds.join(',')})`);
+            }
+
+            // Delete seeded HSKs (do last as others may FK into them)
+            const hskIds = (defaultData.hsks as any[]).map((h) => h.id).filter(Boolean);
+            if (hskIds.length) {
+                db.runSync(`DELETE FROM hsks WHERE id IN (${hskIds.join(',')})`);
+            }
+        });
+    } catch (e) {
+        console.warn('removeInitData error:', e);
+        throw e;
+    }
+}
+
+/**
+ * Re-inserts all initData.json rows (idempotent — uses INSERT OR IGNORE).
+ */
+export function restoreInitData(): void {
+    if (!defaultData) return;
+    try {
+        db.withTransactionSync(() => {
+            for (const hsk of defaultData.hsks) {
+                db.runSync(
+                    `INSERT OR IGNORE INTO hsks (id, name) VALUES (?, ?)`,
+                    hsk.id, hsk.name
+                );
+            }
+            for (const lesson of defaultData.lessons) {
+                db.runSync(
+                    `INSERT OR IGNORE INTO lessons (id, num, title, hskId) VALUES (?, ?, ?, ?)`,
+                    lesson.id, lesson.num, lesson.title, lesson.hskId
+                );
+            }
+            for (const text of defaultData.texts as any[]) {
+                db.runSync(
+                    `INSERT OR IGNORE INTO texts (id, hskId, lessonId, title, content, pinyin, meaning) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    text.id, text.hskId ?? null, text.lessonId ?? null,
+                    text.title, text.content, text.pinyin, text.meaning
+                );
+            }
+            for (const sentence of defaultData.sentences as any[]) {
+                db.runSync(
+                    `INSERT OR IGNORE INTO sentences (id, hskId, lessonId, textId, content, pinyin, meaning) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    sentence.id, sentence.hskId ?? null, sentence.lessonId ?? null,
+                    sentence.textId ?? null, sentence.content, sentence.pinyin, sentence.meaning
+                );
+            }
+            for (const word of defaultData.words as any[]) {
+                db.runSync(
+                    `INSERT OR IGNORE INTO words (id, hskId, lessonId, textId, sentenceId, content, pinyin, meaning) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    word.id, word.hskId ?? null, word.lessonId ?? null,
+                    word.textId ?? null, word.sentenceId ?? null,
+                    word.content, word.pinyin, word.meaning
+                );
+            }
+            for (const character of defaultData.characters as any[]) {
+                db.runSync(
+                    `INSERT OR IGNORE INTO characters (id, hskId, lessonId, textId, sentenceId, wordId, content, pinyin, tone, meaning) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    character.id, character.hskId ?? null, character.lessonId ?? null,
+                    character.textId ?? null, character.sentenceId ?? null, character.wordId ?? null,
+                    character.content, character.pinyin, character.tone, character.meaning
+                );
+            }
+            for (const rule of defaultData.rules as any[]) {
+                db.runSync(
+                    `INSERT OR IGNORE INTO rules (id, hskId, lessonId, textId, sentenceId, wordId, content) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    rule.id, rule.hskId ?? null, rule.lessonId ?? null,
+                    rule.textId ?? null, rule.sentenceId ?? null, rule.wordId ?? null,
+                    rule.content
+                );
+            }
+        });
+    } catch (e) {
+        console.warn('restoreInitData error:', e);
+        throw e;
+    }
+}
+
 
 export const createHSKTable = () => {
     db.execSync(`
@@ -235,9 +392,22 @@ export const deleteHSK = (id: number) => {
     return db.runSync(`DELETE FROM hsks WHERE id = ?`, id);
 };
 
-export const getAllHSKs = () => {
-    const rows = db.getAllSync("SELECT * FROM hsks ORDER BY id DESC");
+export const getAllHSKs = (limit?: number, offset: number = 0) => {
+    if (limit !== undefined && limit > 0) {
+        const rows = db.getAllSync("SELECT * FROM hsks ORDER BY id ASC LIMIT ? OFFSET ?", limit, offset);
+        return rows;
+    }
+    const rows = db.getAllSync("SELECT * FROM hsks ORDER BY id ASC");
     return rows;
+};
+
+export const getAllHSKsCount = (): number => {
+    try {
+        const row = db.getFirstSync<{ count: number }>("SELECT COUNT(*) as count FROM hsks");
+        return row?.count || 0;
+    } catch {
+        return 0;
+    }
 };
 
 // --------- Lessons table ------------
@@ -263,9 +433,22 @@ export const createLesson = (lesson: LessonType) => {
     );
 };
 
-export const getAllLessons = () => {
-    const rows = db.getAllSync("SELECT * FROM lessons ORDER BY num DESC, id DESC");
+export const getAllLessons = (limit?: number, offset: number = 0) => {
+    if (limit !== undefined && limit > 0) {
+        const rows = db.getAllSync("SELECT * FROM lessons ORDER BY num ASC, id ASC LIMIT ? OFFSET ?", limit, offset);
+        return rows;
+    }
+    const rows = db.getAllSync("SELECT * FROM lessons ORDER BY num ASC, id ASC");
     return rows;
+};
+
+export const getAllLessonsCount = (): number => {
+    try {
+        const row = db.getFirstSync<{ count: number }>("SELECT COUNT(*) as count FROM lessons");
+        return row?.count || 0;
+    } catch {
+        return 0;
+    }
 };
 
 export const getLessonsPaged = (
@@ -296,7 +479,7 @@ export const getLessonsCount = (search: string, filter: 'all' | 'unassigned'): n
 };
 
 export const getLessonsByHSKId = (hskId: number) => {
-    const rows = db.getAllSync("SELECT * FROM lessons WHERE hskId = ? ORDER BY num DESC, id DESC", hskId);
+    const rows = db.getAllSync("SELECT * FROM lessons WHERE hskId = ? ORDER BY num ASC, id ASC", hskId);
     return rows;
 };
 
@@ -352,9 +535,22 @@ export const updateText = (id: number, text: Partial<TextType>) => {
     );
 };
 
-export const getAllTexts = () => {
+export const getAllTexts = (limit?: number, offset: number = 0) => {
+    if (limit !== undefined && limit > 0) {
+        const rows = db.getAllSync("SELECT * FROM texts ORDER BY id DESC LIMIT ? OFFSET ?", limit, offset);
+        return rows;
+    }
     const rows = db.getAllSync("SELECT * FROM texts ORDER BY id DESC");
     return rows;
+};
+
+export const getAllTextsCount = (): number => {
+    try {
+        const row = db.getFirstSync<{ count: number }>("SELECT COUNT(*) as count FROM texts");
+        return row?.count || 0;
+    } catch {
+        return 0;
+    }
 };
 
 export const getTextsPaged = (
@@ -491,9 +687,22 @@ export const updateSentence = (id: number, sentence: Partial<SentenceType>) => {
     );
 };
 
-export const getAllSentences = () => {
+export const getAllSentences = (limit?: number, offset: number = 0) => {
+    if (limit !== undefined && limit > 0) {
+        const rows = db.getAllSync("SELECT * FROM sentences ORDER BY id DESC LIMIT ? OFFSET ?", limit, offset);
+        return rows;
+    }
     const rows = db.getAllSync("SELECT * FROM sentences ORDER BY id DESC");
     return rows;
+};
+
+export const getAllSentencesCount = (): number => {
+    try {
+        const row = db.getFirstSync<{ count: number }>("SELECT COUNT(*) as count FROM sentences");
+        return row?.count || 0;
+    } catch {
+        return 0;
+    }
 };
 
 export const getSentencesPaged = (
@@ -639,9 +848,22 @@ export const createWord = (word: WordType) => {
     );
 };
 
-export const getAllWords = () => {
+export const getAllWords = (limit?: number, offset: number = 0) => {
+    if (limit !== undefined && limit > 0) {
+        const rows = db.getAllSync("SELECT * FROM words ORDER BY id DESC LIMIT ? OFFSET ?", limit, offset);
+        return rows;
+    }
     const rows = db.getAllSync("SELECT * FROM words ORDER BY id DESC");
     return rows;
+};
+
+export const getAllWordsCount = (): number => {
+    try {
+        const row = db.getFirstSync<{ count: number }>("SELECT COUNT(*) as count FROM words");
+        return row?.count || 0;
+    } catch {
+        return 0;
+    }
 };
 
 export const getWordsPaged = (
@@ -1915,4 +2137,4 @@ export const deleteHSKs = (ids: number[]) => {
     if (!ids || ids.length === 0) return;
     const placeholders = ids.map(() => '?').join(',');
     return db.runSync(`DELETE FROM hsks WHERE id IN (${placeholders})`, ...ids);
-};
+};

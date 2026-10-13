@@ -1,6 +1,6 @@
+import Lucide from '@react-native-vector-icons/lucide';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Lucide from '@react-native-vector-icons/lucide';
 
 interface ScopeToggleProps {
   searchScope: 'linked' | 'global';
@@ -61,7 +61,7 @@ export const ScopeToggle: React.FC<ScopeToggleProps> = ({
             searchScope === 'global' && styles.scopeTabTextActive,
           ]}
         >
-          All Database Search{globalTotalCount !== undefined ? ` (${globalTotalCount})` : ''}
+          wide search{globalTotalCount !== undefined ? ` (${globalTotalCount})` : ''}
         </Text>
       </TouchableOpacity>
     </View>

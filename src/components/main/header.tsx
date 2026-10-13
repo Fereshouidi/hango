@@ -36,18 +36,18 @@ const Header = ({
     <View style={styles.container}>
       {/* Left Action (Back or Menu) */}
       <View style={styles.leftContainer}>
-        {useBackArrow && (
+        {(useBackArrow || Boolean(onBack)) && (
           <TouchableOpacity
             onPress={handleBack}
             style={styles.navButton}
             activeOpacity={0.7}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Lucide name="arrow-left" size={19} color="#1e293b" />
+            <Lucide name={onBack ? 'x' : 'arrow-left'} size={19} color="#1e293b" />
           </TouchableOpacity>
         )}
 
-        {!useBackArrow && showMenu && (
+        {!useBackArrow && !onBack && showMenu && (
           <TouchableOpacity
             onPress={openSidebar}
             style={styles.navButton}
@@ -126,8 +126,8 @@ const styles = StyleSheet.create({
   },
   centerContainer: {
     position: 'absolute',
-    left: 56,
-    right: 56,
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
@@ -148,10 +148,11 @@ const styles = StyleSheet.create({
   },
   rightContainer: {
     minWidth: 42,
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 8,
+    gap: 6,
     zIndex: 2,
   },
   itemWrapper: {

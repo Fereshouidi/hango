@@ -3520,7 +3520,7 @@
       "content": "好",
       "pinyin": "hǎo",
       "tone": "3",
-      "meaning": "good / like"
+      "meaning": "good; well"
     },
     {
       "id": 3,
@@ -3544,7 +3544,7 @@
       "content": "叫",
       "pinyin": "jiào",
       "tone": "4",
-      "meaning": "character"
+      "meaning": "to call; to be called"
     },
     {
       "id": 5,
@@ -3556,7 +3556,7 @@
       "content": "王",
       "pinyin": "Wáng",
       "tone": "2",
-      "meaning": "character"
+      "meaning": "king; surname Wang"
     },
     {
       "id": 6,
@@ -3568,7 +3568,7 @@
       "content": "明",
       "pinyin": "Míng",
       "tone": "2",
-      "meaning": "character"
+      "meaning": "bright; clear"
     },
     {
       "id": 7,
@@ -3580,7 +3580,7 @@
       "content": "学",
       "pinyin": "xuésheng",
       "tone": "2",
-      "meaning": "study"
+      "meaning": "to study; learning"
     },
     {
       "id": 8,
@@ -3592,7 +3592,7 @@
       "content": "生",
       "pinyin": "xuésheng",
       "tone": "2",
-      "meaning": "life / student suffix"
+      "meaning": "life; to be born; student suffix"
     },
     {
       "id": 9,
@@ -3616,7 +3616,7 @@
       "content": "高",
       "pinyin": "gāoxìng",
       "tone": "1",
-      "meaning": "character"
+      "meaning": "high; tall"
     },
     {
       "id": 11,
@@ -3628,7 +3628,7 @@
       "content": "兴",
       "pinyin": "gāoxìng",
       "tone": "1",
-      "meaning": "character"
+      "meaning": "interest; prosperity"
     },
     {
       "id": 12,
@@ -3640,7 +3640,7 @@
       "content": "认",
       "pinyin": "rènshi",
       "tone": "4",
-      "meaning": "character"
+      "meaning": "to recognize"
     },
     {
       "id": 13,
@@ -3652,7 +3652,7 @@
       "content": "识",
       "pinyin": "rènshi",
       "tone": "4",
-      "meaning": "character"
+      "meaning": "to know; knowledge"
     },
     {
       "id": 14,
@@ -3832,7 +3832,7 @@
       "content": "学",
       "pinyin": "xuéxí",
       "tone": "2",
-      "meaning": "study"
+      "meaning": "to study; learning"
     },
     {
       "id": 29,
@@ -4132,7 +4132,7 @@
       "content": "生",
       "pinyin": "yīshēng",
       "tone": "1",
-      "meaning": "life / student suffix"
+      "meaning": "life; to be born; student suffix"
     },
     {
       "id": 54,
@@ -4876,7 +4876,7 @@
       "content": "学",
       "pinyin": "xuéxiào",
       "tone": "2",
-      "meaning": "study"
+      "meaning": "to study; learning"
     },
     {
       "id": 116,
@@ -6472,7 +6472,7 @@
       "content": "好",
       "pinyin": "àihào",
       "tone": "4",
-      "meaning": "good / like"
+      "meaning": "good; well"
     },
     {
       "id": 249,
@@ -6940,7 +6940,7 @@
       "content": "学",
       "pinyin": "xuéhǎo",
       "tone": "2",
-      "meaning": "study"
+      "meaning": "to study; learning"
     },
     {
       "id": 288,
@@ -6952,7 +6952,7 @@
       "content": "好",
       "pinyin": "xuéhǎo",
       "tone": "2",
-      "meaning": "good / like"
+      "meaning": "good; well"
     },
     {
       "id": 289,
@@ -7000,7 +7000,7 @@
       "content": "生",
       "pinyin": "shēngcí",
       "tone": "2",
-      "meaning": "life / student suffix"
+      "meaning": "life; to be born; student suffix"
     },
     {
       "id": 293,
@@ -7576,7 +7576,7 @@
       "content": "认",
       "pinyin": "rènzhēn",
       "tone": "2",
-      "meaning": "character"
+      "meaning": "to recognize"
     },
     {
       "id": 341,
@@ -8416,7 +8416,7 @@
       "content": "好",
       "pinyin": "hǎo",
       "tone": "3",
-      "meaning": "good / like"
+      "meaning": "good; well"
     },
     {
       "id": 411,
@@ -8776,7 +8776,7 @@
       "content": "学",
       "pinyin": "xuédào",
       "tone": "2",
-      "meaning": "study"
+      "meaning": "to study; learning"
     },
     {
       "id": 441,
