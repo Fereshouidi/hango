@@ -70,7 +70,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const data = await fetchSubscriptionStatus();
       setStatus(data);
       lastFetchRef.current = Date.now();
-      await AsyncStorage.setItem(KEY_SUBSCRIPTION_CACHE, JSON.stringify(data));
+
+      if (data.isSubscribed) {
+        // Persist so the next cold-open feels instant
+        await AsyncStorage.setItem(KEY_SUBSCRIPTION_CACHE, JSON.stringify(data));
+      } else {
+        // Clear stale cache so revoked subscriptions never flash as active
+        await AsyncStorage.removeItem(KEY_SUBSCRIPTION_CACHE);
+      }
     } catch {
       // silently fail – user might be offline
     } finally {
@@ -78,11 +85,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  // Fetch immediately on mount & after short delay
+  // Fetch immediately on mount
   useEffect(() => {
     refresh();
-    const timer = setTimeout(refresh, 2000);
-    return () => clearTimeout(timer);
   }, [refresh]);
 
   // Re-fetch whenever app becomes active (at most once every 3 seconds)

@@ -155,6 +155,7 @@ export default function AccountPage() {
       loadStatus();
     } catch (err: any) {
       setAuthError(err.message || 'Could not sign in. Please check your info.');
+      console.log(err)
     } finally {
       setAuthLoading(false);
     }
@@ -333,7 +334,7 @@ export default function AccountPage() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}

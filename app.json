@@ -18,7 +18,8 @@
         "monochromeImage": "./assets/images/logo/smallScale.jpg"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.fareshouidi.HanGo"
+      "package": "com.fareshouidi.HanGo",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "output": "static",
