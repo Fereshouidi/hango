@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -85,6 +86,33 @@ export default function AccountPage() {
 
   // Animations
   const progressAnim = useRef(new Animated.Value(0)).current;
+
+  // Keyboard and Scroll Handling for Auth Form
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardSpace, setKeyboardSpace] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardSpace(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardSpace(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const scrollToInput = useCallback((offsetY: number) => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: offsetY, animated: true });
+    }, 120);
+  }, []);
 
   const formatPlanTitle = (planKey?: string) => {
     if (!planKey) return 'HanGo Pro Access';
@@ -334,10 +362,15 @@ export default function AccountPage() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          ref={scrollViewRef}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: keyboardSpace > 0 ? keyboardSpace + 160 : 40 },
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -412,6 +445,7 @@ export default function AccountPage() {
                         placeholderTextColor="#94a3b8"
                         value={username}
                         onChangeText={setUsername}
+                        onFocus={() => scrollToInput(100)}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
@@ -432,6 +466,7 @@ export default function AccountPage() {
                       placeholderTextColor="#94a3b8"
                       value={email}
                       onChangeText={setEmail}
+                      onFocus={() => scrollToInput(160)}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -450,6 +485,7 @@ export default function AccountPage() {
                       placeholderTextColor="#94a3b8"
                       value={password}
                       onChangeText={setPassword}
+                      onFocus={() => scrollToInput(240)}
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
                     />
@@ -478,6 +514,7 @@ export default function AccountPage() {
                         placeholderTextColor="#94a3b8"
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
+                        onFocus={() => scrollToInput(300)}
                         secureTextEntry={!showPassword}
                         autoCapitalize="none"
                       />

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -89,6 +90,33 @@ export default function PaymentScreen() {
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Keyboard and Scroll Handling
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [keyboardSpace, setKeyboardSpace] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardSpace(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardSpace(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const scrollToInput = useCallback((offsetY: number) => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: offsetY, animated: true });
+    }, 120);
+  }, []);
 
   // Auto-refresh subscription on mount
   useEffect(() => {
@@ -374,7 +402,8 @@ export default function PaymentScreen() {
       <Bg1 />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? Math.max(insets.top + 40, 60) : 0}
       >
         {/* Header */}
         <View
@@ -424,10 +453,16 @@ export default function PaymentScreen() {
 
         <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
           <ScrollView
+            ref={scrollViewRef}
             style={{ flex: 1 }}
             contentContainerStyle={[
               styles.scrollContent,
-              { paddingBottom: Math.max(insets.bottom + 24, 36) },
+              {
+                paddingBottom: Math.max(
+                  insets.bottom + 24,
+                  keyboardSpace > 0 ? keyboardSpace + 160 : 36
+                ),
+              },
             ]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -600,6 +635,7 @@ export default function PaymentScreen() {
                         style={styles.input}
                         value={reference}
                         onChangeText={setReference}
+                        onFocus={() => scrollToInput(280)}
                         placeholder={
                           selectedMethod === 'payeer'
                             ? 'e.g. Batch ID 12345678'
@@ -616,6 +652,7 @@ export default function PaymentScreen() {
                         style={[styles.input, { height: 72 }]}
                         value={notes}
                         onChangeText={setNotes}
+                        onFocus={() => scrollToInput(360)}
                         placeholder="Any extra info for the admin"
                         placeholderTextColor="#94a3b8"
                         multiline
