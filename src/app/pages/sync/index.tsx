@@ -33,6 +33,7 @@ import {
 } from '@/services/authSyncService';
 import { getSetting, setSetting, removeInitData, restoreInitData } from '@/db/utils';
 import { useAppUpdates } from '@/context/update-context';
+import { useSubscription } from '@/context/subscription-context';
 
 type AuthTab = 'login' | 'register';
 type SyncState = 'idle' | 'running' | 'success' | 'error';
@@ -42,6 +43,20 @@ export default function AccountPage() {
 
   // App updates
   const { currentVersion, latestVersion, checkForUpdates, checking, updateAvailable } = useAppUpdates();
+
+  // Subscription state
+  const {
+    isSubscribed,
+    subscriptionPlan,
+    subscriptionExpiresAt,
+    daysRemaining,
+    hasPendingPayment,
+    refresh: refreshSubscription,
+  } = useSubscription();
+
+  useEffect(() => {
+    refreshSubscription();
+  }, [refreshSubscription]);
 
   // Auth state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -70,6 +85,14 @@ export default function AccountPage() {
 
   // Animations
   const progressAnim = useRef(new Animated.Value(0)).current;
+
+  const formatPlanTitle = (planKey?: string) => {
+    if (!planKey) return 'HanGo Pro Access';
+    if (planKey === '1_month') return '1 Month Pro Plan';
+    if (planKey === '2_months') return '2 Months Pro Plan';
+    if (planKey === '3_months') return '3 Months Pro Plan';
+    return planKey.replace('_', ' ').toUpperCase();
+  };
 
   // Initialize
   useEffect(() => {
@@ -522,6 +545,149 @@ export default function AccountPage() {
                     <Text style={styles.metaValue}>{formatTime(lastSync)}</Text>
                   </View>
                 </View>
+              </View>
+
+              {/* ════════════════════ SUBSCRIPTION CARD ════════════════════ */}
+              <View style={styles.subCard}>
+                <View style={styles.subHeader}>
+                  <View
+                    style={[
+                      styles.subIconBox,
+                      isSubscribed
+                        ? styles.subIconBoxActive
+                        : hasPendingPayment
+                        ? styles.subIconBoxPending
+                        : styles.subIconBoxFree,
+                    ]}
+                  >
+                    <Lucide
+                      name={isSubscribed ? 'crown' : hasPendingPayment ? 'clock' : 'zap'}
+                      size={20}
+                      color={isSubscribed ? '#059669' : hasPendingPayment ? '#d97706' : '#2563eb'}
+                    />
+                  </View>
+                  <View style={styles.subInfo}>
+                    <View style={styles.subTitleRow}>
+                      <Text style={styles.subTitle}>
+                        {isSubscribed
+                          ? 'HanGo Pro Member'
+                          : hasPendingPayment
+                          ? 'Payment Under Review'
+                          : 'Free Learner Plan'}
+                      </Text>
+                      <View
+                        style={[
+                          styles.subStatusBadge,
+                          isSubscribed
+                            ? styles.badgeActive
+                            : hasPendingPayment
+                            ? styles.badgePending
+                            : styles.badgeFree,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.subStatusBadgeText,
+                            isSubscribed
+                              ? styles.badgeTextActive
+                              : hasPendingPayment
+                              ? styles.badgeTextPending
+                              : styles.badgeTextFree,
+                          ]}
+                        >
+                          {isSubscribed ? 'PRO ACTIVE' : hasPendingPayment ? 'PENDING' : 'FREE'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.subPlanName}>
+                      {isSubscribed
+                        ? formatPlanTitle(subscriptionPlan)
+                        : hasPendingPayment
+                        ? 'Your payment is being reviewed by admin'
+                        : 'Upgrade to unlock all premium features'}
+                    </Text>
+                  </View>
+                </View>
+
+                {isSubscribed ? (
+                  <View style={styles.subDetailsSection}>
+                    <View style={styles.subDetailItem}>
+                      <View style={[styles.subDetailIcon, { backgroundColor: '#ecfdf5' }]}>
+                        <Lucide name="calendar" size={14} color="#059669" />
+                      </View>
+                      <View>
+                        <Text style={styles.subDetailLabel}>Expires On</Text>
+                        <Text style={styles.subDetailValue}>
+                          {subscriptionExpiresAt
+                            ? new Date(subscriptionExpiresAt).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })
+                            : 'Active'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.subDetailDivider} />
+
+                    <View style={styles.subDetailItem}>
+                      <View style={[styles.subDetailIcon, { backgroundColor: '#eff6ff' }]}>
+                        <Lucide name="hourglass" size={14} color="#2563eb" />
+                      </View>
+                      <View>
+                        <Text style={styles.subDetailLabel}>Time Remaining</Text>
+                        <Text style={styles.subDetailValue}>
+                          {daysRemaining > 0 ? `${daysRemaining} days remaining` : 'Last day'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ) : null}
+
+                {/* Unlocked / Premium Features summary */}
+                <View style={styles.subFeaturesRow}>
+                  <View style={styles.subFeatureTag}>
+                    <Lucide name="headphones" size={12} color="#059669" />
+                    <Text style={styles.subFeatureTagText}>Listening Loop</Text>
+                  </View>
+                  <View style={styles.subFeatureTag}>
+                    <Lucide name="keyboard" size={12} color="#2563eb" />
+                    <Text style={styles.subFeatureTagText}>Writing Studio</Text>
+                  </View>
+                  <View style={styles.subFeatureTag}>
+                    <Lucide name="pencil-line" size={12} color="#7c3aed" />
+                    <Text style={styles.subFeatureTagText}>Write Characters</Text>
+                  </View>
+                </View>
+
+                {/* Manage / Renew / Upgrade Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.subActionBtn,
+                    isSubscribed
+                      ? styles.subActionBtnRenew
+                      : hasPendingPayment
+                      ? styles.subActionBtnPending
+                      : styles.subActionBtnUpgrade,
+                  ]}
+                  onPress={() => router.push('/pages/payment' as any)}
+                  activeOpacity={0.85}
+                >
+                  <Lucide
+                    name={isSubscribed ? 'refresh-cw' : hasPendingPayment ? 'clock' : 'sparkles'}
+                    size={15}
+                    color="#ffffff"
+                  />
+                  <Text style={styles.subActionBtnText}>
+                    {isSubscribed
+                      ? 'Renew or Extend Plan'
+                      : hasPendingPayment
+                      ? 'View Payment Status'
+                      : 'Upgrade to HanGo Pro'}
+                  </Text>
+                  <Lucide name="chevron-right" size={15} color="#ffffffaa" />
+                </TouchableOpacity>
               </View>
 
               {/* Sync Progress Bar */}
@@ -982,6 +1148,191 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#0f172a',
+  },
+
+  // ════════════════════ Subscription Card Styles ════════════════════
+  subCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+    gap: 14,
+  },
+  subHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  subIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subIconBoxActive: {
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.5,
+    borderColor: '#10b981',
+  },
+  subIconBoxPending: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 1.5,
+    borderColor: '#f59e0b',
+  },
+  subIconBoxFree: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1.5,
+    borderColor: '#3b82f6',
+  },
+  subInfo: {
+    flex: 1,
+  },
+  subTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  subTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  subStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 8,
+  },
+  badgeActive: {
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#10b981',
+  },
+  badgePending: {
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  badgeFree: {
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+  },
+  subStatusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  badgeTextActive: {
+    color: '#059669',
+  },
+  badgeTextPending: {
+    color: '#d97706',
+  },
+  badgeTextFree: {
+    color: '#64748b',
+  },
+  subPlanName: {
+    fontSize: 12.5,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  subDetailsSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  subDetailItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  subDetailIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subDetailLabel: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  subDetailValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginTop: 1,
+  },
+  subDetailDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#cbd5e1',
+    marginHorizontal: 12,
+  },
+  subFeaturesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  subFeatureTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  subFeatureTagText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  subActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  subActionBtnRenew: {
+    backgroundColor: '#059669',
+  },
+  subActionBtnUpgrade: {
+    backgroundColor: '#2563eb',
+  },
+  subActionBtnPending: {
+    backgroundColor: '#d97706',
+  },
+  subActionBtnText: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 
   // Progress Bar

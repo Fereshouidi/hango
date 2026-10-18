@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
 import { useRouter } from 'expo-router';
+import { ThemedView } from '@/components/themed-view';
+import { Bg1 } from '@/components/sub/bg1';
 import { useSubscription } from '@/context/subscription-context';
 
 interface PaywallProps {
@@ -23,7 +25,7 @@ interface PaywallProps {
 
 /**
  * Wrap any premium feature with <Paywall featureName="..."> to automatically
- * gate access. Shows an upgrade prompt when the user is not subscribed.
+ * gate access. Matches the native clean app design.
  */
 export function Paywall({
   featureName,
@@ -58,45 +60,113 @@ export function Paywall({
   // ── Pending payment ──────────────────────────────────────────
   if (hasPendingPayment || subscriptionStatus === 'pending') {
     return (
-      <View style={styles.container}>
+      <ThemedView style={styles.container}>
+        <Bg1 />
+
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Lucide name="arrow-left" size={22} color="#c4b5fd" />
+          <Lucide name="arrow-left" size={20} color="#1e293b" />
         </TouchableOpacity>
 
-        <View style={styles.iconOuter}>
-          <View style={[styles.iconInner, { backgroundColor: '#f59e0b20' }]}>
-            <Lucide name="clock" size={44} color="#f59e0b" />
+        <View style={styles.card}>
+          <View style={[styles.iconOuter, { backgroundColor: '#fffbeb', borderColor: '#f59e0b' }]}>
+            <Lucide name="clock" size={38} color="#d97706" />
           </View>
+
+          <View style={styles.pendingBadge}>
+            <Text style={styles.pendingBadgeText}>UNDER REVIEW</Text>
+          </View>
+
+          <Text style={styles.title}>Payment Under Review</Text>
+          <Text style={styles.subtitle}>
+            Your payment reference has been submitted. Access to{' '}
+            <Text style={{ color: '#0f172a', fontWeight: '800' }}>
+              {featureName}
+            </Text>{' '}
+            will unlock automatically as soon as verified.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.refreshBtn}
+            onPress={handleCheckStatus}
+            disabled={refreshing || loading}
+            activeOpacity={0.85}
+          >
+            {refreshing || loading ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <>
+                <Lucide name="refresh-cw" size={15} color="#ffffff" />
+                <Text style={styles.refreshBtnText}>Check Approval Status</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.backTextBtn}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.backTextBtnText}>Back to Library</Text>
+          </TouchableOpacity>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  // ── Not subscribed ───────────────────────────────────────────
+  return (
+    <ThemedView style={styles.container}>
+      <Bg1 />
+
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.back()}
+        activeOpacity={0.7}
+      >
+        <Lucide name="arrow-left" size={20} color="#1e293b" />
+      </TouchableOpacity>
+
+      <View style={styles.card}>
+        <View style={styles.iconOuter}>
+          <Lucide name={featureIcon as any} size={38} color="#2563eb" />
         </View>
 
-        <Text style={styles.title}>Payment Pending</Text>
+        <View style={styles.lockBadge}>
+          <Lucide name="lock" size={12} color="#2563eb" />
+          <Text style={styles.lockBadgeText}>PRO FEATURE</Text>
+        </View>
+
+        <Text style={styles.title}>{featureName}</Text>
         <Text style={styles.subtitle}>
-          Your payment is being reviewed by our team. Access to{' '}
-          <Text style={{ color: '#a78bfa', fontWeight: '700' }}>
-            {featureName}
-          </Text>{' '}
-          will unlock automatically once approved.
-        </Text>
-        <Text style={styles.note}>
-          This usually takes a few hours. Check back soon!
+          {featureDescription ||
+            `Unlock ${featureName} and all premium features by upgrading to HanGo Pro.`}
         </Text>
 
         <TouchableOpacity
-          style={styles.refreshBtn}
+          style={styles.upgradeBtn}
+          onPress={() => router.push('/pages/payment' as any)}
+          activeOpacity={0.85}
+        >
+          <Lucide name="sparkles" size={17} color="#ffffff" />
+          <Text style={styles.upgradeBtnText}>Upgrade to HanGo Pro</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.checkStatusBtn}
           onPress={handleCheckStatus}
           disabled={refreshing || loading}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
         >
           {refreshing || loading ? (
-            <ActivityIndicator size="small" color="#ede9fe" />
+            <ActivityIndicator size="small" color="#2563eb" />
           ) : (
             <>
-              <Lucide name="refresh-cw" size={15} color="#ede9fe" />
-              <Text style={styles.refreshBtnText}>Check Approval Status</Text>
+              <Lucide name="refresh-cw" size={13} color="#2563eb" />
+              <Text style={styles.checkStatusBtnText}>Already paid? Refresh status</Text>
             </>
           )}
         </TouchableOpacity>
@@ -106,228 +176,186 @@ export function Paywall({
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Text style={styles.backTextBtnText}>Go Back</Text>
+          <Text style={styles.backTextBtnText}>Maybe Later</Text>
         </TouchableOpacity>
+
+        <Text style={styles.priceHint}>
+          From 4.5 DT / month • Pay with D17, Ooredoo, or Payeer
+        </Text>
       </View>
-    );
-  }
-
-  // ── Not subscribed ───────────────────────────────────────────
-  return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        activeOpacity={0.7}
-      >
-        <Lucide name="arrow-left" size={22} color="#c4b5fd" />
-      </TouchableOpacity>
-
-      <View style={styles.iconOuter}>
-        <View style={styles.iconInner}>
-          <Lucide name={featureIcon as any} size={44} color="#a78bfa" />
-        </View>
-      </View>
-
-      <View style={styles.lockBadge}>
-        <Lucide name="lock" size={12} color="#7c3aed" />
-        <Text style={styles.lockBadgeText}>PRO FEATURE</Text>
-      </View>
-
-      <Text style={styles.title}>{featureName}</Text>
-      <Text style={styles.subtitle}>
-        {featureDescription ||
-          `Unlock ${featureName} and all premium features by upgrading to HanGo Pro.`}
-      </Text>
-
-      <TouchableOpacity
-        style={styles.upgradeBtn}
-        onPress={() => router.push('/pages/payment' as any)}
-        activeOpacity={0.85}
-      >
-        <Lucide name="zap" size={17} color="#fff" />
-        <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.checkStatusBtn}
-        onPress={handleCheckStatus}
-        disabled={refreshing || loading}
-        activeOpacity={0.7}
-      >
-        {refreshing || loading ? (
-          <ActivityIndicator size="small" color="#a78bfa" />
-        ) : (
-          <>
-            <Lucide name="refresh-cw" size={13} color="#a78bfa" />
-            <Text style={styles.checkStatusBtnText}>Already paid? Check status</Text>
-          </>
-        )}
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.backTextBtn}
-        onPress={() => router.back()}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.backTextBtnText}>Maybe Later</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.priceHint}>
-        Starting from 4.5 DT / month
-      </Text>
-    </View>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0a1e',
+    backgroundColor: '#f8fafce7',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
+    paddingHorizontal: 20,
     position: 'relative',
   },
   backButton: {
     position: 'absolute',
     top: 50,
     left: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1e1635',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#3b2575',
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
     zIndex: 10,
   },
-  backTextBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  backTextBtnText: {
-    color: '#a78bfa',
-    fontSize: 14,
-    fontWeight: '600',
+  card: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 26,
+    alignItems: 'center',
+    gap: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
   },
   iconOuter: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#2e1065',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1.5,
+    borderColor: '#bfdbfe',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
-    shadowColor: '#7c3aed',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 10,
-  },
-  iconInner: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    backgroundColor: '#4c1d95',
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: 4,
   },
   lockBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#2e1065',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#7c3aed',
+    borderColor: '#bfdbfe',
   },
   lockBadgeText: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '800',
-    color: '#a78bfa',
-    letterSpacing: 1,
+    color: '#2563eb',
+    letterSpacing: 0.5,
+  },
+  pendingBadge: {
+    backgroundColor: '#fffbeb',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  pendingBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#d97706',
+    letterSpacing: 0.5,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
-    color: '#ede9fe',
+    color: '#0f172a',
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#c4b5fd',
+    fontSize: 13.5,
+    color: '#64748b',
     textAlign: 'center',
-    lineHeight: 22,
-  },
-  note: {
-    fontSize: 12.5,
-    color: '#7c3aed',
-    textAlign: 'center',
-    fontStyle: 'italic',
     lineHeight: 20,
+    paddingHorizontal: 8,
   },
   upgradeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#7c3aed',
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 36,
-    marginTop: 8,
-    shadowColor: '#7c3aed',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 18,
-    elevation: 10,
+    gap: 8,
+    backgroundColor: '#2563eb',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    width: '100%',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+    marginTop: 4,
   },
   upgradeBtnText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 0.3,
-  },
-  priceHint: {
-    fontSize: 12,
-    color: '#4c1d95',
-    fontWeight: '500',
+    color: '#ffffff',
   },
   refreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#3b2575',
-    paddingVertical: 14,
-    paddingHorizontal: 28,
+    backgroundColor: '#d97706',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#7c3aed',
+    paddingVertical: 13,
+    paddingHorizontal: 24,
+    width: '100%',
+    shadowColor: '#d97706',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
     marginTop: 4,
   },
   refreshBtnText: {
-    color: '#ede9fe',
     fontSize: 14,
     fontWeight: '700',
+    color: '#ffffff',
   },
   checkStatusBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
   },
   checkStatusBtnText: {
-    color: '#a78bfa',
+    color: '#2563eb',
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+  backTextBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+  },
+  backTextBtnText: {
+    color: '#64748b',
     fontSize: 13,
     fontWeight: '600',
-    textDecorationLine: 'underline',
+  },
+  priceHint: {
+    fontSize: 11.5,
+    color: '#94a3b8',
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
