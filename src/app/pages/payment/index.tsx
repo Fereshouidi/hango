@@ -61,7 +61,13 @@ const METHOD_META: Record<
 export default function PaymentScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { refresh } = useSubscription();
+  const {
+    refresh,
+    isSubscribed,
+    subscriptionExpiresAt,
+    daysRemaining,
+    hasPendingPayment,
+  } = useSubscription();
 
   // Remote data
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -69,6 +75,7 @@ export default function PaymentScreen() {
     Partial<Record<PaymentMethod, MethodInfo>>
   >({});
   const [loadingData, setLoadingData] = useState(true);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   // Flow state
   const [step, setStep] = useState<Step>('plan');
@@ -79,6 +86,18 @@ export default function PaymentScreen() {
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-refresh subscription on mount
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // If user has pending payment, start on pending screen
+  useEffect(() => {
+    if (hasPendingPayment && step === 'plan') {
+      setStep('pending');
+    }
+  }, [hasPendingPayment, step]);
 
   // Step fade animation
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -192,6 +211,95 @@ export default function PaymentScreen() {
       <View style={[styles.center, { paddingTop: insets.top + 60 }]}>
         <ActivityIndicator size="large" color="#7c3aed" />
         <Text style={styles.loadingText}>Loading plans…</Text>
+      </View>
+    );
+  }
+
+  // ── Active Pro Subscription Screen ────────────────────────────
+  if (isSubscribed) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#0f0a1e',
+          paddingTop: Math.max(insets.top, 14),
+          paddingBottom: Math.max(insets.bottom, 14),
+        }}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Lucide name="arrow-left" size={20} color="#a78bfa" />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Subscription</Text>
+            <Text style={styles.headerSub}>HanGo Pro Member</Text>
+          </View>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.activeCard}>
+            <View style={styles.activeIconOuter}>
+              <Lucide name="badge-check" size={56} color="#10b981" />
+            </View>
+            <Text style={styles.activeTitle}>HanGo Pro is Active!</Text>
+            <Text style={styles.activeSubtitle}>
+              You have full unlimited access to all premium features.
+            </Text>
+
+            <View style={styles.activeDetailsBox}>
+              <View style={styles.activeDetailRow}>
+                <Text style={styles.activeDetailLabel}>Status</Text>
+                <View style={styles.activeBadge}>
+                  <Text style={styles.activeBadgeText}>ACTIVE</Text>
+                </View>
+              </View>
+              {subscriptionExpiresAt && (
+                <View style={styles.activeDetailRow}>
+                  <Text style={styles.activeDetailLabel}>Expires On</Text>
+                  <Text style={styles.activeDetailValue}>
+                    {new Date(subscriptionExpiresAt).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.activeDetailRow}>
+                <Text style={styles.activeDetailLabel}>Days Remaining</Text>
+                <Text style={styles.activeDetailValue}>{daysRemaining} days</Text>
+              </View>
+            </View>
+
+            <View style={styles.unlockedFeaturesBox}>
+              <Text style={styles.unlockedTitle}>Unlocked Features</Text>
+              <View style={styles.unlockedRow}>
+                <Lucide name="check" size={16} color="#10b981" />
+                <Text style={styles.unlockedText}>Listening Loop (Shadowing & Repeat)</Text>
+              </View>
+              <View style={styles.unlockedRow}>
+                <Lucide name="check" size={16} color="#10b981" />
+                <Text style={styles.unlockedText}>Writing Studio & Chinese Keyboard</Text>
+              </View>
+              <View style={styles.unlockedRow}>
+                <Lucide name="check" size={16} color="#10b981" />
+                <Text style={styles.unlockedText}>Write Characters (Stroke Order Canvas)</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.doneBtn}
+              onPress={() => router.back()}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.doneBtnText}>Back to Learning</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </View>
     );
   }
@@ -475,6 +583,29 @@ export default function PaymentScreen() {
                 This usually takes a few hours. You can check your status
                 in the Account → Subscription section.
               </Text>
+
+              <TouchableOpacity
+                style={styles.checkStatusBtnPending}
+                onPress={async () => {
+                  setCheckingStatus(true);
+                  try {
+                    await refresh();
+                  } finally {
+                    setCheckingStatus(false);
+                  }
+                }}
+                disabled={checkingStatus}
+                activeOpacity={0.85}
+              >
+                {checkingStatus ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Lucide name="refresh-cw" size={16} color="#fff" />
+                    <Text style={styles.checkStatusBtnPendingText}>Check Approval Status</Text>
+                  </>
+                )}
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.doneBtn}
@@ -846,5 +977,126 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#fff',
+  },
+  checkStatusBtnPending: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#3b2575',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+    width: '100%',
+    maxWidth: 280,
+  },
+  checkStatusBtnPendingText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+  },
+
+  // Active Pro Subscription Card Styles
+  activeCard: {
+    backgroundColor: '#160e2e',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#2e1065',
+    padding: 24,
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 10,
+  },
+  activeIconOuter: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#064e3b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 8,
+    marginBottom: 4,
+  },
+  activeTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#ede9fe',
+    textAlign: 'center',
+  },
+  activeSubtitle: {
+    fontSize: 14,
+    color: '#a78bfa',
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 12,
+  },
+  activeDetailsBox: {
+    width: '100%',
+    backgroundColor: '#1f1442',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#3b2575',
+  },
+  activeDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  activeDetailLabel: {
+    fontSize: 14,
+    color: '#c4b5fd',
+    fontWeight: '500',
+  },
+  activeDetailValue: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '700',
+  },
+  activeBadge: {
+    backgroundColor: '#064e3b',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#10b981',
+  },
+  activeBadgeText: {
+    color: '#6ee7b7',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  unlockedFeaturesBox: {
+    width: '100%',
+    backgroundColor: '#1a1038',
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#2e1065',
+  },
+  unlockedTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ede9fe',
+    marginBottom: 4,
+  },
+  unlockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  unlockedText: {
+    fontSize: 13.5,
+    color: '#e2e8f0',
+    fontWeight: '500',
   },
 });

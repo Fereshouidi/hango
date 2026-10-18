@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -30,9 +31,24 @@ export function Paywall({
   featureDescription,
   children,
 }: PaywallProps) {
-  const { isSubscribed, subscriptionStatus, hasPendingPayment, loading } =
+  const { isSubscribed, subscriptionStatus, hasPendingPayment, loading, refresh } =
     useSubscription();
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Auto-check subscription whenever Paywall is mounted
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const handleCheckStatus = async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Pass-through when subscribed
   if (isSubscribed) {
@@ -68,6 +84,22 @@ export function Paywall({
         <Text style={styles.note}>
           This usually takes a few hours. Check back soon!
         </Text>
+
+        <TouchableOpacity
+          style={styles.refreshBtn}
+          onPress={handleCheckStatus}
+          disabled={refreshing || loading}
+          activeOpacity={0.8}
+        >
+          {refreshing || loading ? (
+            <ActivityIndicator size="small" color="#ede9fe" />
+          ) : (
+            <>
+              <Lucide name="refresh-cw" size={15} color="#ede9fe" />
+              <Text style={styles.refreshBtnText}>Check Approval Status</Text>
+            </>
+          )}
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.backTextBtn}
@@ -115,6 +147,22 @@ export function Paywall({
       >
         <Lucide name="zap" size={17} color="#fff" />
         <Text style={styles.upgradeBtnText}>Upgrade to Pro</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.checkStatusBtn}
+        onPress={handleCheckStatus}
+        disabled={refreshing || loading}
+        activeOpacity={0.7}
+      >
+        {refreshing || loading ? (
+          <ActivityIndicator size="small" color="#a78bfa" />
+        ) : (
+          <>
+            <Lucide name="refresh-cw" size={13} color="#a78bfa" />
+            <Text style={styles.checkStatusBtnText}>Already paid? Check status</Text>
+          </>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -249,5 +297,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#4c1d95',
     fontWeight: '500',
+  },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#3b2575',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+    marginTop: 4,
+  },
+  refreshBtnText: {
+    color: '#ede9fe',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  checkStatusBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  checkStatusBtnText: {
+    color: '#a78bfa',
+    fontSize: 13,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });

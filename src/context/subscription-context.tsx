@@ -7,11 +7,14 @@ import React, {
   useState,
 } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   fetchSubscriptionStatus,
   SubscriptionStatus,
 } from '@/services/paymentService';
 import { getStoredToken } from '@/services/authSyncService';
+
+const KEY_SUBSCRIPTION_CACHE = 'hango_subscription_cache';
 
 interface SubscriptionContextType {
   isSubscribed: boolean;
@@ -43,6 +46,21 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(false);
   const lastFetchRef = useRef<number>(0);
 
+  // Load cached status on initial mount for instant UI feedback
+  useEffect(() => {
+    (async () => {
+      try {
+        const cached = await AsyncStorage.getItem(KEY_SUBSCRIPTION_CACHE);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setStatus(parsed);
+        }
+      } catch {
+        // ignore cache read errors
+      }
+    })();
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
       const token = await getStoredToken();
@@ -52,25 +70,27 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const data = await fetchSubscriptionStatus();
       setStatus(data);
       lastFetchRef.current = Date.now();
+      await AsyncStorage.setItem(KEY_SUBSCRIPTION_CACHE, JSON.stringify(data));
     } catch {
-      // silently fail – user might not be logged in
+      // silently fail – user might be offline
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Initial fetch on mount
+  // Fetch immediately on mount & after short delay
   useEffect(() => {
-    const timer = setTimeout(refresh, 1500);
+    refresh();
+    const timer = setTimeout(refresh, 2000);
     return () => clearTimeout(timer);
   }, [refresh]);
 
-  // Re-fetch when app comes back to foreground (max once per 5 min)
+  // Re-fetch whenever app becomes active (at most once every 3 seconds)
   useEffect(() => {
     const handler = (nextState: AppStateStatus) => {
       if (nextState === 'active') {
         const now = Date.now();
-        if (now - lastFetchRef.current > 5 * 60 * 1000) {
+        if (now - lastFetchRef.current > 3000) {
           refresh();
         }
       }
