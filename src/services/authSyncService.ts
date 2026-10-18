@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { db, repairDatabaseRelations } from '@/db/utils';
+import { getCurrentAppVersion } from './updateService';
 
 // Storage Keys
 const KEY_TOKEN = 'hango_auth_token';
@@ -8,11 +9,15 @@ const KEY_USER = 'hango_auth_user';
 const KEY_SERVER_URL = 'hango_server_url';
 const KEY_LAST_SYNC = 'hango_last_sync';
 
-// Candidate backend URLs (automatically checked in the background)
+// Default backend deployment on Vercel
+export const PRODUCTION_SERVER_URL = 'https://hangobackend.vercel.app';
+
+// Candidate backend URLs
 const CANDIDATE_URLS = [
-  'http://localhost:5000',
-  'http://192.168.1.104:5000',
-  Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000',
+  PRODUCTION_SERVER_URL,
+  'http://localhost:3000',
+  'http://192.168.1.104:3000',
+  Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000',
 ];
 
 let cachedWorkingUrl: string | null = null;
@@ -21,6 +26,8 @@ export interface User {
   id: string;
   email: string;
   username: string;
+  appVersion?: string;
+  platform?: string;
 }
 
 export interface SyncStats {
@@ -43,37 +50,20 @@ export async function getServerUrl(): Promise<string> {
   if (cachedWorkingUrl) return cachedWorkingUrl;
 
   const custom = await AsyncStorage.getItem(KEY_SERVER_URL);
-  if (custom) {
+  // If user set a custom URL that isn't one of the legacy local development URLs, use it
+  if (
+    custom &&
+    custom !== 'http://localhost:5000' &&
+    custom !== 'http://192.168.1.104:5000' &&
+    custom !== 'http://localhost:3000'
+  ) {
     cachedWorkingUrl = custom;
     return custom;
   }
 
-  // Silently find working server in the background
-  try {
-    const probe = async (url: string): Promise<string | null> => {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1200);
-      try {
-        const res = await fetch(`${url}/api/health`, { signal: controller.signal });
-        clearTimeout(timer);
-        if (res.ok) return url;
-      } catch {
-        clearTimeout(timer);
-      }
-      return null;
-    };
-
-    const results = await Promise.all(CANDIDATE_URLS.map(probe));
-    const working = results.find(Boolean);
-    if (working) {
-      cachedWorkingUrl = working;
-      return working;
-    }
-  } catch {
-    // fallback
-  }
-
-  return CANDIDATE_URLS[0];
+  // Fast path: Default to the live Vercel cloud server
+  cachedWorkingUrl = PRODUCTION_SERVER_URL;
+  return PRODUCTION_SERVER_URL;
 }
 
 export async function setServerUrl(url: string): Promise<void> {
@@ -127,11 +117,13 @@ export async function registerAccount(
   password: string
 ): Promise<{ user: User; token: string }> {
   const baseUrl = await getServerUrl();
+  const appVersion = getCurrentAppVersion();
+  const platform = Platform.OS === 'android' ? 'android' : Platform.OS === 'ios' ? 'ios' : 'web';
 
   const res = await fetch(`${baseUrl}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, username, password }),
+    body: JSON.stringify({ email, username, password, appVersion, platform }),
   });
 
   const data = await res.json();
@@ -150,11 +142,13 @@ export async function loginAccount(
   password: string
 ): Promise<{ user: User; token: string }> {
   const baseUrl = await getServerUrl();
+  const appVersion = getCurrentAppVersion();
+  const platform = Platform.OS === 'android' ? 'android' : Platform.OS === 'ios' ? 'ios' : 'web';
 
   const res = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier, password }),
+    body: JSON.stringify({ identifier, password, appVersion, platform }),
   });
 
   const data = await res.json();
@@ -246,6 +240,7 @@ export async function backupDataToCloud(
     characters,
     rules,
     junctions,
+    appVersion: getCurrentAppVersion(),
   };
 
   onProgress?.('Uploading to MongoDB Atlas...', 70);

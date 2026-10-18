@@ -49,6 +49,7 @@ import Lucide from '@react-native-vector-icons/lucide';
 import { ThemedView } from '@/components/themed-view';
 import { Bg1 } from '@/components/sub/bg1';
 import Header from '@/components/main/header';
+import { Paywall } from '@/components/paywall';
 import {
   getAllCharacters,
   getAllCharactersCount,
@@ -541,7 +542,12 @@ export default function CharacterWriteScreen() {
   ];
 
   return (
-    <ThemedView style={styles.container}>
+    <Paywall
+      featureName="Write Characters"
+      featureIcon="pencil-line"
+      featureDescription="Learn Chinese stroke order interactively with animated stroke rules, tracing canvas, and guided repetition."
+    >
+      <ThemedView style={styles.container}>
       <Bg1 />
 
       <Header
@@ -1196,6 +1202,7 @@ export default function CharacterWriteScreen() {
         )}
       </ScrollView>
     </ThemedView>
+    </Paywall>
   );
 }
 

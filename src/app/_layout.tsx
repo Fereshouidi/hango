@@ -10,6 +10,8 @@ import { getAllCharacters, getAllHSKs, getAllLessons, getAllRules, getAllSentenc
 import { ThemedView } from '@/components/themed-view';
 import { SidebarProvider, useSidebar } from '@/context/sidebar-context';
 import { Sidebar } from '@/components/main/sidebar';
+import { UpdateProvider } from '@/context/update-context';
+import { SubscriptionProvider } from '@/context/subscription-context';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,8 +34,10 @@ export default function TabLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <SidebarProvider>
-        <SidebarWrapper>
+      <UpdateProvider>
+        <SubscriptionProvider>
+          <SidebarProvider>
+          <SidebarWrapper>
           <ThemedView
             style={{
               width: "100%",
@@ -198,13 +202,19 @@ export default function TabLayout() {
                     name="pages/sync/index"
                     options={{ headerShown: false }}
                 />
+                <Stack.Screen
+                    name="pages/payment/index"
+                    options={{ headerShown: false }}
+                />
 
             </Stack>
           </ThemedView>
         </SidebarWrapper>
 
         <AnimatedSplashOverlay />
-      </SidebarProvider>
+        </SidebarProvider>
+        </SubscriptionProvider>
+      </UpdateProvider>
     </ThemeProvider>
   );
 }

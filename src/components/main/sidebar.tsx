@@ -136,6 +136,15 @@ export const sidebarSections: SidebarSection[] = [
     chineseTitle: '账号与帮助',
     items: [
       {
+        id: 'payment',
+        label: 'Subscription',
+        chineseLabel: '订阅会员',
+        icon: 'zap',
+        color: '#7c3aed',
+        target: '/pages/payment',
+        badge: 'Pro',
+      },
+      {
         id: 'sync',
         label: 'My Account',
         chineseLabel: '云端同步',

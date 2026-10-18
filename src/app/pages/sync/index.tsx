@@ -32,12 +32,16 @@ import {
   User,
 } from '@/services/authSyncService';
 import { getSetting, setSetting, removeInitData, restoreInitData } from '@/db/utils';
+import { useAppUpdates } from '@/context/update-context';
 
 type AuthTab = 'login' | 'register';
 type SyncState = 'idle' | 'running' | 'success' | 'error';
 
 export default function AccountPage() {
   const router = useRouter();
+
+  // App updates
+  const { currentVersion, latestVersion, checkForUpdates, checking, updateAvailable } = useAppUpdates();
 
   // Auth state
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -693,6 +697,49 @@ export default function AccountPage() {
             </View>
           </View>
 
+          {/* ════════════════════ APP UPDATES SECTION ════════════════════ */}
+          <View style={styles.updatesCard}>
+            <View style={styles.updatesHeader}>
+              <View style={styles.updatesIconBox}>
+                <Lucide name="arrow-up-circle" size={22} color="#2563eb" />
+              </View>
+              <View style={styles.updatesInfo}>
+                <Text style={styles.updatesTitle}>App Updates</Text>
+                <Text style={styles.updatesSub}>Installed Version: v{currentVersion}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.checkUpdateBtn, checking && { opacity: 0.7 }]}
+                onPress={() => checkForUpdates(true)}
+                disabled={checking}
+                activeOpacity={0.8}
+              >
+                {checking ? (
+                  <ActivityIndicator size="small" color="#2563eb" />
+                ) : (
+                  <>
+                    <Lucide name="refresh-cw" size={13} color="#2563eb" />
+                    <Text style={styles.checkUpdateBtnText}>Check Now</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.updatesStatusRow}>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: updateAvailable ? '#ef4444' : '#10b981' },
+                ]}
+              />
+              <Text style={styles.updatesStatusText}>
+                {updateAvailable
+                  ? `New update available (v${latestVersion})!`
+                  : `HanGo is up to date (v${currentVersion})`}
+              </Text>
+            </View>
+          </View>
+
           <View style={{ height: 20 }} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -1163,5 +1210,79 @@ const styles = StyleSheet.create({
   initDataStatusText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+
+  // Updates Card
+  updatesCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+  },
+  updatesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  updatesIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  updatesInfo: {
+    flex: 1,
+  },
+  updatesTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  updatesSub: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  checkUpdateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  checkUpdateBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2563eb',
+  },
+  updatesStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  updatesStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
   },
 });

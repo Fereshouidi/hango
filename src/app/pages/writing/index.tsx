@@ -15,6 +15,7 @@ import { WritingHeader } from './components/WritingHeader';
 import { useDictation } from './hooks/useDictation';
 import { useWritingData } from './hooks/useWritingData';
 import { WritingMode } from './types';
+import { Paywall } from '@/components/paywall';
 
 export default function WritingScreen() {
   // ── Mode ──────────────────────────────────────────────────────────────────
@@ -217,7 +218,12 @@ export default function WritingScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <Paywall
+      featureName="Writing Studio"
+      featureIcon="keyboard"
+      featureDescription="Master sentence construction, interactive pinyin rubies, and audio dictation with custom Chinese keyboard."
+    >
+      <ThemedView style={styles.container}>
       <Bg1 />
 
       {/* Screen Header */}
@@ -311,6 +317,7 @@ export default function WritingScreen() {
         />
       </View>
     </ThemedView>
+    </Paywall>
   );
 }
 

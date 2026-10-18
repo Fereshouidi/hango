@@ -28,6 +28,7 @@ import { LoopPlaylistQueue } from './components/LoopPlaylistQueue';
 import { LoopSettingsModal } from './components/LoopSettingsModal';
 import { useListeningLoop } from './hooks/useListeningLoop';
 import { LoopContentType, LoopItem } from './types';
+import { Paywall } from '@/components/paywall';
 
 export default function ListeningLoopScreen() {
   const router = useRouter();
@@ -456,7 +457,12 @@ export default function ListeningLoopScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <Paywall
+      featureName="Listening Loop"
+      featureIcon="headphones"
+      featureDescription="Master natural Chinese rhythm with audio shadowing, custom loops, repeat intervals, and variable speed."
+    >
+      <ThemedView style={styles.container}>
       <Bg1 />
 
       {/* Screen Header */}
@@ -572,6 +578,7 @@ export default function ListeningLoopScreen() {
         onSelectLoopMode={setLoopMode}
       />
     </ThemedView>
+    </Paywall>
   );
 }
 
