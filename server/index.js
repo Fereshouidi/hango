@@ -7,7 +7,7 @@ const authRoutes = require('./routes/auth');
 const syncRoutes = require('./routes/sync');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Enable CORS for all origins (Expo web, React Native mobile, emulators)
 app.use(cors());
