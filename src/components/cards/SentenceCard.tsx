@@ -5,9 +5,12 @@ import { useRouter } from 'expo-router';
 import { SentenceType } from '@/types';
 import { speakChineseText } from '@/utils/tts';
 
+import { HighlightedText } from '../common/HighlightedText';
+
 interface SentenceCardProps {
   sentence: SentenceType;
   index?: number;
+  searchQuery?: string;
   showPinyin?: boolean;
   showMeaning?: boolean;
   cardBg?: string;
@@ -21,9 +24,10 @@ interface SentenceCardProps {
   onOptionsPress?: () => void;
 }
 
-export const SentenceCard: React.FC<SentenceCardProps> = ({
+export const SentenceCard: React.FC<SentenceCardProps> = React.memo(({
   sentence,
   index,
+  searchQuery,
   showPinyin = true,
   showMeaning = true,
   cardBg,
@@ -124,24 +128,33 @@ export const SentenceCard: React.FC<SentenceCardProps> = ({
         </View>
       </View>
 
-      <Text style={[styles.chineseText, cardBg && styles.whiteText]}>
-        {sentence.content}
-      </Text>
+      <HighlightedText
+        text={sentence.content}
+        highlight={searchQuery}
+        isCardBg={Boolean(cardBg)}
+        style={[styles.chineseText, cardBg && styles.whiteText]}
+      />
 
       {showPinyin && sentence.pinyin ? (
-        <Text style={[styles.pinyinText, cardBg ? styles.whiteSubtext : styles.darkSubtext]}>
-          {sentence.pinyin}
-        </Text>
+        <HighlightedText
+          text={sentence.pinyin}
+          highlight={searchQuery}
+          isCardBg={Boolean(cardBg)}
+          style={[styles.pinyinText, cardBg ? styles.whiteSubtext : styles.darkSubtext]}
+        />
       ) : null}
 
       {showMeaning && sentence.meaning ? (
-        <Text style={[styles.meaningText, cardBg ? styles.whiteSubtext : styles.darkMeaning]}>
-          {sentence.meaning}
-        </Text>
+        <HighlightedText
+          text={sentence.meaning}
+          highlight={searchQuery}
+          isCardBg={Boolean(cardBg)}
+          style={[styles.meaningText, cardBg ? styles.whiteSubtext : styles.darkMeaning]}
+        />
       ) : null}
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {

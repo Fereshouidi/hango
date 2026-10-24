@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
 import { CharacterType, HSKType, LessonType } from '@/types';
 import { StudyToggleBar } from '../common/StudyToggleBar';
+import { HighlightedText } from '../common/HighlightedText';
 
 const toneColors: Record<string, string> = {
   '1': '#ef4444',
@@ -36,6 +37,7 @@ interface CharacterHeroCardProps {
   setShowPinyin: (val: boolean) => void;
   showMeaning: boolean;
   setShowMeaning: (val: boolean) => void;
+  searchQuery?: string;
 }
 
 export const CharacterHeroCard: React.FC<CharacterHeroCardProps> = ({
@@ -54,6 +56,7 @@ export const CharacterHeroCard: React.FC<CharacterHeroCardProps> = ({
   setShowPinyin,
   showMeaning,
   setShowMeaning,
+  searchQuery,
 }) => {
   const toneKey = character?.tone || '5';
   const toneColor = toneColors[toneKey] || '#6b7280';
@@ -65,9 +68,11 @@ export const CharacterHeroCard: React.FC<CharacterHeroCardProps> = ({
       <View style={styles.topRow}>
         {/* Giant character display */}
         <View style={[styles.charBox, { borderColor: toneColor + '50', backgroundColor: toneColor + '10' }]}>
-          <Text style={[styles.charSymbol, { color: toneColor }]}>
-            {character?.content || '？'}
-          </Text>
+          <HighlightedText
+            text={character?.content || '？'}
+            searchQuery={searchQuery}
+            style={[styles.charSymbol, { color: toneColor }]}
+          />
           <View style={[styles.toneBadge, { backgroundColor: toneColor }]}>
             <Text style={styles.toneBadgeText}>T{toneKey}</Text>
           </View>
@@ -79,7 +84,11 @@ export const CharacterHeroCard: React.FC<CharacterHeroCardProps> = ({
           {character?.pinyin ? (
             <View style={[styles.infoRow, { backgroundColor: toneColor + '12' }]}>
               <Lucide name="mic" size={14} color={toneColor} />
-              <Text style={[styles.pinyinText, { color: toneColor }]}>{character.pinyin}</Text>
+              <HighlightedText
+                text={character.pinyin}
+                searchQuery={searchQuery}
+                style={[styles.pinyinText, { color: toneColor }]}
+              />
             </View>
           ) : null}
 
@@ -87,7 +96,12 @@ export const CharacterHeroCard: React.FC<CharacterHeroCardProps> = ({
           {character?.meaning ? (
             <View style={styles.infoRow}>
               <Lucide name="book-open" size={14} color="#64748b" />
-              <Text style={styles.meaningText} numberOfLines={2}>{character.meaning}</Text>
+              <HighlightedText
+                text={character.meaning}
+                searchQuery={searchQuery}
+                style={styles.meaningText}
+                numberOfLines={2}
+              />
             </View>
           ) : null}
 

@@ -420,6 +420,7 @@ const HSKDetails = () => {
                     showMeaning={showMeaning}
                     isPlaying={playingItemId === `text-${text.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `text-${id}`)}
+                    searchQuery={searchQuery}
                   />
                 ))}
                 {activeTab === 'all' && filteredTexts.length > ITEM_LIMIT && (
@@ -489,6 +490,7 @@ const HSKDetails = () => {
                     showMeaning={showMeaning}
                     isPlaying={playingItemId === `sentence-${sentence.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `sentence-${id}`)}
+                    searchQuery={searchQuery}
                   />
                 ))}
                 {activeTab === 'all' && filteredSentences.length > ITEM_LIMIT && (
@@ -559,6 +561,7 @@ const HSKDetails = () => {
                       showMeaning={showMeaning}
                       isPlaying={playingItemId === `word-${word.id}`}
                       onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
+                      searchQuery={searchQuery}
                     />
                     // </View>
                   ))}
@@ -630,6 +633,7 @@ const HSKDetails = () => {
                         showMeaning={showMeaning}
                         isPlaying={playingItemId === `char-${char.id}`}
                         onPlayAudio={(id, content) => playItemAudio(id, content, `char-${id}`)}
+                        searchQuery={searchQuery}
                       />
                     </View>
                   ))}
@@ -699,6 +703,7 @@ const HSKDetails = () => {
                     index={idx}
                     isPlaying={playingItemId === `rule-${rule.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `rule-${id}`, true)}
+                    searchQuery={searchQuery}
                   />
                 ))}
                 {activeTab === 'all' && filteredRules.length > ITEM_LIMIT && (

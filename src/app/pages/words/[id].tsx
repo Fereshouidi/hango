@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   BackHandler,
+  FlatList,
+  PanResponder,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -9,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import {
@@ -38,7 +41,7 @@ import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
 import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
 import { speakChineseText } from '@/utils/tts';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 30;
 
 export default function WordsScreen() {
   const router = useRouter();
@@ -80,6 +83,70 @@ export default function WordsScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [menuVisible, setMenuVisible] = useState(false);
   const [activeCardWord, setActiveCardWord] = useState<WordType | null>(null);
+
+  // ── Pinch-to-zoom column control ──────────────────────────────────
+  const MIN_COLS = 2;
+  const MAX_COLS = 6;
+  const [numColumns, setNumColumns] = useState(4);
+  const numColumnsRef = useRef(numColumns);
+  useEffect(() => {
+    numColumnsRef.current = numColumns;
+  }, [numColumns]);
+
+  const [showColsHint, setShowColsHint] = useState(false);
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pinchStartDistRef = useRef<number | null>(null);
+  const pinchStartColsRef = useRef<number>(4);
+
+  // Load persisted column count
+  useEffect(() => {
+    AsyncStorage.getItem('words_numColumns').then((v) => {
+      if (v) {
+        const n = parseInt(v, 10);
+        if (n >= MIN_COLS && n <= MAX_COLS) setNumColumns(n);
+      }
+    });
+  }, []);
+
+  const pinchResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (_, gs) => gs.numberActiveTouches === 2,
+      onMoveShouldSetPanResponder: (_, gs) => gs.numberActiveTouches === 2,
+      onStartShouldSetPanResponderCapture: (_, gs) => gs.numberActiveTouches === 2,
+      onMoveShouldSetPanResponderCapture: (_, gs) => gs.numberActiveTouches === 2,
+      onPanResponderGrant: (e) => {
+        const touches = e.nativeEvent.touches;
+        if (!touches || touches.length < 2) return;
+        const dx = touches[0].pageX - touches[1].pageX;
+        const dy = touches[0].pageY - touches[1].pageY;
+        pinchStartDistRef.current = Math.sqrt(dx * dx + dy * dy);
+        pinchStartColsRef.current = numColumnsRef.current;
+      },
+      onPanResponderMove: (e) => {
+        const touches = e.nativeEvent.touches;
+        if (!touches || touches.length < 2 || pinchStartDistRef.current === null) return;
+        const dx = touches[0].pageX - touches[1].pageX;
+        const dy = touches[0].pageY - touches[1].pageY;
+        const currentDist = Math.sqrt(dx * dx + dy * dy);
+        // Spreading fingers apart (zoom in) -> fewer cols (bigger cards)
+        // Pinching fingers together (zoom out) -> more cols (smaller cards)
+        const diff = currentDist - pinchStartDistRef.current;
+        const colDelta = Math.round(diff / 55);
+        const next = Math.max(MIN_COLS, Math.min(MAX_COLS, pinchStartColsRef.current - colDelta));
+
+        if (next !== numColumnsRef.current) {
+          setNumColumns(next);
+          setShowColsHint(true);
+          if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+          hintTimerRef.current = setTimeout(() => setShowColsHint(false), 1400);
+          AsyncStorage.setItem('words_numColumns', String(next));
+        }
+      },
+      onPanResponderRelease: () => {
+        pinchStartDistRef.current = null;
+      },
+    })
+  ).current;
 
   useEffect(() => {
     if (params.search !== undefined) {
@@ -192,14 +259,14 @@ export default function WordsScreen() {
     }
   };
 
-  const handlePlayAudio = (id: number, text: string) => {
+  const handlePlayAudio = useCallback((id: number, text: string) => {
     setPlayingId(id);
     speakChineseText(
       text,
       () => setPlayingId(id),
       () => setPlayingId(null)
     );
-  };
+  }, []);
 
   const handleOpenListeningLoop = () => {
     let effLessonId = lessonId > 0 ? lessonId : 0;
@@ -249,18 +316,18 @@ export default function WordsScreen() {
   };
 
   // ── Selection mode helpers ──────────────────────────────────────────────
-  const enterSelectionMode = (id: number) => {
+  const enterSelectionMode = useCallback((id: number) => {
     setIsSelectionMode(true);
     setSelectedIds(new Set([id]));
-  };
+  }, []);
 
-  const exitSelectionMode = () => {
+  const exitSelectionMode = useCallback(() => {
     setIsSelectionMode(false);
     setSelectedIds(new Set());
     setActiveCardWord(null);
-  };
+  }, []);
 
-  const toggleSelection = (id: number) => {
+  const toggleSelection = useCallback((id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -270,7 +337,67 @@ export default function WordsScreen() {
       }
       return next;
     });
-  };
+  }, []);
+
+  const isSelectionModeRef = useRef(isSelectionMode);
+  useEffect(() => {
+    isSelectionModeRef.current = isSelectionMode;
+  }, [isSelectionMode]);
+
+  const handleCardPress = useCallback((word: WordType) => {
+    if (isSelectionModeRef.current) {
+      toggleSelection(word.id!);
+    } else {
+      router.push(`/pages/wordDetails/${word.id}` as any);
+    }
+  }, [toggleSelection, router]);
+
+  const handleCardLongPress = useCallback((word: WordType) => {
+    enterSelectionMode(word.id!);
+  }, [enterSelectionMode]);
+
+  const handleCardOptionsPress = useCallback((word: WordType) => {
+    setActiveCardWord(word);
+    setMenuVisible(true);
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item: word, index }: { item: WordType; index: number }) => {
+      const cardBg = randomColors[index % randomColors.length];
+      const isSelected = selectedIds.has(word.id!);
+      return (
+        <WordCard
+          word={word}
+          index={index}
+          numColumns={numColumns}
+          searchQuery={searchQuery}
+          showPinyin={showPinyin}
+          showMeaning={showMeaning}
+          cardBg={cardBg}
+          isPlaying={playingId === (word.id || index + 1)}
+          onPlayAudio={handlePlayAudio}
+          isSelected={isSelected}
+          isSelectionMode={isSelectionMode}
+          onLongPress={handleCardLongPress}
+          onPress={handleCardPress}
+          onOptionsPress={handleCardOptionsPress}
+        />
+      );
+    },
+    [
+      numColumns,
+      searchQuery,
+      showPinyin,
+      showMeaning,
+      playingId,
+      selectedIds,
+      isSelectionMode,
+      handlePlayAudio,
+      handleCardLongPress,
+      handleCardPress,
+      handleCardOptionsPress,
+    ]
+  );
 
   const isAllSelected = filteredWords.length > 0 && selectedIds.size === filteredWords.length;
 
@@ -503,70 +630,64 @@ export default function WordsScreen() {
         setShowMeaning={setShowMeaning}
       />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={32}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#10b981"
-            colors={['#10b981']}
-          />
-        }
-      >
-        {filteredWords.length > 0 ? (
-          <>
-            {displayedWords.map((word, index) => {
-              const cardBg = randomColors[index % randomColors.length];
-              const isSelected = selectedIds.has(word.id!);
-              return (
-                <WordCard
-                  key={word.id || index}
-                  word={word}
-                  index={index}
-                  showPinyin={showPinyin}
-                  showMeaning={showMeaning}
-                  cardBg={cardBg}
-                  isPlaying={playingId === (word.id || index + 1)}
-                  onPlayAudio={handlePlayAudio}
-                  isSelected={isSelected}
-                  isSelectionMode={isSelectionMode}
-                  onLongPress={() => enterSelectionMode(word.id!)}
-                  onPress={isSelectionMode ? () => toggleSelection(word.id!) : undefined}
-                  onOptionsPress={() => {
-                    setActiveCardWord(word);
-                    setMenuVisible(true);
-                  }}
-                />
-              );
-            })}
-
-            <LoadMoreFooter
-              currentCount={displayedWords.length}
-              totalCount={filteredWords.length}
-              pageSize={PAGE_SIZE}
-              accentColor="#10b981"
-              itemLabel="words"
-              onLoadMore={handleLoadMore}
+      <View style={styles.scrollWrapper} {...pinchResponder.panHandlers}>
+        <FlatList
+          key={`words-grid-${numColumns}`}
+          data={displayedWords}
+          keyExtractor={(item, index) => String(item.id || index)}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          renderItem={renderItem}
+          contentContainerStyle={styles.scrollContent}
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={32}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#10b981"
+              colors={['#10b981']}
             />
-          </>
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Lucide name="languages" size={40} color="#cbd5e1" />
-            <ThemedText style={styles.emptyText}>
-              {searchQuery
-                ? 'No matching words found'
-                : activeFilterLabel
-                ? `No words found for ${activeFilterLabel}`
-                : 'No vocabulary words available'}
-            </ThemedText>
+          }
+          ListFooterComponent={
+            filteredWords.length > 0 ? (
+              <LoadMoreFooter
+                currentCount={displayedWords.length}
+                totalCount={filteredWords.length}
+                pageSize={PAGE_SIZE}
+                accentColor="#10b981"
+                itemLabel="words"
+                onLoadMore={handleLoadMore}
+              />
+            ) : null
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Lucide name="languages" size={40} color="#cbd5e1" />
+              <ThemedText style={styles.emptyText}>
+                {searchQuery
+                  ? 'No matching words found'
+                  : activeFilterLabel
+                  ? `No words found for ${activeFilterLabel}`
+                  : 'No vocabulary words available'}
+              </ThemedText>
+            </View>
+          }
+          initialNumToRender={20}
+          maxToRenderPerBatch={20}
+          windowSize={5}
+          removeClippedSubviews={true}
+        />
+
+        {showColsHint && (
+          <View style={styles.colsHintBadge} pointerEvents="none">
+            <Lucide name="grid" size={15} color="#ffffff" />
+            <Text style={styles.colsHintText}>{numColumns} Columns</Text>
           </View>
         )}
-      </ScrollView>
+      </View>
 
       <OptionsMenuModal
         visible={menuVisible}
@@ -626,19 +747,48 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  scrollWrapper: {
+    width: '100%',
+    flex: 1,
+    position: 'relative',
+  },
   scrollView: {
     width: '100%',
     flex: 1,
   },
+  colsHintBadge: {
+    position: 'absolute',
+    top: 14,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.88)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
+    zIndex: 100,
+  },
+  colsHintText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  columnWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+  },
   scrollContent: {
     width: '100%',
-    display: "flex",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 0,
+    paddingHorizontal: 2,
     paddingBottom: 24,
-    paddingTop: 8,
-    // gap: 6,
+    paddingTop: 4,
   },
   emptyContainer: {
     padding: 40,

@@ -22,6 +22,7 @@ interface SubscriptionContextType {
   daysRemaining: number;
   hasPendingPayment: boolean;
   pendingPayment: SubscriptionStatus['pendingPayment'];
+  latestRejectedPayment: SubscriptionStatus['latestRejectedPayment'];
   subscriptionExpiresAt?: string;
   subscriptionPlan?: string;
   loading: boolean;
@@ -35,6 +36,7 @@ const defaultCtx: SubscriptionContextType = {
   daysRemaining: 0,
   hasPendingPayment: false,
   pendingPayment: null,
+  latestRejectedPayment: null,
   loading: false,
   refresh: async () => {},
 };
@@ -112,6 +114,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         daysRemaining: status.daysRemaining ?? 0,
         hasPendingPayment: status.hasPendingPayment ?? false,
         pendingPayment: status.pendingPayment ?? null,
+        latestRejectedPayment: status.latestRejectedPayment ?? null,
         subscriptionExpiresAt: status.subscriptionExpiresAt,
         subscriptionPlan: status.subscriptionPlan,
         loading,

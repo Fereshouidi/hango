@@ -427,6 +427,7 @@ export default function RulesScreen() {
                   onLongPress={() => enterSelectionMode(ruleId)}
                   onPress={isSelectionMode ? () => toggleSelection(ruleId) : undefined}
                   onOptionsPress={() => { setActiveCardRule(rule); setMenuVisible(true); }}
+                  searchQuery={searchQuery}
                 />
               );
             })}

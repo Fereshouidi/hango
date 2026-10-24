@@ -12,6 +12,7 @@ import { SidebarProvider, useSidebar } from '@/context/sidebar-context';
 import { Sidebar } from '@/components/main/sidebar';
 import { UpdateProvider } from '@/context/update-context';
 import { SubscriptionProvider } from '@/context/subscription-context';
+import { BannerAlertProvider } from '@/components/banners';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,10 +35,11 @@ export default function TabLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <UpdateProvider>
-        <SubscriptionProvider>
-          <SidebarProvider>
-          <SidebarWrapper>
+      <BannerAlertProvider>
+        <UpdateProvider>
+          <SubscriptionProvider>
+            <SidebarProvider>
+            <SidebarWrapper>
           <ThemedView
             style={{
               width: "100%",
@@ -206,6 +208,22 @@ export default function TabLayout() {
                     name="pages/payment/index"
                     options={{ headerShown: false }}
                 />
+                <Stack.Screen
+                    name="pages/payment/method"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="pages/payment/confirm"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="pages/payment/pending"
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="pages/payment/history"
+                    options={{ headerShown: false }}
+                />
 
             </Stack>
           </ThemedView>
@@ -215,6 +233,7 @@ export default function TabLayout() {
         </SidebarProvider>
         </SubscriptionProvider>
       </UpdateProvider>
+      </BannerAlertProvider>
     </ThemeProvider>
   );
 }

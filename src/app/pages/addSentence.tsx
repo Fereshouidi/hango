@@ -392,9 +392,15 @@ const AddSentence = () => {
         title="Sentence Created!"
         lessonTitle={createdBannerInfo.sentenceContent}
         details={createdBannerInfo.details}
-        onClose={() =>
-          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
-        }
+        actionText="Done"
+        onAction={() => {
+          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }));
+          router.back();
+        }}
+        onClose={() => {
+          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }));
+          router.back();
+        }}
       />
 
       <KeyboardAvoidingView

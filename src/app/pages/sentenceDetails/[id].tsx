@@ -296,6 +296,7 @@ const SentenceDetails = () => {
           setShowPinyin={setShowPinyin}
           showMeaning={showMeaning}
           setShowMeaning={setShowMeaning}
+          searchQuery={searchQuery}
         />
 
         {/* UNIFIED CONTROLS: SEARCH, SCOPE & TABS */}
@@ -350,6 +351,7 @@ const SentenceDetails = () => {
                     showMeaning={showMeaning}
                     isPlaying={playingItemId === `text-${text.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `text-${id}`)}
+                    searchQuery={searchQuery}
                   />
                 ))}
                 {activeTab === 'all' && filteredTexts.length > ITEM_LIMIT && (
@@ -405,15 +407,15 @@ const SentenceDetails = () => {
               <>
                 <View style={styles.wordsGrid}>
                   {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((w) => (
-                    // <View key={w.id} style={{ width: '48.5%' }}>
                     <WordCard
+                      key={w.id}
                       word={w}
                       showPinyin={showPinyin}
                       showMeaning={showMeaning}
                       isPlaying={playingItemId === `word-${w.id}`}
                       onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
+                      searchQuery={searchQuery}
                     />
-                    // </View>
                   ))}
                 </View>
                 {activeTab === 'all' && filteredWords.length > ITEM_LIMIT && (
@@ -469,13 +471,14 @@ const SentenceDetails = () => {
               <>
                 <View style={styles.wordsGrid}>
                   {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((c) => (
-                    <View key={c.id} style={{ width: '49%', marginVertical: 5 }}>
+                    <View key={c.id} style={{ width: '48.5%', marginVertical: 4 }}>
                       <CharacterCard
                         char={c}
                         showPinyin={showPinyin}
                         showMeaning={showMeaning}
                         isPlaying={playingItemId === `char-${c.id}`}
                         onPlayAudio={(id, content) => playItemAudio(id, content, `char-${id}`)}
+                        searchQuery={searchQuery}
                       />
                     </View>
                   ))}
@@ -538,6 +541,7 @@ const SentenceDetails = () => {
                     index={idx}
                     isPlaying={playingItemId === `rule-${r.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `rule-${id}`, true)}
+                    searchQuery={searchQuery}
                   />
                 ))}
                 {activeTab === 'all' && filteredRules.length > ITEM_LIMIT && (

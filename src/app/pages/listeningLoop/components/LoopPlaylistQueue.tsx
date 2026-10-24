@@ -119,14 +119,21 @@ export const LoopPlaylistQueue: React.FC<LoopPlaylistQueueProps> = ({
 
               {/* Content text */}
               <View style={styles.contentCol}>
-                {showPinyin && Boolean(item.pinyin) && (
-                  <Text
-                    style={[styles.itemPinyin, isActive && styles.itemPinyinActive]}
-                    numberOfLines={1}
-                  >
-                    {item.pinyin}
-                  </Text>
-                )}
+                <View style={styles.itemMetaRow}>
+                  {item.type === 'word' && (
+                    <View style={styles.itemTypeBadgeWord}>
+                      <Text style={styles.itemTypeBadgeWordText}>Word</Text>
+                    </View>
+                  )}
+                  {showPinyin && Boolean(item.pinyin) && (
+                    <Text
+                      style={[styles.itemPinyin, isActive && styles.itemPinyinActive]}
+                      numberOfLines={1}
+                    >
+                      {item.pinyin}
+                    </Text>
+                  )}
+                </View>
                 <Text
                   style={[styles.itemHanzi, isActive && styles.itemHanziActive]}
                   numberOfLines={2}
@@ -301,6 +308,22 @@ const styles = StyleSheet.create({
   contentCol: {
     flex: 1,
     gap: 2,
+  },
+  itemMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  itemTypeBadgeWord: {
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 5,
+  },
+  itemTypeBadgeWordText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#059669',
   },
   itemPinyin: {
     fontSize: 10.5,

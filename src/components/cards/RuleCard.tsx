@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { RuleType } from '@/types';
 import { speakEnglishText } from '@/utils/tts';
 
+import { HighlightedText } from '../common/HighlightedText';
+
 interface RuleCardProps {
   rule: RuleType;
   index?: number;
@@ -17,6 +19,7 @@ interface RuleCardProps {
   onLongPress?: () => void;
   onPress?: () => void;
   onOptionsPress?: () => void;
+  searchQuery?: string;
 }
 
 export const RuleCard: React.FC<RuleCardProps> = ({
@@ -31,6 +34,7 @@ export const RuleCard: React.FC<RuleCardProps> = ({
   onLongPress,
   onPress,
   onOptionsPress,
+  searchQuery,
 }) => {
   const router = useRouter();
   const [localPlaying, setLocalPlaying] = React.useState(false);
@@ -118,9 +122,12 @@ export const RuleCard: React.FC<RuleCardProps> = ({
         </View>
       </View>
 
-      <Text style={[styles.ruleText, cardBg && styles.whiteText]}>
-        {rule.content}
-      </Text>
+      <HighlightedText
+        text={rule.content}
+        searchQuery={searchQuery}
+        style={[styles.ruleText, cardBg && styles.whiteText]}
+        isCardBg={!!cardBg}
+      />
     </TouchableOpacity>
   );
 };

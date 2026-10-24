@@ -4,9 +4,12 @@ import Lucide from '@react-native-vector-icons/lucide';
 import { HSKType, LessonType, SentenceType } from '@/types';
 import { StudyToggleBar } from '../common/StudyToggleBar';
 
+import { HighlightedText } from '../common/HighlightedText';
+
 interface SentenceHeroCardProps {
   sentence: SentenceType | null;
   sentenceId: number;
+  searchQuery?: string;
   hsk?: HSKType | null;
   lesson?: LessonType | null;
   textCount: number;
@@ -25,6 +28,7 @@ interface SentenceHeroCardProps {
 export const SentenceHeroCard: React.FC<SentenceHeroCardProps> = ({
   sentence,
   sentenceId,
+  searchQuery,
   hsk,
   lesson,
   textCount,
@@ -85,9 +89,11 @@ export const SentenceHeroCard: React.FC<SentenceHeroCardProps> = ({
 
       {/* Main Sentence Content Display */}
       <View style={styles.chineseContentBox}>
-        <Text style={styles.chineseText}>
-          {sentence?.content || 'Loading sentence...'}
-        </Text>
+        <HighlightedText
+          text={sentence?.content || 'Loading sentence...'}
+          highlight={searchQuery}
+          style={styles.chineseText}
+        />
       </View>
 
       {/* Study Toggles Bar */}
@@ -103,7 +109,11 @@ export const SentenceHeroCard: React.FC<SentenceHeroCardProps> = ({
       {showPinyin && sentence?.pinyin ? (
         <View style={styles.pinyinBox}>
           <Text style={styles.sectionLabel}>Pinyin:</Text>
-          <Text style={styles.pinyinText}>{sentence.pinyin}</Text>
+          <HighlightedText
+            text={sentence.pinyin}
+            highlight={searchQuery}
+            style={styles.pinyinText}
+          />
         </View>
       ) : null}
 
@@ -111,7 +121,11 @@ export const SentenceHeroCard: React.FC<SentenceHeroCardProps> = ({
       {showMeaning && sentence?.meaning ? (
         <View style={styles.meaningBox}>
           <Text style={styles.sectionLabel}>Translation:</Text>
-          <Text style={styles.meaningText}>{sentence.meaning}</Text>
+          <HighlightedText
+            text={sentence.meaning}
+            highlight={searchQuery}
+            style={styles.meaningText}
+          />
         </View>
       ) : null}
 

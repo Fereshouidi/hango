@@ -119,7 +119,7 @@ export function Paywall({
 
   // ── Not subscribed ───────────────────────────────────────────
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
       <Bg1 />
 
       <TouchableOpacity
@@ -180,30 +180,31 @@ export function Paywall({
         </TouchableOpacity>
 
         <Text style={styles.priceHint}>
-          From 4.5 DT / month • Pay with D17, Ooredoo, or Payeer
+          From 3.2 DT / month • Pay with D17, Ooredoo, or Payeer
         </Text>
       </View>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    width: "100%",
     flex: 1,
     backgroundColor: '#f8fafce7',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    // paddingHorizontal: 20,
     position: 'relative',
   },
   backButton: {
     position: 'absolute',
-    top: 50,
+    top: 20,
     left: 20,
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffffffea',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffffffea',
     borderRadius: 24,
     padding: 26,
     alignItems: 'center',
@@ -229,13 +230,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 16,
-    elevation: 4,
   },
   iconOuter: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#eff6ffea',
     borderWidth: 1.5,
     borderColor: '#bfdbfe',
     alignItems: 'center',
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#eff6fff3',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 14,

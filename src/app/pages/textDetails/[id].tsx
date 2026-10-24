@@ -262,6 +262,7 @@ const TextDetails = () => {
           setShowPinyin={setShowPinyin}
           showMeaning={showMeaning}
           setShowMeaning={setShowMeaning}
+          searchQuery={searchQuery}
         />
 
         {/* UNIFIED CONTROLS: SEARCH, SCOPE & TABS */}
@@ -311,6 +312,7 @@ const TextDetails = () => {
                     showMeaning={showMeaning}
                     isPlaying={playingItemId === `sentence-${s.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `sentence-${id}`)}
+                    searchQuery={searchQuery}
                   />
                 ))}
                 {activeTab === 'all' && filteredSentences.length > ITEM_LIMIT && (
@@ -373,6 +375,7 @@ const TextDetails = () => {
                       showMeaning={showMeaning}
                       isPlaying={playingItemId === `word-${w.id}`}
                       onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
+                      searchQuery={searchQuery}
                     />
                     // </View>
                   ))}
@@ -437,6 +440,7 @@ const TextDetails = () => {
                         showMeaning={showMeaning}
                         isPlaying={playingItemId === `char-${c.id}`}
                         onPlayAudio={(id, content) => playItemAudio(id, content, `char-${id}`)}
+                        searchQuery={searchQuery}
                       />
                     </View>
                   ))}
@@ -499,6 +503,7 @@ const TextDetails = () => {
                     index={idx}
                     isPlaying={playingItemId === `rule-${r.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `rule-${id}`, true)}
+                    searchQuery={searchQuery}
                   />
                 ))}
                 {activeTab === 'all' && filteredRules.length > ITEM_LIMIT && (

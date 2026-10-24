@@ -193,6 +193,32 @@ const AddCharacter = () => {
     return next;
   };
 
+  const handleToggleHsk = useCallback((id: number) => {
+    setSelectedHskIds((prev) => toggleId(prev, id));
+  }, []);
+
+  const handleToggleLesson = useCallback((id: number) => {
+    setSelectedLessonIds((prev) => toggleId(prev, id));
+  }, []);
+
+  const handleToggleText = useCallback((id: number) => {
+    setSelectedTextIds((prev) => toggleId(prev, id));
+  }, []);
+
+  const handleToggleSentence = useCallback((id: number) => {
+    setSelectedSentenceIds((prev) => toggleId(prev, id));
+  }, []);
+
+  const handleToggleWord = useCallback((id: number) => {
+    setSelectedWordIds((prev) => toggleId(prev, id));
+  }, []);
+
+  const getHskLabel = useCallback((h: HSKType) => h.name, []);
+  const getLessonLabel = useCallback((l: LessonType) => `L${l.num}: ${l.title}`, []);
+  const getTextLabel = useCallback((t: TextType) => t.title || t.content.substring(0, 24), []);
+  const getSentenceLabel = useCallback((s: SentenceType) => s.content.substring(0, 30), []);
+  const getWordLabel = useCallback((w: WordType) => `${w.content} — ${w.meaning}`, []);
+
   // Filtered rules
   const filteredRules = useMemo(() => {
     return allRules.filter((r) => {
@@ -351,9 +377,15 @@ const AddCharacter = () => {
         title="Character Created!"
         lessonTitle={createdBannerInfo.charContent}
         details={createdBannerInfo.details}
-        onClose={() =>
-          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
-        }
+        actionText="Done"
+        onAction={() => {
+          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }));
+          router.back();
+        }}
+        onClose={() => {
+          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }));
+          router.back();
+        }}
       />
 
       <KeyboardAvoidingView
@@ -455,8 +487,8 @@ const AddCharacter = () => {
               iconColor="#ec489a"
               items={hsks}
               selectedIds={selectedHskIds}
-              onToggle={(id) => setSelectedHskIds((prev) => toggleId(prev, id))}
-              getLabel={(h) => h.name}
+              onToggle={handleToggleHsk}
+              getLabel={getHskLabel}
               placeholder="Select HSK levels…"
               open={openPicker === 'hsk'}
               onToggleOpen={() => togglePicker('hsk')}
@@ -469,8 +501,8 @@ const AddCharacter = () => {
               iconColor="#ec489a"
               items={lessons}
               selectedIds={selectedLessonIds}
-              onToggle={(id) => setSelectedLessonIds((prev) => toggleId(prev, id))}
-              getLabel={(l) => `L${l.num}: ${l.title}`}
+              onToggle={handleToggleLesson}
+              getLabel={getLessonLabel}
               placeholder="Select lessons…"
               open={openPicker === 'lesson'}
               onToggleOpen={() => togglePicker('lesson')}
@@ -483,8 +515,8 @@ const AddCharacter = () => {
               iconColor="#ec489a"
               items={texts}
               selectedIds={selectedTextIds}
-              onToggle={(id) => setSelectedTextIds((prev) => toggleId(prev, id))}
-              getLabel={(t) => t.title || t.content.substring(0, 24)}
+              onToggle={handleToggleText}
+              getLabel={getTextLabel}
               placeholder="Select reading texts…"
               open={openPicker === 'text'}
               onToggleOpen={() => togglePicker('text')}
@@ -497,8 +529,8 @@ const AddCharacter = () => {
               iconColor="#ec489a"
               items={sentences}
               selectedIds={selectedSentenceIds}
-              onToggle={(id) => setSelectedSentenceIds((prev) => toggleId(prev, id))}
-              getLabel={(s) => s.content.substring(0, 30)}
+              onToggle={handleToggleSentence}
+              getLabel={getSentenceLabel}
               placeholder="Select sentences…"
               open={openPicker === 'sentence'}
               onToggleOpen={() => togglePicker('sentence')}
@@ -511,8 +543,8 @@ const AddCharacter = () => {
               iconColor="#ec489a"
               items={words}
               selectedIds={selectedWordIds}
-              onToggle={(id) => setSelectedWordIds((prev) => toggleId(prev, id))}
-              getLabel={(w) => `${w.content} — ${w.meaning}`}
+              onToggle={handleToggleWord}
+              getLabel={getWordLabel}
               placeholder="Select vocabulary words…"
               open={openPicker === 'word'}
               onToggleOpen={() => togglePicker('word')}

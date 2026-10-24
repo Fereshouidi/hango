@@ -69,8 +69,12 @@ export const LoopFilterBar: React.FC<LoopFilterBarProps> = ({
         </View>
       ) : null}
 
-      {/* Row 1: Content Type Switcher (Words vs Sentences vs Texts) */}
-      <View style={styles.typeSwitcherRow}>
+      {/* Row 1: Content Type Switcher (Words vs Sentences vs Both vs Texts) */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.typeSwitcherRow}
+      >
         <TouchableOpacity
           style={[styles.typeBtn, contentType === 'words' && styles.typeBtnActive]}
           onPress={() => onSelectContentType('words')}
@@ -106,6 +110,23 @@ export const LoopFilterBar: React.FC<LoopFilterBarProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.typeBtn, contentType === 'mixed' && styles.typeBtnActive]}
+          onPress={() => onSelectContentType('mixed')}
+          activeOpacity={0.7}
+        >
+          <Lucide
+            name="layers"
+            size={13}
+            color={contentType === 'mixed' ? '#ffffff' : '#64748b'}
+          />
+          <Text
+            style={[styles.typeBtnText, contentType === 'mixed' && styles.typeBtnTextActive]}
+          >
+            Both (词与句)
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.typeBtn, contentType === 'texts' && styles.typeBtnActive]}
           onPress={() => onSelectContentType('texts')}
           activeOpacity={0.7}
@@ -119,7 +140,7 @@ export const LoopFilterBar: React.FC<LoopFilterBarProps> = ({
             Texts (课文)
           </Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       {/* Row 2: Scope switcher (HSK vs Lesson) + Text breakdown toggle */}
       <View style={styles.subBarRow}>
@@ -286,15 +307,17 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     padding: 3,
     gap: 4,
+    minWidth: '100%',
   },
   typeBtn: {
     flex: 1,
+    minWidth: 84,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
     paddingVertical: 7,
-    paddingHorizontal: 2,
+    paddingHorizontal: 8,
     borderRadius: 9,
   },
   typeBtnActive: {

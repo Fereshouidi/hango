@@ -374,6 +374,7 @@ export default function SentencesScreen() {
                 key={sentence.id || index}
                 sentence={sentence}
                 index={index}
+                searchQuery={searchQuery}
                 showPinyin={showPinyin}
                 showMeaning={showMeaning}
                 cardBg={randomColors[index % randomColors.length]}

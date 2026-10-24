@@ -49,6 +49,18 @@ export interface SubscriptionStatus {
     currency: string;
     status: 'pending' | 'approved' | 'rejected';
     createdAt: string;
+    rejectionReason?: string | null;
+  } | null;
+  latestRejectedPayment?: {
+    _id: string;
+    method: PaymentMethod;
+    durationMonths: number;
+    amount: number;
+    currency: string;
+    status: 'rejected';
+    rejectionReason?: string | null;
+    reviewedAt?: string;
+    createdAt: string;
   } | null;
 }
 

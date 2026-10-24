@@ -1,69 +1,33 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+// ─────────────────────────────────────────────────────────────────
+// Payment Step 1 – Plan Selection
+// ─────────────────────────────────────────────────────────────────
+import { Bg1 } from '@/components/sub/bg1';
+import { ThemedView } from '@/components/themed-view';
+import Lucide from '@react-native-vector-icons/lucide';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
-import Lucide from '@react-native-vector-icons/lucide';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ThemedView } from '@/components/themed-view';
-import { Bg1 } from '@/components/sub/bg1';
 
-import {
-  fetchPlansAndMethods,
-  submitPayment,
-  type MethodInfo,
-  type PaymentMethod,
-  type Plan,
-} from '@/services/paymentService';
 import { useSubscription } from '@/context/subscription-context';
 import { getStoredToken } from '@/services/authSyncService';
+import { fetchPlansAndMethods, type Plan } from '@/services/paymentService';
+import { S } from './_styles';
+import { formatPlanTitle, getPlanUsdPrice, PRO_BENEFITS, WHATSAPP_PHONE } from './_utils';
 
-// ─────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────
-type Step = 'plan' | 'method' | 'instructions' | 'pending';
-
-const METHOD_META: Record<
-  PaymentMethod,
-  { label: string; icon: string; color: string; flag: string }
-> = {
-  d17: {
-    label: 'D17 (La Poste)',
-    icon: 'landmark',
-    color: '#d97706',
-    flag: '🇹🇳',
-  },
-  ooredoo: {
-    label: 'Ooredoo',
-    icon: 'smartphone',
-    color: '#dc2626',
-    flag: '🇹🇳',
-  },
-  payeer: {
-    label: 'Payeer (USD)',
-    icon: 'wallet',
-    color: '#2563eb',
-    flag: '🌐',
-  },
-};
-
-// ─────────────────────────────────────────────────────────────────
-// Screen
-// ─────────────────────────────────────────────────────────────────
-export default function PaymentScreen() {
+export default function PlanSelectionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const params = useLocalSearchParams<{ renew?: string }>();
   const {
     refresh,
     isSubscribed,
@@ -73,322 +37,172 @@ export default function PaymentScreen() {
     hasPendingPayment,
   } = useSubscription();
 
-  // Remote data
+  const [isRenewing, setIsRenewing] = useState(params.renew === 'true');
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [methods, setMethods] = useState<
-    Partial<Record<PaymentMethod, MethodInfo>>
-  >({});
   const [loadingData, setLoadingData] = useState(true);
-  const [checkingStatus, setCheckingStatus] = useState(false);
-
-  // Flow state
-  const [step, setStep] = useState<Step>('plan');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(
-    null
-  );
-  const [reference, setReference] = useState('');
-  const [notes, setNotes] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  // Keyboard and Scroll Handling
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [keyboardSpace, setKeyboardSpace] = useState(0);
 
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      setKeyboardSpace(e.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardSpace(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  const scrollToInput = useCallback((offsetY: number) => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollTo({ y: offsetY, animated: true });
-    }, 120);
-  }, []);
-
-  // Auto-refresh subscription on mount
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  // If user has pending payment, start on pending screen
-  useEffect(() => {
-    if (hasPendingPayment && step === 'plan') {
-      setStep('pending');
+    if (params.renew === 'true') {
+      setIsRenewing(true);
     }
-  }, [hasPendingPayment, step]);
+  }, [params.renew]);
 
-  // Step fade animation
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const plansCarouselRef = useRef<ScrollView>(null);
+  const { width: windowWidth } = useWindowDimensions();
+  const CARD_WIDTH = Math.min(Math.round(windowWidth * 0.82), 335);
+  const CARD_GAP = 14;
+  const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
+  // Side inset so the first (and last) card sits centred in the full-width scroll view
+  const SIDE_INSET = (windowWidth - CARD_WIDTH) / 2;
 
-  const animateStep = useCallback(
-    (next: () => void) => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }).start(() => {
-        next();
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }).start();
-      });
-    },
-    [fadeAnim]
-  );
+  useEffect(() => { refresh(); }, [refresh]);
 
-  // Load plans & methods on mount
+  useEffect(() => {
+    if (hasPendingPayment) {
+      router.replace('/pages/payment/pending');
+    }
+  }, [hasPendingPayment]);
+
   useEffect(() => {
     (async () => {
       try {
         const token = await getStoredToken();
         if (!token) {
           Alert.alert(
-            'Not logged in',
-            'Please log in to your account first.',
+            'Account Required',
+            'Please log in to your account first so your subscription links directly to you.',
             [{ text: 'OK', onPress: () => router.back() }]
           );
           return;
         }
         const data = await fetchPlansAndMethods();
         setPlans(data.plans || []);
-        setMethods(data.methods || {});
+        if (data.plans?.length) {
+          const bestIndex = data.plans.findIndex((p) => p.durationMonths === 3);
+          const best = bestIndex >= 0 ? data.plans[bestIndex] : data.plans[0];
+          setSelectedPlan(best);
+          if (bestIndex > 0) {
+            setTimeout(() => {
+              plansCarouselRef.current?.scrollTo({ x: bestIndex * SNAP_INTERVAL, animated: false });
+            }, 300);
+          }
+        }
       } catch (e: any) {
-        Alert.alert('Error', e.message || 'Failed to load payment info.');
+        Alert.alert('Connection Issue', e.message || 'Could not load payment options.');
       } finally {
         setLoadingData(false);
       }
     })();
   }, []);
 
-  // ── Helpers ──────────────────────────────────────────────────
-  function buildInstructions(raw: string): string {
-    if (!selectedPlan || !selectedMethod) return raw;
-    const info = methods[selectedMethod];
-    if (!info) return raw;
-    const price =
-      selectedMethod === 'payeer'
-        ? `$${selectedPlan.prices.payeer}`
-        : `${selectedPlan.prices[selectedMethod]} DT`;
+  const handleSwitchPlan = useCallback((plan: Plan, index: number) => {
+    setSelectedPlan(plan);
+    plansCarouselRef.current?.scrollTo({ x: index * SNAP_INTERVAL, animated: true });
+  }, [SNAP_INTERVAL]);
 
-    return raw
-      .replace(/{accountNumber}/g, info.accountNumber)
-      .replace(/{amount}/g, price)
-      .replace(/\${amount}/g, `$${selectedPlan.prices.payeer}`);
-  }
-
-  function formatPlanTitle(planKey?: string) {
-    if (!planKey) return 'HanGo Pro';
-    if (planKey === '1_month') return '1 Month Access';
-    if (planKey === '2_months') return '2 Months Access';
-    if (planKey === '3_months') return '3 Months Access';
-    return planKey.replace('_', ' ').toUpperCase();
-  }
-
-  // ── Handlers ─────────────────────────────────────────────────
   const handleSelectPlan = (plan: Plan) => {
-    animateStep(() => {
-      setSelectedPlan(plan);
-      setStep('method');
+    router.push({
+      pathname: '/pages/payment/method',
+      params: { planJson: JSON.stringify(plan) },
     });
   };
 
-  const handleSelectMethod = (method: PaymentMethod) => {
-    animateStep(() => {
-      setSelectedMethod(method);
-      setStep('instructions');
-    });
+  const handleOpenWhatsApp = () => {
+    const { Linking } = require('react-native');
+    const text = encodeURIComponent('Hello HanGo Support! I need help with my subscription.');
+    Linking.openURL(`https://wa.me/${WHATSAPP_PHONE}?text=${text}`).catch(() =>
+      Alert.alert('Contact Support', 'WhatsApp: +216 29 845 347')
+    );
   };
 
-  const handleSubmit = async () => {
-    if (!reference.trim()) {
-      Alert.alert('Missing Reference', 'Please enter your sender reference / transaction ID.');
-      return;
-    }
-    if (!selectedPlan || !selectedMethod) return;
-
-    setSubmitting(true);
-    try {
-      await submitPayment({
-        method: selectedMethod,
-        durationMonths: selectedPlan.durationMonths,
-        senderReference: reference.trim(),
-        notes: notes.trim(),
-      });
-      await refresh();
-      animateStep(() => setStep('pending'));
-    } catch (e: any) {
-      Alert.alert('Submission Failed', e.message || 'Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleBack = () => {
-    if (step === 'method') animateStep(() => setStep('plan'));
-    else if (step === 'instructions') animateStep(() => setStep('method'));
-    else router.back();
-  };
-
-  const handleManualCheckStatus = async () => {
-    setCheckingStatus(true);
-    try {
-      await refresh();
-      if (isSubscribed) {
-        Alert.alert(
-          'Subscription Active!',
-          'Your payment has been approved. Enjoy learning!',
-          [{ text: 'Start Learning', onPress: () => router.back() }]
-        );
-      } else {
-        Alert.alert(
-          'Still Under Review',
-          'Your payment is still being verified. Please check back shortly.'
-        );
-      }
-    } catch (e: any) {
-      Alert.alert('Status Check', e.message || 'Could not reach server.');
-    } finally {
-      setCheckingStatus(false);
-    }
-  };
-
-  // ── Price label helper ───────────────────────────────────────
-  const priceLabel = (plan: Plan, method: PaymentMethod | null) => {
-    if (!method) return '';
-    const p = plan.prices[method];
-    return method === 'payeer' ? `$${p}` : `${p} DT`;
-  };
-
-  // ── Loading ──────────────────────────────────────────────────
   if (loadingData) {
     return (
-      <ThemedView style={styles.loadingContainer}>
+      <ThemedView style={S.loadingContainer}>
         <Bg1 />
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Loading plans…</Text>
+        <View style={S.loadingCard}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={S.loadingTitle}>Setting up your checkout...</Text>
+          <Text style={S.loadingSub}>Loading verified payment options</Text>
+        </View>
       </ThemedView>
     );
   }
 
-  // ── Active Pro Subscription Screen ───────────────────────────
-  if (isSubscribed) {
+  // ── Already subscribed ─────────────────────────────────────────
+  if (isSubscribed && !isRenewing) {
     return (
-      <ThemedView style={styles.container}>
+      <ThemedView style={S.container}>
         <Bg1 />
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, 14) }]}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Lucide name="arrow-left" size={20} color="#2563eb" />
+        <View style={S.header}>
+          <TouchableOpacity onPress={() => router.back()} style={S.backBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Lucide name="arrow-left" size={20} color="#0f172a" />
           </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Subscription</Text>
-            <Text style={styles.headerSub}>HanGo Pro Member</Text>
+          <View style={S.headerCenter}>
+            <Text style={S.headerTitle}>Subscription Status</Text>
+            <Text style={S.headerSub}>HanGo Pro Member</Text>
           </View>
+          <TouchableOpacity onPress={() => router.push('/pages/payment/history')} style={S.helpBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Lucide name="receipt" size={18} color="#2563eb" />
+          </TouchableOpacity>
         </View>
-
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: Math.max(insets.bottom + 24, 36) },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.activeCard}>
-            <View style={styles.activeIconOuter}>
-              <Lucide name="badge-check" size={56} color="#10b981" />
+        <ScrollView contentContainerStyle={[S.scrollContent, { paddingBottom: Math.max(insets.bottom + 24, 36) }]} showsVerticalScrollIndicator={false}>
+          <View style={S.activeCard}>
+            <View style={S.activeIconOuter}>
+              <Lucide name="badge-check" size={54} color="#10b981" />
             </View>
-            <Text style={styles.activeTitle}>HanGo Pro is Active!</Text>
-            <Text style={styles.activeSubtitle}>
-              You have full unlimited access to all premium features.
-            </Text>
-
-            <View style={styles.activeDetailsBox}>
-              <View style={styles.activeDetailRow}>
-                <Text style={styles.activeDetailLabel}>Plan</Text>
-                <Text style={styles.activeDetailValue}>
-                  {formatPlanTitle(subscriptionPlan)}
-                </Text>
+            <Text style={S.activeTitle}>HanGo Pro is Active!</Text>
+            <Text style={S.activeSubtitle}>You have full unlimited access to all features.</Text>
+            <View style={S.activeDetailsBox}>
+              <View style={S.activeDetailRow}>
+                <Text style={S.activeDetailLabel}>Current Plan</Text>
+                <Text style={S.activeDetailValue}>{formatPlanTitle(subscriptionPlan)}</Text>
               </View>
-              <View style={styles.activeDetailRow}>
-                <Text style={styles.activeDetailLabel}>Status</Text>
-                <View style={styles.activeBadge}>
-                  <Text style={styles.activeBadgeText}>ACTIVE</Text>
-                </View>
+              <View style={S.activeDetailRow}>
+                <Text style={S.activeDetailLabel}>Status</Text>
+                <View style={S.activeBadge}><Text style={S.activeBadgeText}>ACTIVE</Text></View>
               </View>
               {subscriptionExpiresAt && (
-                <View style={styles.activeDetailRow}>
-                  <Text style={styles.activeDetailLabel}>Expires On</Text>
-                  <Text style={styles.activeDetailValue}>
-                    {new Date(subscriptionExpiresAt).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                <View style={S.activeDetailRow}>
+                  <Text style={S.activeDetailLabel}>Expires On</Text>
+                  <Text style={S.activeDetailValue}>
+                    {new Date(subscriptionExpiresAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                   </Text>
                 </View>
               )}
-              <View style={styles.activeDetailRow}>
-                <Text style={styles.activeDetailLabel}>Days Remaining</Text>
-                <Text style={styles.activeDetailValue}>{daysRemaining} days</Text>
+              <View style={S.activeDetailRow}>
+                <Text style={S.activeDetailLabel}>Days Left</Text>
+                <Text style={[S.activeDetailValue, { color: '#059669' }]}>{daysRemaining} days remaining</Text>
               </View>
             </View>
-
-            <View style={styles.unlockedFeaturesBox}>
-              <Text style={styles.unlockedTitle}>Unlocked Features</Text>
-              {[
-                { icon: 'headphones', label: 'Listening Loop – audio practice' },
-                { icon: 'keyboard', label: 'Writing Studio – compose in Chinese' },
-                { icon: 'pencil-line', label: 'Write Characters – stroke canvas' },
-              ].map((f) => (
-                <View key={f.icon} style={styles.unlockedRow}>
-                  <Lucide name={f.icon as any} size={15} color="#10b981" />
-                  <Text style={styles.unlockedText}>{f.label}</Text>
+            <View style={S.unlockedFeaturesBox}>
+              <Text style={S.unlockedTitle}>All Pro Features Unlocked</Text>
+              {PRO_BENEFITS.map((f) => (
+                <View key={f.title} style={S.unlockedRow}>
+                  <View style={S.benefitIconCircle}>
+                    <Lucide name={f.icon as any} size={14} color="#10b981" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={S.unlockedFeatureName}>{f.title}</Text>
+                    <Text style={S.unlockedFeatureDesc}>{f.desc}</Text>
+                  </View>
                 </View>
               ))}
             </View>
-
-            {/* Renewal note */}
-            <View style={styles.renewNoteBox}>
-              <Lucide name="info" size={14} color="#2563eb" />
-              <Text style={styles.renewNoteText}>
-                Want to extend? Choose a plan below and your days will be added on top.
-              </Text>
+            <View style={S.renewNoteBox}>
+              <Lucide name="sparkles" size={16} color="#2563eb" />
+              <Text style={S.renewNoteText}>Want to add more time? Renewing now adds days right on top of your existing period!</Text>
             </View>
-
-            <TouchableOpacity
-              style={styles.renewBtn}
-              onPress={() => setStep('plan')}
-              activeOpacity={0.85}
-            >
-              <Lucide name="refresh-cw" size={16} color="#fff" />
-              <Text style={styles.renewBtnText}>Renew / Extend Plan</Text>
+            <TouchableOpacity style={S.primaryActionBtn} onPress={() => setIsRenewing(true)} activeOpacity={0.85}>
+              <Lucide name="refresh-cw" size={17} color="#ffffff" />
+              <Text style={S.primaryActionBtnText}>Renew or Extend Plan</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.doneBtn}
-              onPress={() => router.back()}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.doneBtnText}>Back to Learning</Text>
+            <TouchableOpacity style={S.ghostBtn} onPress={() => router.push('/pages/payment/history')} activeOpacity={0.8}>
+              <Lucide name="receipt" size={15} color="#64748b" />
+              <Text style={S.ghostBtnText}>View Payment History</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={S.ghostBtn} onPress={() => router.back()} activeOpacity={0.8}>
+              <Text style={S.ghostBtnText}>Return to Learning</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -396,877 +210,337 @@ export default function PaymentScreen() {
     );
   }
 
-  // ── Render steps ──────────────────────────────────────────────
+  // ── Plan selection ─────────────────────────────────────────────
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={S.container}>
       <Bg1 />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? Math.max(insets.top + 40, 60) : 0}
-      >
-        {/* Header */}
-        <View
-          style={[
-            styles.header,
-            { paddingTop: Math.max(insets.top, 14) },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={handleBack}
-            style={styles.backBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Lucide name="arrow-left" size={20} color="#2563eb" />
-          </TouchableOpacity>
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>
-              {step === 'plan' && 'Choose a Plan'}
-              {step === 'method' && 'Payment Method'}
-              {step === 'instructions' && 'Send Payment'}
-              {step === 'pending' && 'Payment Submitted'}
-            </Text>
-            <Text style={styles.headerSub}>
-              {step === 'plan' && 'Unlock full Chinese learning studio'}
-              {step === 'method' && `${selectedPlan?.title || ''} · select method`}
-              {step === 'instructions' && 'Send money & enter reference'}
-              {step === 'pending' && 'Pending admin confirmation'}
+      {/* Header */}
+      <View style={S.header}>
+        <TouchableOpacity
+          onPress={() => {
+            if (isSubscribed && isRenewing) {
+              setIsRenewing(false);
+            } else {
+              router.back();
+            }
+          }}
+          style={S.backBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Lucide name="arrow-left" size={20} color="#0f172a" />
+        </TouchableOpacity>
+        <View style={S.headerCenter}>
+          <Text style={S.headerTitle}>{isRenewing ? 'Extend / Renew Pro' : 'Upgrade to Pro'}</Text>
+          <Text style={S.headerSub}>
+            {isRenewing ? 'Add more days to your active membership' : 'Pick your duration to unlock everything'}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleOpenWhatsApp} style={S.helpBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Lucide name="help-circle" size={19} color="#2563eb" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Steps Switcher */}
+      <View style={S.stepsSwitcherWrapper}>
+        <View style={S.stepsSwitcherContainer}>
+          <View style={[S.stepsSwitcherTab, S.stepsSwitcherTabActive]}>
+            <View style={[S.stepNumBadge, S.stepNumBadgeActive]}>
+              <Text style={[S.stepNumBadgeText, S.stepNumBadgeTextActive]}>1</Text>
+            </View>
+            <Text style={[S.stepsSwitcherTabText, S.stepsSwitcherTabTextActive]}>Plan</Text>
+          </View>
+          <View style={[S.stepsSwitcherTab, S.stepsSwitcherTabDisabled]}>
+            <View style={S.stepNumBadge}><Text style={S.stepNumBadgeText}>2</Text></View>
+            <Text style={S.stepsSwitcherTabText}>Method</Text>
+          </View>
+          <View style={[S.stepsSwitcherTab, S.stepsSwitcherTabDisabled]}>
+            <View style={S.stepNumBadge}><Text style={S.stepNumBadgeText}>3</Text></View>
+            <Text style={S.stepsSwitcherTabText}>Confirm</Text>
+          </View>
+        </View>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[S.scrollContent, { paddingBottom: Math.max(insets.bottom + 24, 36) }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Active Member Extension Note */}
+        {isRenewing && (
+          <View style={[S.renewNoteBox, { marginBottom: 12 }]}>
+            <Lucide name="sparkles" size={17} color="#2563eb" />
+            <Text style={S.renewNoteText}>
+              Active Member: Your {daysRemaining} days remaining will not be lost. Your new plan will be added directly on top!
             </Text>
           </View>
+        )}
 
-          {/* Step dots */}
-          {step !== 'pending' && (
-            <View style={styles.stepDots}>
-              {(['plan', 'method', 'instructions'] as Step[]).map((s, i) => (
-                <View
-                  key={s}
-                  style={[
-                    styles.dot,
-                    step === s ? styles.dotActive : null,
-                  ]}
-                />
-              ))}
-            </View>
-          )}
+        {/* Hero Banner */}
+        <View style={ls.heroBanner}>
+          <View style={ls.heroBadge}>
+            <Lucide name="sparkles" size={13} color="#2563eb" />
+            <Text style={ls.heroBadgeText}>HANGO PRO PASS</Text>
+          </View>
+          <Text style={ls.heroTitle}>Master Chinese 3x Faster</Text>
+          <Text style={ls.heroSub}>
+            Full access to all audio loops, writing studios, and HSK lessons with simple local payment.
+          </Text>
         </View>
 
-        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        <View style={{...ls.plansContainer}}>
+          {/* Section Header */}
+          <Text style={[S.sectionHeaderTitle, { marginTop: 4 }]}>Choose Your Access Duration</Text>
+          <Text style={S.sectionHeaderSubtitle}>Swipe to explore each plan — all features included</Text>
+
+          {/* Carousel */}
           <ScrollView
-            ref={scrollViewRef}
-            style={{ flex: 1 }}
-            contentContainerStyle={[
-              styles.scrollContent,
-              {
-                paddingBottom: Math.max(
-                  insets.bottom + 24,
-                  keyboardSpace > 0 ? keyboardSpace + 160 : 36
-                ),
-              },
-            ]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+            ref={plansCarouselRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={SNAP_INTERVAL}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            contentContainerStyle={{
+              paddingHorizontal: SIDE_INSET,
+              gap: CARD_GAP,
+              paddingVertical: 8,
+            }}
+            onMomentumScrollEnd={(e) => {
+              const index = Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL);
+              const clamped = Math.max(0, Math.min(plans.length - 1, index));
+              if (plans[clamped] && plans[clamped].id !== selectedPlan?.id) {
+                setSelectedPlan(plans[clamped]);
+              }
+            }}
           >
-            {/* ── STEP: plan ── */}
-            {step === 'plan' && (
-              <>
-                <Text style={styles.sectionTitle}>Select a Plan</Text>
-                <Text style={styles.sectionSub}>
-                  Longer plans save you more 🎉
-                </Text>
+            {plans.map((plan, idx) => {
+              const isSelected = selectedPlan?.id === plan.id;
+              const isBestValue = plan.durationMonths === 3;
+              const { total: usdPrice, perMo: perMoUsd } = getPlanUsdPrice(plan);
 
-                {plans.map((plan) => (
-                  <TouchableOpacity
-                    key={plan.id}
-                    style={[
-                      styles.card,
-                      plan.durationMonths === 3 && styles.cardHighlight,
-                    ]}
-                    onPress={() => handleSelectPlan(plan)}
-                    activeOpacity={0.8}
-                  >
-                    {plan.tag && (
-                      <View style={styles.tagBadge}>
-                        <Text style={styles.tagText}>{plan.tag}</Text>
-                      </View>
-                    )}
-                    <View style={styles.cardTop}>
-                      <View style={styles.cardIconBox}>
-                        <Lucide
-                          name={
-                            plan.durationMonths === 1
-                              ? 'calendar'
-                              : plan.durationMonths === 2
-                              ? 'layers'
-                              : 'award'
-                          }
-                          size={20}
-                          color="#2563eb"
-                        />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.cardTitle}>{plan.title}</Text>
-                        <Text style={styles.cardSubtext}>
-                          D17 / Ooredoo: {plan.prices.d17} DT &nbsp;·&nbsp; Payeer: ${plan.prices.payeer}
-                        </Text>
-                      </View>
-                      <Lucide name="chevron-right" size={18} color="#2563eb" />
+              return (
+                <TouchableOpacity
+                  key={plan.id}
+                  style={[ls.swipePlanCard, { width: CARD_WIDTH }, isSelected && ls.swipePlanCardSelected, isBestValue && ls.swipePlanCardBest]}
+                  onPress={() => handleSwitchPlan(plan, idx)}
+                  activeOpacity={0.92}
+                >
+                  {/* Ribbon */}
+                  {plan.tag && (
+                    <View style={[ls.planRibbon, isBestValue ? ls.planRibbonBest : ls.planRibbonStandard]}>
+                      <Lucide name={isBestValue ? 'sparkles' : 'award'} size={12} color="#ffffff" />
+                      <Text style={ls.planRibbonText}>{plan.tag}</Text>
                     </View>
-                  </TouchableOpacity>
-                ))}
+                  )}
 
-                {/* Features list */}
-                <View style={styles.featuresBox}>
-                  <Text style={styles.featuresTitle}>What you unlock:</Text>
-                  {[
-                    { icon: 'headphones', label: 'Listening Loop – audio practice' },
-                    { icon: 'keyboard', label: 'Writing Studio – compose in Chinese' },
-                    { icon: 'pencil-line', label: 'Write Characters – stroke canvas' },
-                    { icon: 'cloud', label: 'Cloud Sync – backup your data' },
-                  ].map((f) => (
-                    <View key={f.icon} style={styles.featureRow}>
-                      <View style={styles.featureIconBox}>
-                        <Lucide name={f.icon as any} size={14} color="#2563eb" />
-                      </View>
-                      <Text style={styles.featureLabel}>{f.label}</Text>
+                  {/* Plan Title Row */}
+                  <View style={ls.planTitleRow}>
+                    <View style={[ls.radioCircle, isSelected && ls.radioCircleSelected]}>
+                      {isSelected && <View style={ls.radioDot} />}
                     </View>
-                  ))}
-                </View>
-              </>
-            )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={ls.planTitle}>{plan.title}</Text>
+                      <Text style={ls.planDuration}>
+                        {plan.durationMonths === 1 ? '30 Days Full Access'
+                          : plan.durationMonths === 3 ? '90 Days Full Access'
+                          : '365 Days Full Access'}
+                      </Text>
+                    </View>
+                  </View>
 
-            {/* ── STEP: method ── */}
-            {step === 'method' && selectedPlan && (
-              <>
-                <Text style={styles.sectionTitle}>Payment Method</Text>
-                <Text style={styles.sectionSub}>
-                  Plan: <Text style={{ color: '#2563eb' }}>{selectedPlan.title}</Text>
-                </Text>
+                  {/* Price */}
+                  <View style={ls.priceCard}>
+                    <View style={ls.priceRow}>
+                      <Text style={ls.priceMain}>{usdPrice}</Text>
+                      <View style={ls.perMoPill}>
+                        <Text style={ls.perMoText}>{perMoUsd} / month</Text>
+                      </View>
+                    </View>
+                    <Text style={ls.savingsNote}>
+                      {plan.durationMonths === 1 ? 'No recurring charges · Pay once'
+                        : plan.durationMonths === 3 ? '🔥 Save 19% vs monthly plan'
+                        : '🌟 Save 28% vs monthly plan'}
+                    </Text>
+                  </View>
 
-                {(Object.keys(METHOD_META) as PaymentMethod[]).map((m) => {
-                  const info = methods[m];
-                  const meta = METHOD_META[m];
-                  const isEnabled = info ? info.isEnabled : true;
-                  const price = priceLabel(selectedPlan, m);
+                  <View style={ls.cardDivider} />
 
-                  return (
-                    <TouchableOpacity
-                      key={m}
-                      style={[styles.card, !isEnabled && styles.cardDisabled]}
-                      onPress={() => isEnabled && handleSelectMethod(m)}
-                      disabled={!isEnabled}
-                      activeOpacity={0.8}
-                    >
-                      <View style={styles.cardTop}>
-                        <View
-                          style={[
-                            styles.cardIconBox,
-                            { backgroundColor: meta.color + '18' },
-                          ]}
-                        >
-                          <Text style={{ fontSize: 20 }}>{meta.flag}</Text>
+                  {/* Features */}
+                  <Text style={ls.includedHeading}>All Pro Features Included:</Text>
+                  <View style={{ gap: 8 }}>
+                    {[
+                      { icon: 'headphones', title: 'Listening Loop', sub: 'Infinite native audio loops & speed controls' },
+                      { icon: 'pencil-line', title: 'Character Canvas', sub: 'Real-time stroke order & handwriting engine' },
+                      { icon: 'keyboard', title: 'Writing Studio', sub: 'Sentence composition & dictation mastery' },
+                      { icon: 'cloud', title: 'Cloud Sync & Backups', sub: 'Keep vocabulary & review stats safely synced' },
+                      { icon: 'book-open', title: 'Complete HSK 1–6', sub: 'All grammar rules, words, and passages' },
+                    ].map((f) => (
+                      <View key={f.title} style={ls.perkRow}>
+                        <View style={ls.perkIconBox}>
+                          <Lucide name={f.icon as any} size={14} color="#2563eb" />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.cardTitle}>{meta.label}</Text>
-                          <Text style={[styles.cardSubtext, { color: meta.color }]}>
-                            {price}
-                          </Text>
-                          {info && (
-                            <Text style={styles.cardHint}>
-                              Send to: {info.accountNumber}
-                            </Text>
-                          )}
+                          <Text style={ls.perkTitle}>{f.title}</Text>
+                          <Text style={ls.perkSub}>{f.sub}</Text>
                         </View>
-                        <Lucide name="chevron-right" size={18} color="#94a3b8" />
                       </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </>
-            )}
-
-            {/* ── STEP: instructions ── */}
-            {step === 'instructions' &&
-              selectedPlan &&
-              selectedMethod &&
-              (() => {
-                const info = methods[selectedMethod];
-                const meta = METHOD_META[selectedMethod];
-                const price = priceLabel(selectedPlan, selectedMethod);
-                const rawInstructions = info?.instructions || '';
-                const instructions = buildInstructions(rawInstructions);
-
-                return (
-                  <>
-                    <View style={styles.methodHeader}>
-                      <Text style={{ fontSize: 32 }}>{meta.flag}</Text>
-                      <View>
-                        <Text style={styles.methodHeaderTitle}>{meta.label}</Text>
-                        <Text style={[styles.methodHeaderPrice, { color: meta.color }]}>
-                          {price} for {selectedPlan.title}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Recipient number highlight */}
-                    <View style={styles.recipientBox}>
-                      <Text style={styles.recipientLabel}>Send to this account:</Text>
-                      <Text style={styles.recipientNumber}>
-                        {info?.accountNumber}
-                      </Text>
-                    </View>
-
-                    {/* Step-by-step instructions */}
-                    <View style={styles.instructionsBox}>
-                      <Text style={styles.instructionsTitle}>Instructions</Text>
-                      {instructions.split('\n').map((line, i) => (
-                        <Text key={i} style={styles.instructionLine}>
-                          {line}
-                        </Text>
-                      ))}
-                    </View>
-
-                    {/* Reference input */}
-                    <View style={styles.inputSection}>
-                      <Text style={styles.inputLabel}>
-                        Your sender reference / transaction ID *
-                      </Text>
-                      <TextInput
-                        style={styles.input}
-                        value={reference}
-                        onChangeText={setReference}
-                        onFocus={() => scrollToInput(280)}
-                        placeholder={
-                          selectedMethod === 'payeer'
-                            ? 'e.g. Batch ID 12345678'
-                            : 'e.g. your phone number (29XXXXXX)'
-                        }
-                        placeholderTextColor="#94a3b8"
-                        autoCapitalize="none"
-                      />
-
-                      <Text style={[styles.inputLabel, { marginTop: 12 }]}>
-                        Additional notes (optional)
-                      </Text>
-                      <TextInput
-                        style={[styles.input, { height: 72 }]}
-                        value={notes}
-                        onChangeText={setNotes}
-                        onFocus={() => scrollToInput(360)}
-                        placeholder="Any extra info for the admin"
-                        placeholderTextColor="#94a3b8"
-                        multiline
-                      />
-                    </View>
-
-                    <TouchableOpacity
-                      style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
-                      onPress={handleSubmit}
-                      disabled={submitting}
-                      activeOpacity={0.85}
-                    >
-                      {submitting ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                      ) : (
-                        <>
-                          <Lucide name="send" size={17} color="#fff" />
-                          <Text style={styles.submitBtnText}>
-                            I've Sent the Money – Continue
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </>
-                );
-              })()}
-
-            {/* ── STEP: pending ── */}
-            {step === 'pending' && (
-              <View style={styles.pendingContainer}>
-                <View style={styles.pendingIconOuter}>
-                  <View style={styles.pendingIconInner}>
-                    <Lucide name="clock" size={44} color="#2563eb" />
+                    ))}
                   </View>
-                </View>
-                <Text style={styles.pendingTitle}>Payment Under Review</Text>
-                <Text style={styles.pendingBody}>
-                  Your payment has been submitted and is awaiting admin
-                  approval. Once approved, your subscription will activate
-                  automatically.
-                </Text>
-                <Text style={styles.pendingNote}>
-                  This usually takes a few hours. You can check your status
-                  in the Account → Subscription section.
-                </Text>
 
-                <TouchableOpacity
-                  style={styles.checkStatusBtnPending}
-                  onPress={handleManualCheckStatus}
-                  disabled={checkingStatus}
-                  activeOpacity={0.85}
-                >
-                  {checkingStatus ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Lucide name="refresh-cw" size={16} color="#fff" />
-                      <Text style={styles.checkStatusBtnPendingText}>Check Approval Status</Text>
-                    </>
-                  )}
+                  {/* Confirm Button */}
+                  <TouchableOpacity
+                    style={[ls.cardConfirmBtn, isSelected && ls.cardConfirmBtnSelected]}
+                    onPress={(e) => {
+                      (e as any).stopPropagation?.();
+                      handleSelectPlan(plan);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Lucide
+                      name={isSelected ? 'arrow-right-circle' : 'circle'}
+                      size={17}
+                      color={isSelected ? '#ffffff' : '#2563eb'}
+                    />
+                    <Text style={[ls.cardConfirmBtnText, isSelected && ls.cardConfirmBtnTextSelected]} numberOfLines={1}>
+                      {isSelected
+                        ? (isRenewing ? `Renew with ${plan.title} · ${usdPrice}` : `Continue with ${plan.title} · ${usdPrice}`)
+                        : `Select ${plan.title}`}
+                    </Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.doneBtn}
-                  onPress={() => router.back()}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.doneBtnText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              );
+            })}
           </ScrollView>
-        </Animated.View>
-      </KeyboardAvoidingView>
+        </View>
+
+        {/* Pagination Dots */}
+        <View style={{ alignItems: 'center', gap: 5, marginVertical: 4 }}>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {plans.map((p, idx) => (
+              <TouchableOpacity
+                key={p.id}
+                onPress={() => handleSwitchPlan(p, idx)}
+                style={[ls.dot, selectedPlan?.id === p.id && ls.dotActive]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* Trust Box */}
+        <View style={S.trustBox}>
+          <Lucide name="shield-check" size={20} color="#059669" />
+          <View style={{ flex: 1 }}>
+            <Text style={S.trustTitle}>Safe & Transparent</Text>
+            <Text style={S.trustDesc}>Manual verification · Zero hidden fees · Pay only for what you choose</Text>
+          </View>
+        </View>
+
+        {/* History link */}
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 6 }}
+          onPress={() => router.push('/pages/payment/history')}
+          activeOpacity={0.7}
+        >
+          <Lucide name="receipt" size={14} color="#94a3b8" />
+          <Text style={{ fontSize: 12.5, color: '#94a3b8', fontWeight: '600' }}>View Payment History</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </ThemedView>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Styles — same structure as the original, purple → app blues/slate
-// ─────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    color: '#64748b',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-
-  // ── Header ──
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    gap: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
+// ── Local styles (plan-specific) ──────────────────────────────────
+const ls = StyleSheet.create({
+  heroBanner: {
+    backgroundColor: '#ffffffe1',
     borderRadius: 18,
-    backgroundColor: '#eff6ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerCenter: { flex: 1 },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: 0.2,
-  },
-  headerSub: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
-    marginTop: 1,
-  },
-
-  // ── Step dots ──
-  stepDots: {
-    flexDirection: 'row',
-    gap: 5,
-    alignItems: 'center',
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#e2e8f0',
-  },
-  dotActive: {
-    backgroundColor: '#2563eb',
-    width: 18,
-  },
-
-  // ── Scroll ──
-  scrollContent: {
-    paddingHorizontal: 18,
-    paddingTop: 20,
-    gap: 14,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0f172a',
-    marginBottom: 2,
-  },
-  sectionSub: {
-    fontSize: 13,
-    color: '#64748b',
-    fontWeight: '500',
-    marginBottom: 6,
-  },
-
-  // ── Cards (plan & method) ──
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  cardHighlight: {
-    borderColor: '#2563eb',
-    borderWidth: 1.5,
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  cardDisabled: {
-    opacity: 0.5,
-  },
-  tagBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: '#2563eb',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  tagText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.4,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  cardIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#eff6ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: 2,
-  },
-  cardSubtext: {
-    fontSize: 12.5,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  cardHint: {
-    fontSize: 11,
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-
-  // ── Features box ──
-  featuresBox: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    gap: 10,
-    marginTop: 4,
-  },
-  featuresTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#2563eb',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  featureIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: '#eff6ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureLabel: {
-    fontSize: 13,
-    color: '#334155',
-    fontWeight: '500',
-    flex: 1,
-  },
-
-  // ── Instructions step ──
-  methodHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  methodHeaderTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  methodHeaderPrice: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-
-  // ── Recipient ──
-  recipientBox: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: '#2563eb',
-    alignItems: 'center',
-    gap: 6,
-  },
-  recipientLabel: {
-    fontSize: 12,
-    color: '#2563eb',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  recipientNumber: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#0f172a',
-    letterSpacing: 2,
-  },
-
-  // ── Instructions ──
-  instructionsBox: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     gap: 8,
-  },
-  instructionsTitle: {
-    fontSize: 12,
-    color: '#2563eb',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 4,
-  },
-  instructionLine: {
-    fontSize: 13.5,
-    color: '#334155',
-    lineHeight: 20,
-    fontWeight: '400',
-  },
-
-  // ── Input ──
-  inputSection: { gap: 6 },
-  inputLabel: {
-    fontSize: 12.5,
-    color: '#475569',
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    color: '#0f172a',
-    fontSize: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontWeight: '500',
-  },
-
-  // ── Submit ──
-  submitBtn: {
-    backgroundColor: '#2563eb',
-    borderRadius: 14,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 4,
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-  submitBtnDisabled: {
-    opacity: 0.6,
-  },
-  submitBtnText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 0.2,
-  },
-
-  // ── Pending screen ──
-  pendingContainer: {
-    alignItems: 'center',
-    paddingTop: 24,
-    gap: 18,
-  },
-  pendingIconOuter: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: '#dbeafe',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pendingIconInner: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#bfdbfe',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pendingTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0f172a',
-    textAlign: 'center',
-  },
-  pendingBody: {
-    fontSize: 14,
-    color: '#475569',
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 10,
-  },
-  pendingNote: {
-    fontSize: 12.5,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 16,
-    fontStyle: 'italic',
-  },
-  checkStatusBtnPending: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#2563eb',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    width: '100%',
-    maxWidth: 280,
     shadowColor: '#2563eb',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
-  checkStatusBtnPendingText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
+  heroBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#eff6ff',
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, alignSelf: 'flex-start',
+    borderWidth: 1, borderColor: '#bfdbfe',
   },
+  heroBadgeText: { fontSize: 10.5, fontWeight: '800', color: '#2563eb', letterSpacing: 0.6 },
+  heroTitle: { fontSize: 20, fontWeight: '700', color: '#0f172a', letterSpacing: -0.4 },
+  heroSub: { fontSize: 13, color: '#64748b', lineHeight: 19, fontWeight: '500' },
 
-  // ── Shared buttons ──
-  doneBtn: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 48,
-    marginTop: 4,
+  swipePlanCard: {
+    backgroundColor: '#ffffffe6',
+    overflow: "hidden",
+    borderRadius: 22,
+    padding: 18,
     borderWidth: 1.5,
     borderColor: '#e2e8f0',
-  },
-  doneBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#64748b',
-    textAlign: 'center',
-  },
-
-  // ── Active Pro Card ──
-  activeCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    padding: 24,
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 10,
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 10,
-    elevation: 2,
-  },
-  activeIconOuter: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#ecfdf5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    elevation: 6,
-    marginBottom: 4,
-  },
-  activeTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#0f172a',
-    textAlign: 'center',
-  },
-  activeSubtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: 12,
-  },
-  activeDetailsBox: {
-    width: '100%',
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
-    padding: 16,
     gap: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
-  activeDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  activeDetailLabel: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  activeDetailValue: {
-    fontSize: 14,
-    color: '#0f172a',
-    fontWeight: '700',
-  },
-  activeBadge: {
-    backgroundColor: '#ecfdf5',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#10b981',
-  },
-  activeBadgeText: {
-    color: '#059669',
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  unlockedFeaturesBox: {
-    width: '100%',
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
-    padding: 16,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  unlockedTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0f172a',
-    marginBottom: 4,
-  },
-  unlockedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  unlockedText: {
-    fontSize: 13.5,
-    color: '#334155',
-    fontWeight: '500',
-  },
-  renewNoteBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    width: '100%',
-  },
-  renewNoteText: {
-    flex: 1,
-    fontSize: 12.5,
-    color: '#2563eb',
-    fontWeight: '500',
-    lineHeight: 18,
-  },
-  renewBtn: {
-    backgroundColor: '#2563eb',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    width: '100%',
+  swipePlanCardSelected: {
+    borderColor: '#2563eb',
     shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    overflow: "hidden",
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
   },
-  renewBtnText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#fff',
+  swipePlanCardBest: { borderColor: '#3b82f6', overflow: "hidden" },
+
+  planRibbon: {
+    position: 'absolute', top: 0, right: 0, flexDirection: 'row',
+    alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderBottomLeftRadius: 12,
   },
+  planRibbonBest: { backgroundColor: '#2563eb' },
+  planRibbonStandard: { backgroundColor: '#059669' },
+  planRibbonText: { fontSize: 10, fontWeight: '800', color: '#ffffff', letterSpacing: 0.3 },
+
+  plansContainer: {backgroundColor: "#ffffffe6", padding: 10, borderRadius: 20},
+  planTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  radioCircle: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#cbd5e1', alignItems: 'center', justifyContent: 'center' },
+  radioCircleSelected: { borderColor: '#2563eb', backgroundColor: '#ffffff' },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#2563eb' },
+  planTitle: { fontSize: 16, fontWeight: '800', color: '#0f172a' },
+  planDuration: { fontSize: 12, color: '#64748b', fontWeight: '500', marginTop: 2 },
+
+  priceCard: {
+    backgroundColor: '#f8faff', borderRadius: 14, padding: 12, gap: 6,
+    borderWidth: 1, borderColor: '#dbeafe',
+  },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  priceMain: { fontSize: 30, fontWeight: '900', color: '#0f172a', letterSpacing: -1 },
+  perMoPill: { backgroundColor: '#eff6ff', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#bfdbfe' },
+  perMoText: { fontSize: 11.5, fontWeight: '700', color: '#2563eb' },
+  savingsNote: { fontSize: 12, color: '#2563eb', fontWeight: '600' },
+
+  cardDivider: { height: 1, backgroundColor: '#f1f5f9' },
+  includedHeading: { fontSize: 11.5, fontWeight: '800', color: '#2563eb', textTransform: 'uppercase', letterSpacing: 0.6 },
+
+  perkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  perkIconBox: { width: 28, height: 28, borderRadius: 8, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center' },
+  perkTitle: { fontSize: 13, fontWeight: '700', color: '#0f172a' },
+  perkSub: { fontSize: 11, color: '#64748b', fontWeight: '500' },
+
+  cardConfirmBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 13, paddingHorizontal: 16, borderRadius: 14,
+    backgroundColor: '#eff6ff', borderWidth: 1.5, borderColor: '#2563eb', marginTop: 4,
+  },
+  cardConfirmBtnSelected: {
+    backgroundColor: '#2563eb', borderColor: '#1d4ed8',
+    shadowColor: '#2563eb', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 5,
+  },
+  cardConfirmBtnText: { fontSize: 13.5, fontWeight: '700', color: '#2563eb', flexShrink: 1 },
+  cardConfirmBtnTextSelected: { color: '#ffffff' },
+
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#cbd5e1' },
+  dotActive: { width: 22, height: 8, borderRadius: 4, backgroundColor: '#2563eb' },
+  swipeHint: { fontSize: 11.5, fontWeight: '600', color: '#94a3b8' },
 });

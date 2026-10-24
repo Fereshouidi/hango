@@ -258,9 +258,15 @@ const AddHSK = () => {
                 title="HSK Level Created!"
                 lessonTitle={createdBannerInfo.hskName}
                 details={createdBannerInfo.details}
-                onClose={() =>
-                    setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
-                }
+                actionText="Done"
+                onAction={() => {
+                    setCreatedBannerInfo((prev) => ({ ...prev, visible: false }));
+                    router.back();
+                }}
+                onClose={() => {
+                    setCreatedBannerInfo((prev) => ({ ...prev, visible: false }));
+                    router.back();
+                }}
             />
 
             <KeyboardAvoidingView

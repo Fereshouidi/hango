@@ -481,9 +481,15 @@ const AddText = () => {
         title="Text Created!"
         lessonTitle={createdBannerInfo.textTitle}
         details={createdBannerInfo.details}
-        onClose={() =>
-          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }))
-        }
+        actionText="Done"
+        onAction={() => {
+          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }));
+          router.back();
+        }}
+        onClose={() => {
+          setCreatedBannerInfo((prev) => ({ ...prev, visible: false }));
+          router.back();
+        }}
       />
 
       <KeyboardAvoidingView

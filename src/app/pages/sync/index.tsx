@@ -709,7 +709,11 @@ export default function AccountPage() {
                       ? styles.subActionBtnPending
                       : styles.subActionBtnUpgrade,
                   ]}
-                  onPress={() => router.push('/pages/payment' as any)}
+                  onPress={() =>
+                    router.push(
+                      (isSubscribed ? '/pages/payment?renew=true' : '/pages/payment') as any
+                    )
+                  }
                   activeOpacity={0.85}
                 >
                   <Lucide

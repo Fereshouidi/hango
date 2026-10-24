@@ -4,6 +4,8 @@ import Lucide from '@react-native-vector-icons/lucide';
 import { WordType, HSKType, LessonType } from '@/types';
 import { StudyToggleBar } from '../common/StudyToggleBar';
 
+import { HighlightedText } from '../common/HighlightedText';
+
 interface WordHeroCardProps {
   word: WordType | null;
   hsk: HSKType | null;
@@ -19,6 +21,7 @@ interface WordHeroCardProps {
   setShowPinyin: (val: boolean) => void;
   showMeaning: boolean;
   setShowMeaning: (val: boolean) => void;
+  searchQuery?: string;
 }
 
 export const WordHeroCard: React.FC<WordHeroCardProps> = ({
@@ -36,6 +39,7 @@ export const WordHeroCard: React.FC<WordHeroCardProps> = ({
   setShowPinyin,
   showMeaning,
   setShowMeaning,
+  searchQuery,
 }) => {
   const accentColor = '#059669';
 
@@ -45,9 +49,11 @@ export const WordHeroCard: React.FC<WordHeroCardProps> = ({
       <View style={styles.topRow}>
         {/* Giant word display */}
         <View style={[styles.wordBox, { borderColor: accentColor + '50', backgroundColor: accentColor + '10' }]}>
-          <Text style={[styles.wordSymbol, { color: accentColor }]}>
-            {word?.content || '？'}
-          </Text>
+          <HighlightedText
+            text={word?.content || '？'}
+            searchQuery={searchQuery}
+            style={[styles.wordSymbol, { color: accentColor }]}
+          />
         </View>
 
         {/* Right info panel */}
@@ -56,7 +62,11 @@ export const WordHeroCard: React.FC<WordHeroCardProps> = ({
           {word?.pinyin ? (
             <View style={[styles.infoRow, { backgroundColor: accentColor + '12' }]}>
               <Lucide name="mic" size={14} color={accentColor} />
-              <Text style={[styles.pinyinText, { color: accentColor }]}>{word.pinyin}</Text>
+              <HighlightedText
+                text={word.pinyin}
+                searchQuery={searchQuery}
+                style={[styles.pinyinText, { color: accentColor }]}
+              />
             </View>
           ) : null}
 
@@ -64,7 +74,12 @@ export const WordHeroCard: React.FC<WordHeroCardProps> = ({
           {word?.meaning ? (
             <View style={styles.infoRow}>
               <Lucide name="book-open" size={14} color="#64748b" />
-              <Text style={styles.meaningText} numberOfLines={2}>{word.meaning}</Text>
+              <HighlightedText
+                text={word.meaning}
+                searchQuery={searchQuery}
+                style={styles.meaningText}
+                numberOfLines={2}
+              />
             </View>
           ) : null}
 

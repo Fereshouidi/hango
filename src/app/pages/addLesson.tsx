@@ -299,7 +299,7 @@ const AddLesson = () => {
         hskName={createdBannerInfo.hskName}
         itemCount={createdBannerInfo.itemCount}
         details={createdBannerInfo.details}
-        actionText="Go to Lessons"
+        actionText="Done"
         autoCloseMs={3200}
         onClose={() => {
           setCreatedBannerInfo((prev) => ({ ...prev, visible: false }));

@@ -1,4 +1,4 @@
-export type LoopContentType = 'words' | 'sentences' | 'texts';
+export type LoopContentType = 'words' | 'sentences' | 'texts' | 'mixed';
 
 export type LoopMode = 'repeat-all' | 'repeat-one' | 'shuffle';
 

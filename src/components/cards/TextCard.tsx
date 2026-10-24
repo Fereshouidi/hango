@@ -4,10 +4,12 @@ import Lucide from '@react-native-vector-icons/lucide';
 import { useRouter } from 'expo-router';
 import { TextType } from '@/types';
 import { handleLongText, speakChineseText } from '@/utils/tts';
+import { HighlightedText } from '../common/HighlightedText';
 
 interface TextCardProps {
   textObj: TextType;
   index?: number;
+  searchQuery?: string;
   showPinyin?: boolean;
   showMeaning?: boolean;
   cardBg?: string;
@@ -21,9 +23,10 @@ interface TextCardProps {
   onOptionsPress?: () => void;
 }
 
-export const TextCard: React.FC<TextCardProps> = ({
+export const TextCard: React.FC<TextCardProps> = React.memo(({
   textObj,
   index,
+  searchQuery,
   showPinyin = true,
   showMeaning = true,
   cardBg,
@@ -127,24 +130,36 @@ export const TextCard: React.FC<TextCardProps> = ({
         </View>
       </View>
 
-      <Text style={[styles.content, cardBg && styles.whiteText]} numberOfLines={3}>
-        {handleLongText(textObj.content, 15)}
-      </Text>
+      <HighlightedText
+        text={searchQuery ? textObj.content : handleLongText(textObj.content, 20)}
+        highlight={searchQuery}
+        isCardBg={Boolean(cardBg)}
+        style={[styles.content, cardBg && styles.whiteText]}
+        numberOfLines={3}
+      />
 
       {showPinyin && textObj.pinyin ? (
-        <Text style={[styles.pinyin, cardBg ? styles.whiteSubtext : styles.darkSubtext]} numberOfLines={2}>
-          {handleLongText(textObj.pinyin, 40)}
-        </Text>
+        <HighlightedText
+          text={searchQuery ? textObj.pinyin : handleLongText(textObj.pinyin, 40)}
+          highlight={searchQuery}
+          isCardBg={Boolean(cardBg)}
+          style={[styles.pinyin, cardBg ? styles.whiteSubtext : styles.darkSubtext]}
+          numberOfLines={2}
+        />
       ) : null}
 
       {showMeaning && textObj.meaning ? (
-        <Text style={[styles.meaning, cardBg ? styles.whiteSubtext : styles.darkMeaning]} numberOfLines={2}>
-          {handleLongText(textObj.meaning, 40)}
-        </Text>
+        <HighlightedText
+          text={searchQuery ? textObj.meaning : handleLongText(textObj.meaning, 40)}
+          highlight={searchQuery}
+          isCardBg={Boolean(cardBg)}
+          style={[styles.meaning, cardBg ? styles.whiteSubtext : styles.darkMeaning]}
+          numberOfLines={2}
+        />
       ) : null}
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {

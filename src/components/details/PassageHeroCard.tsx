@@ -4,11 +4,14 @@ import Lucide from '@react-native-vector-icons/lucide';
 import { HSKType, TextType } from '@/types';
 import { StudyToggleBar } from '../common/StudyToggleBar';
 
+import { HighlightedText } from '../common/HighlightedText';
+
 interface PassageHeroCardProps {
   textObj: TextType | null;
   hsk: HSKType | null;
   sentenceCount: number;
   wordCount: number;
+  searchQuery?: string;
   isPlayingPassage: boolean;
   onPlayPassage: () => void;
   showPinyin: boolean;
@@ -22,6 +25,7 @@ export const PassageHeroCard: React.FC<PassageHeroCardProps> = ({
   hsk,
   sentenceCount,
   wordCount,
+  searchQuery,
   isPlayingPassage,
   onPlayPassage,
   showPinyin,
@@ -37,7 +41,11 @@ export const PassageHeroCard: React.FC<PassageHeroCardProps> = ({
             <Lucide name="file-text" size={18} color="#0284c7" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.passageTitle}>{textObj?.title || 'Reading Passage'}</Text>
+            <HighlightedText
+              text={textObj?.title || 'Reading Passage'}
+              highlight={searchQuery}
+              style={styles.passageTitle}
+            />
             <Text style={styles.passageMeta}>
               {hsk ? hsk.name : 'Chinese Text'} • {sentenceCount} Sentences • {wordCount} Words
             </Text>
@@ -62,7 +70,11 @@ export const PassageHeroCard: React.FC<PassageHeroCardProps> = ({
 
       {/* Passage Chinese Content */}
       <View style={styles.chineseContentBox}>
-        <Text style={styles.chineseText}>{textObj?.content || 'Loading text passage...'}</Text>
+        <HighlightedText
+          text={textObj?.content || 'Loading text passage...'}
+          highlight={searchQuery}
+          style={styles.chineseText}
+        />
       </View>
 
       {/* Toggles Row */}
@@ -78,7 +90,11 @@ export const PassageHeroCard: React.FC<PassageHeroCardProps> = ({
       {showPinyin && textObj?.pinyin ? (
         <View style={styles.pinyinBox}>
           <Text style={styles.pinyinLabel}>Pinyin Transcript:</Text>
-          <Text style={styles.pinyinText}>{textObj.pinyin}</Text>
+          <HighlightedText
+            text={textObj.pinyin}
+            highlight={searchQuery}
+            style={styles.pinyinText}
+          />
         </View>
       ) : null}
 
@@ -86,7 +102,11 @@ export const PassageHeroCard: React.FC<PassageHeroCardProps> = ({
       {showMeaning && textObj?.meaning ? (
         <View style={styles.meaningBox}>
           <Text style={styles.meaningLabel}>English Translation:</Text>
-          <Text style={styles.meaningText}>{textObj.meaning}</Text>
+          <HighlightedText
+            text={textObj.meaning}
+            highlight={searchQuery}
+            style={styles.meaningText}
+          />
         </View>
       ) : null}
     </View>

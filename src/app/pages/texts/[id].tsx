@@ -435,6 +435,7 @@ export default function TextsScreen() {
                   key={textObjId || index}
                   textObj={textItem}
                   index={index}
+                  searchQuery={searchQuery}
                   showPinyin={showPinyin}
                   showMeaning={showMeaning}
                   cardBg={cardBg}
