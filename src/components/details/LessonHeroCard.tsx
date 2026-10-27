@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 import { HSKType, LessonType } from '@/types';
 import { StudyToggleBar } from '../common/StudyToggleBar';
 
@@ -17,6 +18,7 @@ interface LessonHeroCardProps {
   setShowPinyin: (val: boolean) => void;
   showMeaning: boolean;
   setShowMeaning: (val: boolean) => void;
+  onEdit?: () => void;
 }
 
 export const LessonHeroCard: React.FC<LessonHeroCardProps> = ({
@@ -32,22 +34,36 @@ export const LessonHeroCard: React.FC<LessonHeroCardProps> = ({
   setShowPinyin,
   showMeaning,
   setShowMeaning,
+  onEdit,
 }) => {
   return (
     <View style={styles.heroCard}>
       <View style={styles.heroTopRow}>
-        <View style={styles.lessonPill}>
-          <Lucide name="sparkles" size={13} color="#2563eb" />
-          <Text style={styles.lessonPillText}>
-            Lesson {lesson?.num ?? lessonId}
-          </Text>
+        <View style={styles.pillsContainer}>
+          <View style={styles.lessonPill}>
+            <Lucide name="sparkles" size={13} color="#2563eb" />
+            <Text style={styles.lessonPillText}>
+              Lesson {lesson?.num ?? lessonId}
+            </Text>
+          </View>
+
+          {hsk && (
+            <View style={styles.hskPill}>
+              <Lucide name="book-open" size={12} color="#059669" />
+              <Text style={styles.hskPillText}>{hsk.name}</Text>
+            </View>
+          )}
         </View>
 
-        {hsk && (
-          <View style={styles.hskPill}>
-            <Lucide name="book-open" size={12} color="#059669" />
-            <Text style={styles.hskPillText}>{hsk.name}</Text>
-          </View>
+        {onEdit && (
+          <TouchableOpacity
+            onPress={onEdit}
+            style={styles.editBtn}
+            activeOpacity={0.7}
+          >
+            <Lucide name="pencil" size={12} color="#2563eb" />
+            <Text style={styles.editBtnText}>Edit Lesson</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -68,7 +84,7 @@ export const LessonHeroCard: React.FC<LessonHeroCardProps> = ({
           <Text style={styles.statChipText}>{wordCount} Words</Text>
         </View>
         <View style={styles.statChip}>
-          <Lucide name="spell-check" size={13} color="#ec489a" />
+          <CharacterIcon size={13} color="#ec489a" />
           <Text style={styles.statChipText}>{characterCount} Hanzi</Text>
         </View>
         {ruleCount > 0 && (
@@ -115,6 +131,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
+  },
+  pillsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  editBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563eb',
   },
   lessonPill: {
     flexDirection: 'row',

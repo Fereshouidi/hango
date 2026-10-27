@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 
 type SliderSectionProps = {
   title: string;
@@ -25,6 +26,7 @@ type SliderSectionProps = {
   filterMode: 'all' | 'unassigned' | 'hsk';
   onFilterChange: (m: 'all' | 'unassigned' | 'hsk') => void;
   hasHskSelected: boolean;
+  hint?: string;
   children: React.ReactNode;
 };
 
@@ -45,6 +47,7 @@ export const SliderSection = ({
   filterMode,
   onFilterChange,
   hasHskSelected,
+  hint,
   children,
 }: SliderSectionProps) => (
   <View style={styles.section}>
@@ -56,7 +59,11 @@ export const SliderSection = ({
         activeOpacity={0.7}
       >
         <View style={[styles.sectionIcon, { backgroundColor: color }]}>
-          <Lucide name={icon as any} size={16} color="#ffffff" />
+          {icon === 'chinese-character' || icon === 'character' || icon === 'spell-check' || title.toLowerCase() === 'characters' ? (
+            <CharacterIcon size={16} color="#ffffff" />
+          ) : (
+            <Lucide name={icon as any} size={16} color="#ffffff" />
+          )}
         </View>
         <Text style={styles.sectionTitle}>{title}</Text>
         <Text style={styles.sectionCount}>({totalCount})</Text>
@@ -102,6 +109,12 @@ export const SliderSection = ({
     {/* Section Body */}
     {expanded && (
       <View style={styles.sectionBody}>
+        {/* Contextual Hint */}
+        {hint && (
+          <View style={styles.hintRow}>
+            <Text style={styles.hintText}>{hint}</Text>
+          </View>
+        )}
         {/* Search Bar & Quick Select */}
         <View style={styles.searchAndActionsRow}>
           <View style={styles.searchBarContainer}>
@@ -303,6 +316,22 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 14,
     gap: 10,
+  },
+  hintRow: {
+    marginHorizontal: 12,
+    marginBottom: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#cbd5e1',
+  },
+  hintText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+    lineHeight: 17,
   },
   searchAndActionsRow: {
     flexDirection: 'row',

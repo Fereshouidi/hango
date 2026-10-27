@@ -24,6 +24,7 @@ import {
   HeaderFilterButton,
 } from '@/components/common/CollapsibleControlBar';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { EmptyState } from '@/components/common/EmptyState';
 import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
 import { speakChineseText } from '@/utils/tts';
 
@@ -377,16 +378,13 @@ const Lessons = () => {
             </View>
           </>
         ) : (
-          <View style={styles.emptyContainer}>
-            <Lucide name="book-open" size={40} color="#cbd5e1" />
-            <ThemedText style={styles.emptyText}>
-              {searchQuery
-                ? 'No matching lessons found'
-                : hskInfo
-                ? `No lessons found for ${hskInfo.name}`
-                : 'No lessons found'}
-            </ThemedText>
-          </View>
+          <EmptyState
+            type="lessons"
+            searchQuery={searchQuery}
+            onClearSearch={() => setSearchQuery('')}
+            filterLabel={hskInfo ? hskInfo.name : undefined}
+            onClearFilter={() => router.push('/pages/lessons/0' as any)}
+          />
         )}
       </ScrollView>
 

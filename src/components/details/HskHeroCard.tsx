@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 import { useRouter } from 'expo-router';
 import { HSKType } from '@/types';
 import { StudyToggleBar } from '../common/StudyToggleBar';
@@ -79,7 +80,7 @@ export const HskHeroCard: React.FC<HskHeroCardProps> = ({
           <Text style={styles.statChipText}>{wordCount} Words</Text>
         </View>
         <View style={styles.statChip}>
-          <Lucide name="spell-check" size={13} color="#ec489a" />
+          <CharacterIcon size={13} color="#ec489a" />
           <Text style={styles.statChipText}>{characterCount} Hanzi</Text>
         </View>
         {ruleCount > 0 && (

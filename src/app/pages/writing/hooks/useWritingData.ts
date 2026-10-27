@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getAllCharacters,
   getAllCharactersCount,
@@ -40,7 +40,7 @@ export function useWritingData() {
   // Search input query
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ── Fetch paginated characters ─────────────────────────────────────────────
+  // ÔöÇÔöÇ Fetch paginated characters ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   const fetchKeyboardPage = useCallback(
     (offset: number, hskId: number | null, lessonId: number | null, reset: boolean) => {
       if (isLoadingMore && !reset) return;
@@ -82,7 +82,7 @@ export function useWritingData() {
     fetchKeyboardPage(keyboardOffset, selectedHskId, selectedLessonId, false);
   }, [keyboardOffset, keyboardTotal, isLoadingMore, selectedHskId, selectedLessonId, fetchKeyboardPage]);
 
-  // ── Initial load ───────────────────────────────────────────────────────────
+  // ÔöÇÔöÇ Initial load ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   const reloadMetadata = useCallback(() => {
     try {
       const hsks = (getAllHSKs() as HSKType[]) || [];
@@ -119,7 +119,7 @@ export function useWritingData() {
     reloadMetadata();
   }, [reloadMetadata]);
 
-  // ── Filter changes ─────────────────────────────────────────────────────────
+  // ÔöÇÔöÇ Filter changes ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   useEffect(() => {
     if (filterScope !== 'hsk') return;
     setSelectedLessonId(null);
@@ -148,7 +148,7 @@ export function useWritingData() {
     }
   };
 
-  // ── Lookup map ─────────────────────────────────────────────────────────────
+  // ÔöÇÔöÇ Lookup map ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   const charLookupMap = useMemo(() => {
     const map = new Map<string, CharacterType>();
     lookupChars.forEach((c) => {
@@ -159,7 +159,7 @@ export function useWritingData() {
     return map;
   }, [lookupChars]);
 
-  // ── Search & Filtered characters ───────────────────────────────────────────
+  // ÔöÇÔöÇ Search & Filtered characters ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   const searchResults = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return null;

@@ -53,6 +53,18 @@ export const METHOD_META: Record<PaymentMethod, MethodMeta> = {
     refPlaceholder: 'e.g. Batch #19845621 or P12345678',
     refHint: 'Enter your Payeer account ID or Operation Batch ID',
   },
+  usdt: {
+    label: 'USDT (Tether)',
+    shortName: 'USDT',
+    badge: 'Crypto Payments',
+    icon: require('../../../../assets/images/usdt.jpg'),
+    color: '#16a34a',
+    lightBg: '#f0fdf4',
+    flag: '🌐',
+    accountLabel: 'USDT Wallet Address',
+    refPlaceholder: 'Enter your transaction hash (TXID)',
+    refHint: 'Send USDT using the supported network only, then enter your transaction hash (TXID)',
+  },
 };
 
 export const PRO_BENEFITS = [
@@ -64,10 +76,13 @@ export const PRO_BENEFITS = [
 
 // ── Helpers ────────────────────────────────────────────────────────
 export function getPlanUsdPrice(plan: Plan) {
+  // USDT and Payeer share the same USD price
   const rawVal =
     plan.prices?.payeer != null
       ? Number(plan.prices.payeer)
-      : Number(plan.prices?.d17 || 0) / 3.0;
+      : plan.prices?.usdt != null
+        ? Number(plan.prices.usdt)
+        : Number(plan.prices?.d17 || 0) / 3.0;
   const total = `$${rawVal.toFixed(2)}`;
   const perMoVal = rawVal / Math.max(1, plan.durationMonths);
   const perMo = `$${perMoVal.toFixed(2)}`;
@@ -75,21 +90,30 @@ export function getPlanUsdPrice(plan: Plan) {
 }
 
 export function getPriceString(plan: Plan, method: PaymentMethod): string {
-  const p = plan.prices[method];
-  return method === 'payeer' ? `$${p}` : `${p} DT`;
+  // USDT uses the same USD price as Payeer
+  const isUsd = method === 'payeer' || method === 'usdt';
+  const p = isUsd
+    ? (plan.prices?.usdt ?? plan.prices.payeer)
+    : plan.prices[method as 'd17' | 'ooredoo'];
+  return isUsd ? `$${p}` : `${p} DT`;
 }
 
 export function getMonthlyPrice(plan: Plan, method: PaymentMethod): string {
-  const p = plan.prices[method];
-  const perMo = (p / plan.durationMonths).toFixed(1);
-  return method === 'payeer' ? `$${perMo}/mo` : `${perMo} DT/mo`;
+  const isUsd = method === 'payeer' || method === 'usdt';
+  const rawP = isUsd
+    ? (plan.prices?.usdt ?? plan.prices.payeer)
+    : plan.prices[method as 'd17' | 'ooredoo'];
+  const perMo = (rawP / plan.durationMonths).toFixed(1);
+  return isUsd ? `$${perMo}/mo` : `${perMo} DT/mo`;
 }
 
 export function formatPlanTitle(planKey?: string) {
   if (!planKey) return 'HanGo Pro';
+  if (planKey === '1_month_free_trial') return '🎁 1 Month Free Trial';
   if (planKey === '1_month') return '1 Month Access';
   if (planKey === '2_months') return '2 Months Access';
   if (planKey === '3_months') return '3 Months Access';
+  if (planKey.endsWith('_month_manual')) return `${planKey.replace('_month_manual', '')} Month (Admin Grant)`;
   return planKey.replace('_', ' ').toUpperCase();
 }
 

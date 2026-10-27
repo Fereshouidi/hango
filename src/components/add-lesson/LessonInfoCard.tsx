@@ -17,7 +17,7 @@ type LessonInfoCardProps = {
   onTitleChange: (val: string) => void;
   hsks: HSKType[];
   selectedHskId: number | null;
-  onSelectHskId: (id: number) => void;
+  onSelectHskId: (id: number | null) => void;
   showHskPicker: boolean;
   onToggleHskPicker: () => void;
 };
@@ -33,8 +33,9 @@ export const LessonInfoCard = ({
   showHskPicker,
   onToggleHskPicker,
 }: LessonInfoCardProps) => {
-  const selectedHskName =
-    hsks.find((h) => h.id === selectedHskId)?.name ?? 'Select HSK Level';
+  const selectedHskName = selectedHskId
+    ? (hsks.find((h) => h.id === selectedHskId)?.name ?? 'HSK Level')
+    : 'Select HSK Level (Optional)';
 
   return (
     <View style={styles.card}>
@@ -45,9 +46,13 @@ export const LessonInfoCard = ({
           </View>
           <Text style={styles.cardTitle}>Lesson Details</Text>
         </View>
-        {selectedHskId && (
+        {selectedHskId ? (
           <View style={styles.hskBadge}>
             <Text style={styles.hskBadgeText}>{selectedHskName}</Text>
+          </View>
+        ) : (
+          <View style={[styles.hskBadge, { backgroundColor: '#f1f5f9' }]}>
+            <Text style={[styles.hskBadgeText, { color: '#64748b' }]}>No HSK Level</Text>
           </View>
         )}
       </View>
@@ -90,7 +95,7 @@ export const LessonInfoCard = ({
       <View style={styles.fieldContainer}>
         <View style={styles.labelRow}>
           <Lucide name="book-open" size={14} color="#6b7280" />
-          <Text style={styles.label}>Target HSK Level</Text>
+          <Text style={styles.label}>Target HSK Level (Optional)</Text>
         </View>
         <TouchableOpacity
           style={styles.pickerButton}
@@ -119,6 +124,28 @@ export const LessonInfoCard = ({
               style={{ maxHeight: 200 }}
               showsVerticalScrollIndicator={true}
             >
+              {/* Optional: None / Unassigned option */}
+              <TouchableOpacity
+                style={[
+                  styles.pickerOption,
+                  selectedHskId === null && styles.pickerOptionSelected,
+                ]}
+                onPress={() => onSelectHskId(null)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.pickerOptionText,
+                    selectedHskId === null && styles.pickerOptionTextSelected,
+                  ]}
+                >
+                  None (No HSK Level)
+                </Text>
+                {selectedHskId === null && (
+                  <Lucide name="check" size={16} color="#3b82f6" />
+                )}
+              </TouchableOpacity>
+
               {hsks.map((hsk) => (
                 <TouchableOpacity
                   key={hsk.id}
@@ -126,7 +153,7 @@ export const LessonInfoCard = ({
                     styles.pickerOption,
                     selectedHskId === hsk.id && styles.pickerOptionSelected,
                   ]}
-                  onPress={() => onSelectHskId(hsk.id)}
+                  onPress={() => onSelectHskId(selectedHskId === hsk.id ? null : hsk.id)}
                   activeOpacity={0.7}
                 >
                   <Text

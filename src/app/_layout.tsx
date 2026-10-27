@@ -2,8 +2,6 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme, View, Image } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
 import { useEffect } from 'react';
 import { getAllCharacters, getAllHSKs, getAllLessons, getAllRules, getAllSentences, getAllTexts, getCharactersByTextId, getLessonsByHSKId, getRulesByHSKId, getRulesByLessonId, getSentencesByLessonId, getTextsByLessonId, getWordsBySentenceId, initDatabase, resetDatabase } from '@/db/utils';
 // import HomeScreen from '.';
@@ -29,9 +27,17 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    // resetDatabase()
-    initDatabase();
-  }, [])
+    async function prepare() {
+      try {
+        await initDatabase();
+      } catch (e) {
+        console.error('Failed to init database on app launch:', e);
+      } finally {
+        await SplashScreen.hideAsync();
+      }
+    }
+    prepare();
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -67,7 +73,7 @@ export default function TabLayout() {
                 opacity: 0.1
               }}
             />
-            <Stack>
+            <Stack screenOptions={{ presentation: 'card' }}>
                 <Stack.Screen
                     name="index"
                     options={{ headerShown: false }}
@@ -229,7 +235,7 @@ export default function TabLayout() {
           </ThemedView>
         </SidebarWrapper>
 
-        <AnimatedSplashOverlay />
+
         </SidebarProvider>
         </SubscriptionProvider>
       </UpdateProvider>

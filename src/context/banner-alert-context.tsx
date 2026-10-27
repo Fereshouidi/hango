@@ -4,7 +4,9 @@ import { AppBanner, BannerButton, BannerType } from '@/components/banners/AppBan
 
 export interface ShowBannerOptions {
   type?: BannerType;
+  position?: 'top' | 'center';
   title: string;
+  subTitle?: string;
   message?: string;
   details?: string;
   buttons?: BannerButton[];
@@ -64,7 +66,7 @@ function inferBannerType(title?: string, message?: string, buttons?: AlertButton
   const m = (message || '').toLowerCase();
 
   // If any button is destructive, it's a warning or error prompt
-  if (buttons?.some((b) => b.style === 'destructive')) {
+  if (buttons?.some((b) => b.style === 'destructive' || (b.text && b.text.toLowerCase().includes('delete')))) {
     return 'warning';
   }
 
@@ -140,12 +142,24 @@ export function setupGlobalAlertBridge() {
         }))
       : [{ text: 'Done', style: 'default' }];
 
+    const hasMultipleButtons = convertedButtons.length > 1;
+    const isDestructive = convertedButtons.some(
+      (b) =>
+        b.style === 'destructive' ||
+        b.text.toLowerCase() === 'delete' ||
+        b.text.toLowerCase() === 'remove'
+    );
+
+    // If it is a prompt (e.g. Yes/No, Cancel/Delete, or destructive action), center it in the middle of the screen!
+    const isCenter = hasMultipleButtons || isDestructive || type === 'warning';
+
     showBanner({
       type,
+      position: isCenter ? 'center' : 'top',
       title: title || '',
       message: message || '',
       buttons: convertedButtons,
-      autoCloseMs: convertedButtons.length <= 1 ? 3800 : 0,
+      autoCloseMs: hasMultipleButtons ? 0 : type === 'success' ? 3200 : 0,
     });
   };
 }
@@ -153,9 +167,10 @@ export function setupGlobalAlertBridge() {
 export const BannerAlertProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [bannerState, setBannerState] = useState<ShowBannerOptions & { visible: boolean }>({
+  const [bannerState, setBannerState] = useState<ShowBannerOptions & { visible: boolean; id: number }>({
     visible: false,
     title: '',
+    id: 0,
   });
 
   useEffect(() => {
@@ -164,6 +179,7 @@ export const BannerAlertProvider: React.FC<{ children: React.ReactNode }> = ({
       setBannerState({
         ...options,
         visible: true,
+        id: Date.now(),
       });
     };
 
@@ -184,6 +200,7 @@ export const BannerAlertProvider: React.FC<{ children: React.ReactNode }> = ({
     setBannerState({
       ...options,
       visible: true,
+      id: Date.now(),
     });
   };
 
@@ -204,9 +221,13 @@ export const BannerAlertProvider: React.FC<{ children: React.ReactNode }> = ({
     <BannerContext.Provider value={contextValue}>
       {children}
       <AppBanner
+        key={bannerState.id}
+        id={bannerState.id}
         visible={bannerState.visible}
         type={bannerState.type}
+        position={bannerState.position}
         title={bannerState.title}
+        subTitle={bannerState.subTitle}
         message={bannerState.message}
         details={bannerState.details}
         buttons={bannerState.buttons}

@@ -6,12 +6,19 @@ import { WordCard } from '@/components/cards/WordCard';
 import { CategoryTabType } from '@/components/common/CategoryTabs';
 import { DetailControlPanel } from '@/components/common/DetailControlPanel';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { OptionsMenuModal, OptionItem } from '@/components/common/OptionsMenuModal';
 import { ViewAllButton } from '@/components/common/ViewAllButton';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 import { LessonHeroCard } from '@/components/details/LessonHeroCard';
 import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
 import { ThemedView } from '@/components/themed-view';
 import {
+  deleteCharacter,
+  deleteRule,
+  deleteSentence,
+  deleteText,
+  deleteWord,
   getAllCharacters,
   getAllRules,
   getAllSentences,
@@ -24,6 +31,11 @@ import {
   getSentencesByLessonId,
   getTextsByLessonId,
   getWordsByLessonId,
+  unlinkCharacterFromLesson,
+  unlinkRuleFromLesson,
+  unlinkSentenceFromLesson,
+  unlinkTextFromLesson,
+  unlinkWordFromLesson,
 } from '@/db/utils';
 import {
   CharacterType,
@@ -36,9 +48,10 @@ import {
 } from '@/types';
 import { speakChineseText, speakEnglishText } from '@/utils/tts';
 import Lucide from '@react-native-vector-icons/lucide';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -47,7 +60,7 @@ import {
   View,
 } from 'react-native';
 
-const ITEM_LIMIT = 4;
+const ITEM_LIMIT = 3;
 const PAGE_SIZE = 10;
 
 const LessonDetails = () => {
@@ -80,6 +93,118 @@ const LessonDetails = () => {
   const [allRules, setAllRules] = useState<RuleType[]>([]);
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Options Menu state
+  const [activeItem, setActiveItem] = useState<{
+    type: 'text' | 'sentence' | 'word' | 'character' | 'rule';
+    item: any;
+  } | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const handleOpenOptions = (
+    type: 'text' | 'sentence' | 'word' | 'character' | 'rule',
+    item: any
+  ) => {
+    setActiveItem({ type, item });
+    setMenuVisible(true);
+  };
+
+  const buildMenuOptions = (): OptionItem[] => {
+    if (!activeItem || !activeItem.item) return [];
+    const { type, item } = activeItem;
+    const typeLabel =
+      type === 'text'
+        ? 'Text'
+        : type === 'sentence'
+        ? 'Sentence'
+        : type === 'word'
+        ? 'Word'
+        : type === 'character'
+        ? 'Character'
+        : 'Rule';
+
+    return [
+      {
+        id: 'view',
+        label: 'View Details',
+        iconName: 'external-link',
+        color: '#2563eb',
+        onPress: () => {
+          setMenuVisible(false);
+          setActiveItem(null);
+          if (type === 'text') router.push(`/pages/textDetails/${item.id}` as any);
+          else if (type === 'sentence') router.push(`/pages/sentenceDetails/${item.id}` as any);
+          else if (type === 'word') router.push(`/pages/wordDetails/${item.id}` as any);
+          else if (type === 'character') router.push(`/pages/characterDetails/${item.id}` as any);
+          else if (type === 'rule') router.push(`/pages/ruleDetails/${item.id}` as any);
+        },
+      },
+      {
+        id: 'remove',
+        label: `Remove from Lesson`,
+        iconName: 'minus-circle',
+        color: '#ef4444',
+        destructive: true,
+        onPress: () => {
+          Alert.alert(
+            'Remove from Lesson',
+            `Are you sure you want to remove this ${typeLabel.toLowerCase()} from Lesson ${lesson?.num || ''}?`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Remove',
+                style: 'destructive',
+                onPress: () => {
+                  try {
+                    if (type === 'text') unlinkTextFromLesson(item.id, lessonId);
+                    else if (type === 'sentence') unlinkSentenceFromLesson(item.id, lessonId);
+                    else if (type === 'word') unlinkWordFromLesson(item.id, lessonId);
+                    else if (type === 'character') unlinkCharacterFromLesson(item.id, lessonId);
+                    else if (type === 'rule') unlinkRuleFromLesson(item.id, lessonId);
+                    loadLessonData();
+                  } catch (e) {
+                    Alert.alert('Error', 'Failed to remove item from lesson.');
+                  }
+                },
+              },
+            ]
+          );
+        },
+      },
+      {
+        id: 'delete',
+        label: `Delete ${typeLabel} Permanently`,
+        iconName: 'trash-2',
+        color: '#dc2626',
+        destructive: true,
+        onPress: () => {
+          Alert.alert(
+            `Delete ${typeLabel}`,
+            `Are you sure you want to permanently delete this ${typeLabel.toLowerCase()}? This cannot be undone.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => {
+                  try {
+                    if (type === 'text') deleteText(item.id);
+                    else if (type === 'sentence') deleteSentence(item.id);
+                    else if (type === 'word') deleteWord(item.id);
+                    else if (type === 'character') deleteCharacter(item.id);
+                    else if (type === 'rule') deleteRule(item.id);
+                    loadLessonData();
+                  } catch (e) {
+                    Alert.alert('Error', `Failed to delete ${typeLabel.toLowerCase()}.`);
+                  }
+                },
+              },
+            ]
+          );
+        },
+      },
+    ];
+  };
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -143,9 +268,11 @@ const LessonDetails = () => {
     }
   }, [lessonId]);
 
-  useEffect(() => {
-    loadLessonData();
-  }, [loadLessonData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadLessonData();
+    }, [loadLessonData])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -216,6 +343,14 @@ const LessonDetails = () => {
         label={lesson ? `Lesson ${lesson.num}` : 'Lesson Details'}
         items={[
           <TouchableOpacity
+            key="edit"
+            onPress={() => router.push(`/pages/addLesson?lessonId=${lessonId}` as any)}
+            activeOpacity={0.7}
+            style={styles.headerIconBtn}
+          >
+            <Lucide name="pencil" size={18} color="#1e293b" />
+          </TouchableOpacity>,
+          <TouchableOpacity
             key="pinyin-toggle"
             onPress={() => setShowPinyin((prev) => !prev)}
             activeOpacity={0.7}
@@ -224,7 +359,7 @@ const LessonDetails = () => {
             <Lucide
               name="type"
               size={18}
-              color={showPinyin ? '#2563eb' : '#64748b'}
+              color={showPinyin ? '#2563eb' : '#1e293b'}
             />
           </TouchableOpacity>,
           <TouchableOpacity
@@ -236,7 +371,7 @@ const LessonDetails = () => {
             <Lucide
               name={showMeaning ? 'eye' : 'eye-off'}
               size={18}
-              color={showMeaning ? '#2563eb' : '#64748b'}
+              color={showMeaning ? '#2563eb' : '#1e293b'}
             />
           </TouchableOpacity>,
         ]}
@@ -269,6 +404,7 @@ const LessonDetails = () => {
           setShowPinyin={setShowPinyin}
           showMeaning={showMeaning}
           setShowMeaning={setShowMeaning}
+          onEdit={() => router.push(`/pages/addLesson?lessonId=${lessonId}` as any)}
         />
 
         <View style={{ margin: 2 }}></View>
@@ -298,7 +434,7 @@ const LessonDetails = () => {
         />
 
         {/* SECTION: TEXTS */}
-        {(activeTab === 'all' || activeTab === 'texts') && filteredTexts.length > 0 && (
+        {(activeTab === 'all' || activeTab === 'texts') && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIconBadge, { backgroundColor: '#3b82f6' }]}>
@@ -313,67 +449,64 @@ const LessonDetails = () => {
 
               <TouchableOpacity
                 onPress={() => { router.push(`/pages/addText?lessonId=${lessonId}`) }}
-                style={{
-                  backgroundColor: "#3b82f6",
-                  borderRadius: 50,
-                  padding: 4,
-                  paddingHorizontal: 5,
-                  display: "flex",
-                  flexDirection: "row",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: 1
-                }}
+                style={[styles.addBtn, { backgroundColor: '#3b82f6' }]}
               >
                 <Lucide name="plus" size={12} color="#ffffff" />
-                <Text style={{ fontSize: 12, color: "#fff" }}>add text</Text>
+                <Text style={styles.addBtnText}>add text</Text>
               </TouchableOpacity>
             </View>
 
-            {filteredTexts.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((text, idx) => (
-              <TextCard
-                key={text.id || idx}
-                textObj={text}
-                index={idx}
-                showPinyin={showPinyin}
-                showMeaning={showMeaning}
-                isPlaying={playingItemId === `text-${text.id}`}
-                onPlayAudio={(id, content) => playItemAudio(id, content, `text-${id}`)}
-                searchQuery={searchQuery}
-              />
-            ))}
-            {activeTab === 'all' && filteredTexts.length > ITEM_LIMIT && (
-              <ViewAllButton
-                count={filteredTexts.length}
-                label="Reading Texts"
-                accentColor="#3b82f6"
-                onPress={() =>
-                  router.push({
-                    pathname: `/pages/texts/${lessonId}`,
-                    params: {
-                      lessonId,
-                      scope: searchScope,
-                      search: searchQuery,
-                    },
-                  } as any)
-                }
-              />
-            )}
-            {activeTab !== 'all' && (
-              <LoadMoreFooter
-                currentCount={Math.min(visibleCount, filteredTexts.length)}
-                totalCount={filteredTexts.length}
-                pageSize={PAGE_SIZE}
-                accentColor="#3b82f6"
-                itemLabel="reading texts"
-                onLoadMore={handleLoadMore}
-              />
+            {filteredTexts.length === 0 ? (
+              <Text style={styles.emptySectionText}>No reading texts linked to this lesson.</Text>
+            ) : (
+              <>
+                {filteredTexts.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((text, idx) => (
+                  <TextCard
+                    key={text.id || idx}
+                    textObj={text}
+                    index={idx}
+                    showPinyin={showPinyin}
+                    showMeaning={showMeaning}
+                    isPlaying={playingItemId === `text-${text.id}`}
+                    onPlayAudio={(id, content) => playItemAudio(id, content, `text-${id}`)}
+                    searchQuery={searchQuery}
+                    onOptionsPress={(item) => handleOpenOptions('text', item)}
+                  />
+                ))}
+                {activeTab === 'all' && filteredTexts.length > 0 && (
+                  <ViewAllButton
+                    count={filteredTexts.length}
+                    label="Reading Texts"
+                    accentColor="#3b82f6"
+                    onPress={() =>
+                      router.push({
+                        pathname: `/pages/texts/${lessonId}`,
+                        params: {
+                          lessonId,
+                          scope: searchScope,
+                          search: searchQuery,
+                        },
+                      } as any)
+                    }
+                  />
+                )}
+                {activeTab !== 'all' && (
+                  <LoadMoreFooter
+                    currentCount={Math.min(visibleCount, filteredTexts.length)}
+                    totalCount={filteredTexts.length}
+                    pageSize={PAGE_SIZE}
+                    accentColor="#3b82f6"
+                    itemLabel="reading texts"
+                    onLoadMore={handleLoadMore}
+                  />
+                )}
+              </>
             )}
           </View>
         )}
 
         {/* SECTION: SENTENCES */}
-        {(activeTab === 'all' || activeTab === 'sentences') && filteredSentences.length > 0 && (
+        {(activeTab === 'all' || activeTab === 'sentences') && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIconBadge, { backgroundColor: '#8b5cf6' }]}>
@@ -394,50 +527,57 @@ const LessonDetails = () => {
               </TouchableOpacity>
             </View>
 
-            {filteredSentences.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((sentence, idx) => (
-              <SentenceCard
-                key={sentence.id || idx}
-                sentence={sentence}
-                index={idx}
-                showPinyin={showPinyin}
-                showMeaning={showMeaning}
-                isPlaying={playingItemId === `sentence-${sentence.id}`}
-                onPlayAudio={(id, content) => playItemAudio(id, content, `sentence-${id}`)}
-                searchQuery={searchQuery}
-              />
-            ))}
-            {activeTab === 'all' && filteredSentences.length > ITEM_LIMIT && (
-              <ViewAllButton
-                count={filteredSentences.length}
-                label="Sentences"
-                accentColor="#8b5cf6"
-                onPress={() =>
-                  router.push({
-                    pathname: `/pages/sentences/${lessonId}`,
-                    params: {
-                      lessonId,
-                      scope: searchScope,
-                      search: searchQuery,
-                    },
-                  } as any)
-                }
-              />
-            )}
-            {activeTab !== 'all' && (
-              <LoadMoreFooter
-                currentCount={Math.min(visibleCount, filteredSentences.length)}
-                totalCount={filteredSentences.length}
-                pageSize={PAGE_SIZE}
-                accentColor="#8b5cf6"
-                itemLabel="sentences"
-                onLoadMore={handleLoadMore}
-              />
+            {filteredSentences.length === 0 ? (
+              <Text style={styles.emptySectionText}>No sentences linked to this lesson.</Text>
+            ) : (
+              <>
+                {filteredSentences.slice(0, activeTab === 'all' ? 3 : visibleCount).map((sentence, idx) => (
+                  <SentenceCard
+                    key={sentence.id || idx}
+                    sentence={sentence}
+                    index={idx}
+                    showPinyin={showPinyin}
+                    showMeaning={showMeaning}
+                    isPlaying={playingItemId === `sentence-${sentence.id}`}
+                    onPlayAudio={(id, content) => playItemAudio(id, content, `sentence-${id}`)}
+                    searchQuery={searchQuery}
+                    onOptionsPress={(item) => handleOpenOptions('sentence', item)}
+                  />
+                ))}
+                {activeTab === 'all' && filteredSentences.length > 0 && (
+                  <ViewAllButton
+                    count={filteredSentences.length}
+                    label="Sentences"
+                    accentColor="#8b5cf6"
+                    onPress={() =>
+                      router.push({
+                        pathname: `/pages/sentences/${lessonId}`,
+                        params: {
+                          lessonId,
+                          scope: searchScope,
+                          search: searchQuery,
+                        },
+                      } as any)
+                    }
+                  />
+                )}
+                {activeTab !== 'all' && (
+                  <LoadMoreFooter
+                    currentCount={Math.min(visibleCount, filteredSentences.length)}
+                    totalCount={filteredSentences.length}
+                    pageSize={PAGE_SIZE}
+                    accentColor="#8b5cf6"
+                    itemLabel="sentences"
+                    onLoadMore={handleLoadMore}
+                  />
+                )}
+              </>
             )}
           </View>
         )}
 
         {/* SECTION: WORDS */}
-        {(activeTab === 'all' || activeTab === 'words') && filteredWords.length > 0 && (
+        {(activeTab === 'all' || activeTab === 'words') && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIconBadge, { backgroundColor: '#059669' }]}>
@@ -458,56 +598,62 @@ const LessonDetails = () => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.wordsGrid}>
-              {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((word, idx) => (
-                // <View key={word.id || idx} style={{ width: '48.5%' }}>
-                <WordCard
-                  word={word}
-                  showPinyin={showPinyin}
-                  showMeaning={showMeaning}
-                  isPlaying={playingItemId === `word-${word.id}`}
-                  onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
-                  searchQuery={searchQuery}
-                />
-                // </View>
-              ))}
-            </View>
-            {activeTab === 'all' && filteredWords.length > ITEM_LIMIT && (
-              <ViewAllButton
-                count={filteredWords.length}
-                label="Vocabulary Words"
-                accentColor="#059669"
-                onPress={() =>
-                  router.push({
-                    pathname: `/pages/words/${lessonId}`,
-                    params: {
-                      lessonId,
-                      scope: searchScope,
-                      search: searchQuery,
-                    },
-                  } as any)
-                }
-              />
-            )}
-            {activeTab !== 'all' && (
-              <LoadMoreFooter
-                currentCount={Math.min(visibleCount, filteredWords.length)}
-                totalCount={filteredWords.length}
-                pageSize={PAGE_SIZE}
-                accentColor="#059669"
-                itemLabel="vocabulary words"
-                onLoadMore={handleLoadMore}
-              />
+            {filteredWords.length === 0 ? (
+              <Text style={styles.emptySectionText}>No vocabulary words linked to this lesson.</Text>
+            ) : (
+              <>
+                <View style={styles.wordsGrid}>
+                  {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT + 1 : visibleCount).map((word, idx) => (
+                    <WordCard
+                      key={word.id ?? idx}
+                      word={word}
+                      showPinyin={showPinyin}
+                      showMeaning={showMeaning}
+                      isPlaying={playingItemId === `word-${word.id}`}
+                      onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
+                      searchQuery={searchQuery}
+                      onOptionsPress={(item) => handleOpenOptions('word', item)}
+                    />
+                  ))}
+                </View>
+                {activeTab === 'all' && filteredWords.length > 0 && (
+                  <ViewAllButton
+                    count={filteredWords.length}
+                    label="Vocabulary Words"
+                    accentColor="#059669"
+                    onPress={() =>
+                      router.push({
+                        pathname: `/pages/words/${lessonId}`,
+                        params: {
+                          lessonId,
+                          scope: searchScope,
+                          search: searchQuery,
+                        },
+                      } as any)
+                    }
+                  />
+                )}
+                {activeTab !== 'all' && (
+                  <LoadMoreFooter
+                    currentCount={Math.min(visibleCount, filteredWords.length)}
+                    totalCount={filteredWords.length}
+                    pageSize={PAGE_SIZE}
+                    accentColor="#059669"
+                    itemLabel="vocabulary words"
+                    onLoadMore={handleLoadMore}
+                  />
+                )}
+              </>
             )}
           </View>
         )}
 
         {/* SECTION: CHARACTERS */}
-        {(activeTab === 'all' || activeTab === 'characters') && filteredCharacters.length > 0 && (
+        {(activeTab === 'all' || activeTab === 'characters') && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIconBadge, { backgroundColor: '#ec489a' }]}>
-                <Lucide name="spell-check" size={15} color="#ffffff" />
+                <CharacterIcon size={15} color="#ffffff" />
               </View>
               <View style={styles.sectionHeaderCenter}>
                 <Text style={styles.sectionHeading}>Characters (Hanzi)</Text>
@@ -524,52 +670,59 @@ const LessonDetails = () => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.charsGrid}>
-              {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((char, idx) => (
-                <View key={char.id || idx} style={{ width: '48.5%' }}>
-                  <CharacterCard
-                    char={char}
-                    showPinyin={showPinyin}
-                    showMeaning={showMeaning}
-                    isPlaying={playingItemId === `char-${char.id}`}
-                    onPlayAudio={(id, content) => playItemAudio(id, content, `char-${id}`)}
-                    searchQuery={searchQuery}
-                  />
+            {filteredCharacters.length === 0 ? (
+              <Text style={styles.emptySectionText}>No characters linked to this lesson.</Text>
+            ) : (
+              <>
+                <View style={styles.charsGrid}>
+                  {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT + 1 : visibleCount).map((char, idx) => (
+                    <View key={char.id || idx} style={{ width: '48.5%', marginBottom: 8 }}>
+                      <CharacterCard
+                        char={char}
+                        showPinyin={showPinyin}
+                        showMeaning={showMeaning}
+                        isPlaying={playingItemId === `char-${char.id}`}
+                        onPlayAudio={(id, content) => playItemAudio(id, content, `char-${id}`)}
+                        searchQuery={searchQuery}
+                        onOptionsPress={(item) => handleOpenOptions('character', item)}
+                      />
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-            {activeTab === 'all' && filteredCharacters.length > ITEM_LIMIT && (
-              <ViewAllButton
-                count={filteredCharacters.length}
-                label="Characters"
-                accentColor="#ec489a"
-                onPress={() =>
-                  router.push({
-                    pathname: `/pages/characters/${lessonId}`,
-                    params: {
-                      lessonId,
-                      scope: searchScope,
-                      search: searchQuery,
-                    },
-                  } as any)
-                }
-              />
-            )}
-            {activeTab !== 'all' && (
-              <LoadMoreFooter
-                currentCount={Math.min(visibleCount, filteredCharacters.length)}
-                totalCount={filteredCharacters.length}
-                pageSize={PAGE_SIZE}
-                accentColor="#ec489a"
-                itemLabel="characters"
-                onLoadMore={handleLoadMore}
-              />
+                {activeTab === 'all' && filteredCharacters.length > 0 && (
+                  <ViewAllButton
+                    count={filteredCharacters.length}
+                    label="Characters"
+                    accentColor="#ec489a"
+                    onPress={() =>
+                      router.push({
+                        pathname: `/pages/characters/${lessonId}`,
+                        params: {
+                          lessonId,
+                          scope: searchScope,
+                          search: searchQuery,
+                        },
+                      } as any)
+                    }
+                  />
+                )}
+                {activeTab !== 'all' && (
+                  <LoadMoreFooter
+                    currentCount={Math.min(visibleCount, filteredCharacters.length)}
+                    totalCount={filteredCharacters.length}
+                    pageSize={PAGE_SIZE}
+                    accentColor="#ec489a"
+                    itemLabel="characters"
+                    onLoadMore={handleLoadMore}
+                  />
+                )}
+              </>
             )}
           </View>
         )}
 
         {/* SECTION: GRAMMAR RULES */}
-        {(activeTab === 'all' || activeTab === 'rules') && filteredRules.length > 0 && (
+        {(activeTab === 'all' || activeTab === 'rules') && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIconBadge, { backgroundColor: '#d97706' }]}>
@@ -590,42 +743,49 @@ const LessonDetails = () => {
               </TouchableOpacity>
             </View>
 
-            {filteredRules.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((rule, idx) => (
-              <RuleCard
-                key={rule.id || idx}
-                rule={rule}
-                index={idx}
-                isPlaying={playingItemId === `rule-${rule.id}`}
-                onPlayAudio={(id, content) => playItemAudio(id, content, `rule-${id}`, true)}
-                searchQuery={searchQuery}
-              />
-            ))}
-            {activeTab === 'all' && filteredRules.length > ITEM_LIMIT && (
-              <ViewAllButton
-                count={filteredRules.length}
-                label="Grammar Points"
-                accentColor="#d97706"
-                onPress={() =>
-                  router.push({
-                    pathname: `/pages/rules/${lessonId}`,
-                    params: {
-                      lessonId,
-                      scope: searchScope,
-                      search: searchQuery,
-                    },
-                  } as any)
-                }
-              />
-            )}
-            {activeTab !== 'all' && (
-              <LoadMoreFooter
-                currentCount={Math.min(visibleCount, filteredRules.length)}
-                totalCount={filteredRules.length}
-                pageSize={PAGE_SIZE}
-                accentColor="#d97706"
-                itemLabel="grammar points"
-                onLoadMore={handleLoadMore}
-              />
+            {filteredRules.length === 0 ? (
+              <Text style={styles.emptySectionText}>No grammar points linked to this lesson.</Text>
+            ) : (
+              <>
+                {filteredRules.slice(0, activeTab === 'all' ? 3 : visibleCount).map((rule, idx) => (
+                  <RuleCard
+                    key={rule.id || idx}
+                    rule={rule}
+                    index={idx}
+                    isPlaying={playingItemId === `rule-${rule.id}`}
+                    onPlayAudio={(id, content) => playItemAudio(id, content, `rule-${id}`, true)}
+                    searchQuery={searchQuery}
+                    onOptionsPress={(item) => handleOpenOptions('rule', item)}
+                  />
+                ))}
+                {activeTab === 'all' && filteredRules.length > 0 && (
+                  <ViewAllButton
+                    count={filteredRules.length}
+                    label="Grammar Points"
+                    accentColor="#d97706"
+                    onPress={() =>
+                      router.push({
+                        pathname: `/pages/rules/${lessonId}`,
+                        params: {
+                          lessonId,
+                          scope: searchScope,
+                          search: searchQuery,
+                        },
+                      } as any)
+                    }
+                  />
+                )}
+                {activeTab !== 'all' && (
+                  <LoadMoreFooter
+                    currentCount={Math.min(visibleCount, filteredRules.length)}
+                    totalCount={filteredRules.length}
+                    pageSize={PAGE_SIZE}
+                    accentColor="#d97706"
+                    itemLabel="grammar points"
+                    onLoadMore={handleLoadMore}
+                  />
+                )}
+              </>
             )}
           </View>
         )}
@@ -643,6 +803,22 @@ const LessonDetails = () => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <OptionsMenuModal
+        visible={menuVisible}
+        onClose={() => {
+          setMenuVisible(false);
+          setActiveItem(null);
+        }}
+        title={
+          activeItem?.item
+            ? activeItem.type === 'text'
+              ? activeItem.item.title || 'Text Options'
+              : `"${activeItem.item.content}" Options`
+            : 'Options'
+        }
+        options={buildMenuOptions()}
+      />
     </ThemedView>
   );
 };
@@ -655,14 +831,19 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#e8e8e8ff',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#414040ff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   headerIconBtnActive: {
     backgroundColor: '#eff6ff',
@@ -725,6 +906,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#64748b',
   },
+  emptySectionText: {
+    fontSize: 13,
+    color: '#94a3b8',
+    fontStyle: 'italic',
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
   wordsGrid: {
     width: "100%",
     flexDirection: 'row',
@@ -733,9 +921,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   charsGrid: {
+    width: "100%",
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    // gap: 10,
     justifyContent: 'space-between',
   },
   emptyContainer: {

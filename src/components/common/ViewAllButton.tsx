@@ -23,7 +23,7 @@ export const ViewAllButton: React.FC<ViewAllButtonProps> = ({
     >
       <View style={styles.content}>
         <Text style={[styles.text, { color: accentColor }]}>
-          View All {count} {label}
+          View All
         </Text>
         <Lucide name="arrow-right" size={16} color={accentColor} />
       </View>

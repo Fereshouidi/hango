@@ -4,6 +4,7 @@ import {
   HeaderFilterButton,
 } from '@/components/common/CollapsibleControlBar';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { EmptyState } from '@/components/common/EmptyState';
 import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
 import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
@@ -86,7 +87,7 @@ export default function CharactersScreen() {
   // ── Pinch-to-zoom column control ──────────────────────────────────
   const MIN_COLS = 2;
   const MAX_COLS = 6;
-  const [numColumns, setNumColumns] = useState(4);
+  const [numColumns, setNumColumns] = useState(2);
   const numColumnsRef = useRef(numColumns);
   useEffect(() => {
     numColumnsRef.current = numColumns;
@@ -229,6 +230,8 @@ export default function CharactersScreen() {
     }, 400);
   }, [loadData]);
 
+  const wideSearchHighlightStyle = searchQuery.trim() ? { color: '#ef4444', fontWeight: '700' as const } : undefined;
+
   const q = searchQuery.toLowerCase().trim();
   const filteredCharacters = characters.filter(
     (c) =>
@@ -324,6 +327,7 @@ export default function CharactersScreen() {
           index={index}
           numColumns={numColumns}
           searchQuery={searchQuery}
+          highlightStyle={wideSearchHighlightStyle}
           showPinyin={showPinyin}
           showMeaning={showMeaning}
           cardBg={cardBg}
@@ -340,6 +344,7 @@ export default function CharactersScreen() {
     [
       numColumns,
       searchQuery,
+      wideSearchHighlightStyle,
       showPinyin,
       showMeaning,
       playingId,
@@ -551,16 +556,13 @@ export default function CharactersScreen() {
             ) : null
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Lucide name="spell-check" size={40} color="#cbd5e1" />
-              <ThemedText style={styles.emptyText}>
-                {searchQuery
-                  ? 'No matching characters found'
-                  : activeFilterLabel
-                    ? `No characters found for ${activeFilterLabel}`
-                    : 'No characters available'}
-              </ThemedText>
-            </View>
+            <EmptyState
+              type="characters"
+              searchQuery={searchQuery}
+              onClearSearch={() => setSearchQuery('')}
+              filterLabel={activeFilterLabel || undefined}
+              onClearFilter={() => router.push('/pages/characters/0?scope=global' as any)}
+            />
           }
           initialNumToRender={20}
           maxToRenderPerBatch={20}

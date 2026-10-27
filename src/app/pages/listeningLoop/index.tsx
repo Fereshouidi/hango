@@ -28,6 +28,7 @@ import { LoopFilterBar } from './components/LoopFilterBar';
 import { LoopHeroPlayer } from './components/LoopHeroPlayer';
 import { LoopPlaylistQueue } from './components/LoopPlaylistQueue';
 import { LoopSettingsModal } from './components/LoopSettingsModal';
+import { FullscreenTextModal } from './components/FullscreenTextModal';
 import { useListeningLoop } from './hooks/useListeningLoop';
 import { LoopContentType, LoopItem } from './types';
 import { Paywall } from '@/components/paywall';
@@ -61,7 +62,8 @@ export default function ListeningLoopScreen() {
   const [scope, setScope] = useState<'hsk' | 'lesson'>(initialScope);
   const [selectedHskId, setSelectedHskId] = useState<number | null>(initialHskId);
   const [selectedLessonId, setSelectedLessonId] = useState<number | null>(initialLessonId);
-  const [breakTextsIntoSentences, setBreakTextsIntoSentences] = useState(true);
+  const [breakTextsIntoSentences, setBreakTextsIntoSentences] = useState(false);
+  const [fullscreenModalVisible, setFullscreenModalVisible] = useState(false);
 
   // Custom filter from sentences or words page
   const [customSentenceIds, setCustomSentenceIds] = useState<number[] | null>(() => {
@@ -351,6 +353,7 @@ export default function ListeningLoopScreen() {
     currentItem,
     isPlaying,
     isSpeaking,
+    spokenCharIndex,
     isWaitingInterval,
     intervalCountdown,
     repeatCounter,
@@ -377,6 +380,9 @@ export default function ListeningLoopScreen() {
   // Filter selection handlers
   const handleSelectContentType = (type: LoopContentType) => {
     setContentType(type);
+    if (type === 'texts') {
+      setBreakTextsIntoSentences(false);
+    }
     setCustomSentenceIds(null);
     setCustomWordIds(null);
     setCustomFilterLabel(null);
@@ -609,10 +615,12 @@ export default function ListeningLoopScreen() {
           onNext={next}
           onPrev={prev}
           onToggleLoopMode={handleToggleLoopMode}
-          onTogglePinyin={() => setShowPinyin((p) => !p)}
-          onToggleMeaning={() => setShowMeaning((m) => !m)}
+          onTogglePinyin={() => setShowPinyin(!showPinyin)}
+          onToggleMeaning={() => setShowMeaning(!showMeaning)}
           onToggleWords={() => setShowWords((w) => !w)}
           onOpenSettings={() => setSettingsModalVisible(true)}
+          onOpenFullscreen={() => setFullscreenModalVisible(true)}
+          spokenCharIndex={spokenCharIndex}
         />
 
         {/* Content & Scope Filter Bar */}
@@ -725,6 +733,27 @@ export default function ListeningLoopScreen() {
         onSelectSpeed={setSpeed}
         loopMode={loopMode}
         onSelectLoopMode={setLoopMode}
+      />
+
+      {/* Fullscreen Text Shadowing Modal */}
+      <FullscreenTextModal
+        visible={fullscreenModalVisible}
+        onClose={() => setFullscreenModalVisible(false)}
+        item={currentItem}
+        spokenCharIndex={spokenCharIndex}
+        activeWord={
+          activeSentenceWords.length > 0 && spokenCharIndex >= 0
+            ? (activeSentenceWords.find((w) =>
+                w.content && currentItem?.content
+                  ? currentItem.content.indexOf(w.content) <= spokenCharIndex &&
+                    spokenCharIndex < currentItem.content.indexOf(w.content) + w.content.length
+                  : false
+              )?.content || null)
+            : null
+        }
+        isPlaying={isPlaying}
+        isSpeaking={isSpeaking}
+        onTogglePlayPause={togglePlayPause}
       />
     </View>
     </Paywall>

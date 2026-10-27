@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 
 interface CharacterDetailSectionProps {
   title: string;
-  iconName: string;
+  iconName?: string;
   badgeColor: string;
   count: number;
   addBtnText: string;
@@ -23,11 +24,37 @@ export const CharacterDetailSection: React.FC<CharacterDetailSectionProps> = ({
   emptyLabel,
   children,
 }) => {
+  const renderIcon = () => {
+    if (iconName === 'character' || iconName === 'chinese-character') {
+      return <CharacterIcon size={14} color="#ffffff" />;
+    }
+    if (iconName) {
+      return <Lucide name={iconName as any} size={14} color="#ffffff" />;
+    }
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes('text')) {
+      return <Lucide name="file-text" size={14} color="#ffffff" />;
+    }
+    if (lowerTitle.includes('sentence')) {
+      return <Lucide name="message-square-text" size={14} color="#ffffff" />;
+    }
+    if (lowerTitle.includes('word') || lowerTitle.includes('vocab')) {
+      return <Lucide name="languages" size={14} color="#ffffff" />;
+    }
+    if (lowerTitle.includes('lesson')) {
+      return <Lucide name="book-open" size={14} color="#ffffff" />;
+    }
+    if (lowerTitle.includes('rule') || lowerTitle.includes('grammar')) {
+      return <Lucide name="graduation-cap" size={14} color="#ffffff" />;
+    }
+    return <CharacterIcon size={14} color="#ffffff" />;
+  };
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <View style={[styles.sectionBadge, { backgroundColor: badgeColor }]}>
-          <Lucide name={iconName as any} size={14} color="#ffffff" />
+          {renderIcon()}
         </View>
         <View style={styles.sectionHeaderCenter}>
           <Text style={styles.sectionTitle}>{title}</Text>
@@ -58,8 +85,8 @@ export const CharacterDetailSection: React.FC<CharacterDetailSectionProps> = ({
 
 const styles = StyleSheet.create({
   section: {
-    gap: 10,
-    marginTop: 4,
+    gap: 5,
+    marginTop: 0,
     padding: 12,
     borderRadius: 14,
     backgroundColor: '#ffffffe6',

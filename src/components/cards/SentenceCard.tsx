@@ -11,6 +11,7 @@ interface SentenceCardProps {
   sentence: SentenceType;
   index?: number;
   searchQuery?: string;
+  highlightStyle?: import('react-native').StyleProp<import('react-native').TextStyle>;
   showPinyin?: boolean;
   showMeaning?: boolean;
   cardBg?: string;
@@ -21,13 +22,14 @@ interface SentenceCardProps {
   isSelectionMode?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
-  onOptionsPress?: () => void;
+  onOptionsPress?: (sentence: SentenceType) => void;
 }
 
 export const SentenceCard: React.FC<SentenceCardProps> = React.memo(({
   sentence,
   index,
   searchQuery,
+  highlightStyle,
   showPinyin = true,
   showMeaning = true,
   cardBg,
@@ -116,7 +118,7 @@ export const SentenceCard: React.FC<SentenceCardProps> = React.memo(({
               styles.playBtn,
               cardBg ? styles.whitePlayBtnBg : { backgroundColor: accentColor + '20' },
             ]}
-            onPress={onOptionsPress || onLongPress}
+            onPress={onOptionsPress ? () => onOptionsPress(sentence) : onLongPress}
             activeOpacity={0.7}
           >
             <Lucide
@@ -131,6 +133,7 @@ export const SentenceCard: React.FC<SentenceCardProps> = React.memo(({
       <HighlightedText
         text={sentence.content}
         highlight={searchQuery}
+        highlightStyle={highlightStyle}
         isCardBg={Boolean(cardBg)}
         style={[styles.chineseText, cardBg && styles.whiteText]}
       />
@@ -139,6 +142,7 @@ export const SentenceCard: React.FC<SentenceCardProps> = React.memo(({
         <HighlightedText
           text={sentence.pinyin}
           highlight={searchQuery}
+          highlightStyle={highlightStyle}
           isCardBg={Boolean(cardBg)}
           style={[styles.pinyinText, cardBg ? styles.whiteSubtext : styles.darkSubtext]}
         />
@@ -148,6 +152,7 @@ export const SentenceCard: React.FC<SentenceCardProps> = React.memo(({
         <HighlightedText
           text={sentence.meaning}
           highlight={searchQuery}
+          highlightStyle={highlightStyle}
           isCardBg={Boolean(cardBg)}
           style={[styles.meaningText, cardBg ? styles.whiteSubtext : styles.darkMeaning]}
         />

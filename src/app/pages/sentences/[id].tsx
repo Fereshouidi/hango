@@ -36,6 +36,7 @@ import {
   HeaderFilterButton,
 } from '@/components/common/CollapsibleControlBar';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { EmptyState } from '@/components/common/EmptyState';
 import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
 import { speakChineseText } from '@/utils/tts';
 
@@ -133,6 +134,8 @@ export default function SentencesScreen() {
     loadData();
     setTimeout(() => setRefreshing(false), 400);
   }, [loadData]);
+
+  const wideSearchHighlightStyle = searchQuery.trim() ? { color: '#ef4444', fontWeight: '700' as const } : undefined;
 
   const q = searchQuery.toLowerCase().trim();
   const filteredSentences = sentences.filter(
@@ -375,6 +378,7 @@ export default function SentencesScreen() {
                 sentence={sentence}
                 index={index}
                 searchQuery={searchQuery}
+                highlightStyle={wideSearchHighlightStyle}
                 showPinyin={showPinyin}
                 showMeaning={showMeaning}
                 cardBg={randomColors[index % randomColors.length]}
@@ -390,10 +394,13 @@ export default function SentencesScreen() {
             <LoadMoreFooter currentCount={displayedSentences.length} totalCount={filteredSentences.length} pageSize={PAGE_SIZE} accentColor="#8b5cf6" itemLabel="sentences" onLoadMore={handleLoadMore} />
           </>
         ) : (
-          <View style={styles.emptyContainer}>
-            <Lucide name="message-square-text" size={40} color="#cbd5e1" />
-            <ThemedText style={styles.emptyText}>{searchQuery ? 'No matching sentences found' : activeFilterLabel ? `No sentences found for ${activeFilterLabel}` : 'No sentences available'}</ThemedText>
-          </View>
+          <EmptyState
+            type="sentences"
+            searchQuery={searchQuery}
+            onClearSearch={() => setSearchQuery('')}
+            filterLabel={activeFilterLabel || undefined}
+            onClearFilter={() => router.push('/pages/sentences/0?scope=global' as any)}
+          />
         )}
       </ScrollView>
 

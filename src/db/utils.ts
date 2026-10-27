@@ -8,6 +8,7 @@ export function initDatabase() {
     createSettingsTable();
     createHSKTable();
     createLessonTable();
+    ensureLessonHskIdNullable();
     createTextTable();
     createSentencesTable();
     createWordsTable();
@@ -418,19 +419,153 @@ export const createLessonTable = () => {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             num INTEGER  NOT NULL,
             title TEXT UNIQUE NOT NULL,
-            hskId INTEGER NOT NULL,
+            hskId INTEGER,
             FOREIGN KEY (hskId) REFERENCES hsks(id)
         );
     `);
 };
 
-export const createLesson = (lesson: LessonType) => {
+export const ensureLessonHskIdNullable = () => {
+    try {
+        const columns = db.getAllSync<{ name: string; notnull: number }>(`PRAGMA table_info(lessons)`);
+        const hskCol = columns.find((c) => c.name === 'hskId');
+        if (hskCol && hskCol.notnull === 1) {
+            db.withTransactionSync(() => {
+                db.execSync(`
+                    CREATE TABLE IF NOT EXISTS lessons_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        num INTEGER NOT NULL,
+                        title TEXT UNIQUE NOT NULL,
+                        hskId INTEGER,
+                        FOREIGN KEY (hskId) REFERENCES hsks(id)
+                    );
+                    INSERT INTO lessons_new (id, num, title, hskId)
+                    SELECT id, num, title, hskId FROM lessons;
+                    DROP TABLE lessons;
+                    ALTER TABLE lessons_new RENAME TO lessons;
+                `);
+            });
+        }
+    } catch (e) {
+        console.warn('ensureLessonHskIdNullable warning:', e);
+    }
+};
+
+export const createLesson = (lesson: { num: number; title: string; hskId?: number | null }) => {
     db.runSync(
         `INSERT INTO lessons (num, title, hskId) VALUES (?, ?, ?)`,
         lesson.num,
         lesson.title,
-        lesson.hskId
+        lesson.hskId ?? null
     );
+};
+
+export const updateLesson = (
+    id: number,
+    lesson: { num?: number; title?: string; hskId?: number | null }
+) => {
+    if (lesson.hskId !== undefined) {
+        return db.runSync(
+            `UPDATE lessons 
+             SET num = COALESCE(?, num),
+                 title = COALESCE(?, title),
+                 hskId = ?
+             WHERE id = ?`,
+            lesson.num ?? null,
+            lesson.title ?? null,
+            lesson.hskId,
+            id
+        );
+    }
+    return db.runSync(
+        `UPDATE lessons 
+         SET num = COALESCE(?, num),
+             title = COALESCE(?, title)
+         WHERE id = ?`,
+        lesson.num ?? null,
+        lesson.title ?? null,
+        id
+    );
+};
+
+export const updateLessonRelations = (
+    lessonId: number,
+    relations: {
+        hskId?: number | null;
+        textIds?: number[];
+        sentenceIds?: number[];
+        wordIds?: number[];
+        characterIds?: number[];
+        ruleIds?: number[];
+    }
+) => {
+    const targetHskId = relations.hskId ?? null;
+
+    if (relations.textIds !== undefined) {
+        if (relations.textIds.length > 0) {
+            const placeholders = relations.textIds.map(() => '?').join(',');
+            db.runSync(`UPDATE texts SET lessonId = NULL WHERE lessonId = ? AND id NOT IN (${placeholders})`, lessonId, ...relations.textIds);
+            for (const textId of relations.textIds) {
+                db.runSync(`UPDATE texts SET lessonId = ?, hskId = COALESCE(?, hskId) WHERE id = ?`, lessonId, targetHskId, textId);
+            }
+        } else {
+            db.runSync(`UPDATE texts SET lessonId = NULL WHERE lessonId = ?`, lessonId);
+        }
+    }
+
+    if (relations.sentenceIds !== undefined) {
+        if (relations.sentenceIds.length > 0) {
+            const placeholders = relations.sentenceIds.map(() => '?').join(',');
+            db.runSync(`UPDATE sentences SET lessonId = NULL WHERE lessonId = ? AND id NOT IN (${placeholders})`, lessonId, ...relations.sentenceIds);
+            for (const sentenceId of relations.sentenceIds) {
+                db.runSync(`UPDATE sentences SET lessonId = ?, hskId = COALESCE(?, hskId) WHERE id = ?`, lessonId, targetHskId, sentenceId);
+            }
+        } else {
+            db.runSync(`UPDATE sentences SET lessonId = NULL WHERE lessonId = ?`, lessonId);
+        }
+    }
+
+    if (relations.wordIds !== undefined) {
+        db.runSync(`DELETE FROM word_lessons WHERE lessonId = ?`, lessonId);
+        if (relations.wordIds.length > 0) {
+            const placeholders = relations.wordIds.map(() => '?').join(',');
+            db.runSync(`UPDATE words SET lessonId = NULL WHERE lessonId = ? AND id NOT IN (${placeholders})`, lessonId, ...relations.wordIds);
+            for (const wordId of relations.wordIds) {
+                db.runSync(`INSERT OR IGNORE INTO word_lessons (wordId, lessonId) VALUES (?, ?)`, wordId, lessonId);
+                db.runSync(`UPDATE words SET lessonId = COALESCE(lessonId, ?), hskId = COALESCE(?, hskId) WHERE id = ?`, lessonId, targetHskId, wordId);
+            }
+        } else {
+            db.runSync(`UPDATE words SET lessonId = NULL WHERE lessonId = ?`, lessonId);
+        }
+    }
+
+    if (relations.characterIds !== undefined) {
+        db.runSync(`DELETE FROM character_lessons WHERE lessonId = ?`, lessonId);
+        if (relations.characterIds.length > 0) {
+            const placeholders = relations.characterIds.map(() => '?').join(',');
+            db.runSync(`UPDATE characters SET lessonId = NULL WHERE lessonId = ? AND id NOT IN (${placeholders})`, lessonId, ...relations.characterIds);
+            for (const characterId of relations.characterIds) {
+                db.runSync(`INSERT OR IGNORE INTO character_lessons (characterId, lessonId) VALUES (?, ?)`, characterId, lessonId);
+                db.runSync(`UPDATE characters SET lessonId = COALESCE(lessonId, ?), hskId = COALESCE(?, hskId) WHERE id = ?`, lessonId, targetHskId, characterId);
+            }
+        } else {
+            db.runSync(`UPDATE characters SET lessonId = NULL WHERE lessonId = ?`, lessonId);
+        }
+    }
+
+    if (relations.ruleIds !== undefined) {
+        db.runSync(`DELETE FROM rule_lessons WHERE lessonId = ?`, lessonId);
+        if (relations.ruleIds.length > 0) {
+            const placeholders = relations.ruleIds.map(() => '?').join(',');
+            db.runSync(`UPDATE rules SET lessonId = NULL WHERE lessonId = ? AND id NOT IN (${placeholders})`, lessonId, ...relations.ruleIds);
+            for (const ruleId of relations.ruleIds) {
+                db.runSync(`INSERT OR IGNORE INTO rule_lessons (ruleId, lessonId) VALUES (?, ?)`, ruleId, lessonId);
+                db.runSync(`UPDATE rules SET lessonId = COALESCE(lessonId, ?), hskId = COALESCE(?, hskId) WHERE id = ?`, lessonId, targetHskId, ruleId);
+            }
+        } else {
+            db.runSync(`UPDATE rules SET lessonId = NULL WHERE lessonId = ?`, lessonId);
+        }
+    }
 };
 
 export const getAllLessons = (limit?: number, offset: number = 0) => {
@@ -2138,3 +2273,158 @@ export const deleteHSKs = (ids: number[]) => {
     const placeholders = ids.map(() => '?').join(',');
     return db.runSync(`DELETE FROM hsks WHERE id IN (${placeholders})`, ...ids);
 };
+
+// --------- Unlink entity helpers ---------
+
+export const unlinkTextFromLesson = (textId: number, lessonId: number) => {
+    return db.runSync(`UPDATE texts SET lessonId = NULL WHERE id = ? AND lessonId = ?`, textId, lessonId);
+};
+
+export const unlinkSentenceFromLesson = (sentenceId: number, lessonId: number) => {
+    return db.runSync(`UPDATE sentences SET lessonId = NULL WHERE id = ? AND lessonId = ?`, sentenceId, lessonId);
+};
+
+export const unlinkWordFromLesson = (wordId: number, lessonId: number) => {
+    db.runSync(`DELETE FROM word_lessons WHERE wordId = ? AND lessonId = ?`, wordId, lessonId);
+    return db.runSync(`UPDATE words SET lessonId = NULL WHERE id = ? AND lessonId = ?`, wordId, lessonId);
+};
+
+export const unlinkCharacterFromLesson = (characterId: number, lessonId: number) => {
+    db.runSync(`DELETE FROM character_lessons WHERE characterId = ? AND lessonId = ?`, characterId, lessonId);
+    return db.runSync(`UPDATE characters SET lessonId = NULL WHERE id = ? AND lessonId = ?`, characterId, lessonId);
+};
+
+export const unlinkRuleFromLesson = (ruleId: number, lessonId: number) => {
+    db.runSync(`DELETE FROM rule_lessons WHERE ruleId = ? AND lessonId = ?`, ruleId, lessonId);
+    return db.runSync(`UPDATE rules SET lessonId = NULL WHERE id = ? AND lessonId = ?`, ruleId, lessonId);
+};
+
+export const unlinkSentenceFromText = (sentenceId: number, textId: number) => {
+    db.runSync(`DELETE FROM text_sentences WHERE sentenceId = ? AND textId = ?`, sentenceId, textId);
+    return db.runSync(`UPDATE sentences SET textId = NULL WHERE id = ? AND textId = ?`, sentenceId, textId);
+};
+
+export const unlinkWordFromText = (wordId: number, textId: number) => {
+    db.runSync(`DELETE FROM word_texts WHERE wordId = ? AND textId = ?`, wordId, textId);
+    return db.runSync(`UPDATE words SET textId = NULL WHERE id = ? AND textId = ?`, wordId, textId);
+};
+
+export const unlinkCharacterFromText = (characterId: number, textId: number) => {
+    db.runSync(`DELETE FROM character_texts WHERE characterId = ? AND textId = ?`, characterId, textId);
+    return db.runSync(`UPDATE characters SET textId = NULL WHERE id = ? AND textId = ?`, characterId, textId);
+};
+
+export const unlinkRuleFromText = (ruleId: number, textId: number) => {
+    db.runSync(`DELETE FROM rule_texts WHERE ruleId = ? AND textId = ?`, ruleId, textId);
+    return db.runSync(`UPDATE rules SET textId = NULL WHERE id = ? AND textId = ?`, ruleId, textId);
+};
+
+export const unlinkTextFromSentence = (textId: number, sentenceId: number) => {
+    db.runSync(`DELETE FROM text_sentences WHERE textId = ? AND sentenceId = ?`, textId, sentenceId);
+    return db.runSync(`UPDATE sentences SET textId = NULL WHERE id = ? AND textId = ?`, sentenceId, textId);
+};
+
+export const unlinkWordFromSentence = (wordId: number, sentenceId: number) => {
+    db.runSync(`DELETE FROM word_sentences WHERE wordId = ? AND sentenceId = ?`, wordId, sentenceId);
+    return db.runSync(`UPDATE words SET sentenceId = NULL WHERE id = ? AND sentenceId = ?`, wordId, sentenceId);
+};
+
+export const unlinkCharacterFromSentence = (characterId: number, sentenceId: number) => {
+    db.runSync(`DELETE FROM character_sentences WHERE characterId = ? AND sentenceId = ?`, characterId, sentenceId);
+    return db.runSync(`UPDATE characters SET sentenceId = NULL WHERE id = ? AND sentenceId = ?`, characterId, sentenceId);
+};
+
+export const unlinkRuleFromSentence = (ruleId: number, sentenceId: number) => {
+    db.runSync(`DELETE FROM rule_sentences WHERE ruleId = ? AND sentenceId = ?`, ruleId, sentenceId);
+    return db.runSync(`UPDATE rules SET sentenceId = NULL WHERE id = ? AND sentenceId = ?`, ruleId, sentenceId);
+};
+
+export const unlinkCharacterFromWord = (characterId: number, wordId: number) => {
+    db.runSync(`DELETE FROM word_characters WHERE characterId = ? AND wordId = ?`, characterId, wordId);
+    db.runSync(`DELETE FROM character_words WHERE characterId = ? AND wordId = ?`, characterId, wordId);
+    return db.runSync(`UPDATE characters SET wordId = NULL WHERE id = ? AND wordId = ?`, characterId, wordId);
+};
+
+export const unlinkSentenceFromWord = (sentenceId: number, wordId: number) => {
+    db.runSync(`DELETE FROM word_sentences WHERE wordId = ? AND sentenceId = ?`, wordId, sentenceId);
+    return db.runSync(`UPDATE words SET sentenceId = NULL WHERE id = ? AND sentenceId = ?`, wordId, sentenceId);
+};
+
+export const unlinkTextFromWord = (textId: number, wordId: number) => {
+    db.runSync(`DELETE FROM word_texts WHERE wordId = ? AND textId = ?`, wordId, textId);
+    return db.runSync(`UPDATE words SET textId = NULL WHERE id = ? AND textId = ?`, wordId, textId);
+};
+
+export const unlinkRuleFromWord = (ruleId: number, wordId: number) => {
+    db.runSync(`DELETE FROM word_rules WHERE wordId = ? AND ruleId = ?`, wordId, ruleId);
+    db.runSync(`DELETE FROM rule_words WHERE wordId = ? AND ruleId = ?`, wordId, ruleId);
+    return db.runSync(`UPDATE rules SET wordId = NULL WHERE id = ? AND wordId = ?`, ruleId, wordId);
+};
+
+export const unlinkWordFromCharacter = (wordId: number, characterId: number) => {
+    db.runSync(`DELETE FROM word_characters WHERE characterId = ? AND wordId = ?`, characterId, wordId);
+    db.runSync(`DELETE FROM character_words WHERE characterId = ? AND wordId = ?`, characterId, wordId);
+    return db.runSync(`UPDATE characters SET wordId = NULL WHERE id = ? AND wordId = ?`, characterId, wordId);
+};
+
+export const unlinkSentenceFromCharacter = (sentenceId: number, characterId: number) => {
+    db.runSync(`DELETE FROM character_sentences WHERE characterId = ? AND sentenceId = ?`, characterId, sentenceId);
+    return db.runSync(`UPDATE characters SET sentenceId = NULL WHERE id = ? AND sentenceId = ?`, characterId, sentenceId);
+};
+
+export const unlinkTextFromCharacter = (textId: number, characterId: number) => {
+    db.runSync(`DELETE FROM character_texts WHERE characterId = ? AND textId = ?`, characterId, textId);
+    return db.runSync(`UPDATE characters SET textId = NULL WHERE id = ? AND textId = ?`, characterId, textId);
+};
+
+export const unlinkRuleFromCharacter = (ruleId: number, characterId: number) => {
+    return db.runSync(`DELETE FROM rule_characters WHERE characterId = ? AND ruleId = ?`, characterId, ruleId);
+};
+
+export const unlinkCharacterFromRule = (characterId: number, ruleId: number) => {
+    return db.runSync(`DELETE FROM rule_characters WHERE characterId = ? AND ruleId = ?`, characterId, ruleId);
+};
+
+export const unlinkWordFromRule = (wordId: number, ruleId: number) => {
+    db.runSync(`DELETE FROM rule_words WHERE wordId = ? AND ruleId = ?`, wordId, ruleId);
+    db.runSync(`DELETE FROM word_rules WHERE wordId = ? AND ruleId = ?`, wordId, ruleId);
+    return db.runSync(`UPDATE rules SET wordId = NULL WHERE id = ? AND wordId = ?`, ruleId, wordId);
+};
+
+export const unlinkSentenceFromRule = (sentenceId: number, ruleId: number) => {
+    db.runSync(`DELETE FROM rule_sentences WHERE ruleId = ? AND sentenceId = ?`, ruleId, sentenceId);
+    return db.runSync(`UPDATE rules SET sentenceId = NULL WHERE id = ? AND sentenceId = ?`, ruleId, sentenceId);
+};
+
+export const unlinkTextFromRule = (textId: number, ruleId: number) => {
+    db.runSync(`DELETE FROM rule_texts WHERE ruleId = ? AND textId = ?`, ruleId, textId);
+    return db.runSync(`UPDATE rules SET textId = NULL WHERE id = ? AND textId = ?`, ruleId, textId);
+};
+
+export const unlinkLessonFromHSK = (lessonId: number, hskId: number) => {
+    return db.runSync(`UPDATE lessons SET hskId = NULL WHERE id = ? AND hskId = ?`, lessonId, hskId);
+};
+
+export const unlinkTextFromHSK = (textId: number, hskId: number) => {
+    return db.runSync(`UPDATE texts SET hskId = NULL WHERE id = ? AND hskId = ?`, textId, hskId);
+};
+
+export const unlinkSentenceFromHSK = (sentenceId: number, hskId: number) => {
+    return db.runSync(`UPDATE sentences SET hskId = NULL WHERE id = ? AND hskId = ?`, sentenceId, hskId);
+};
+
+export const unlinkWordFromHSK = (wordId: number, hskId: number) => {
+    db.runSync(`DELETE FROM word_hsks WHERE wordId = ? AND hskId = ?`, wordId, hskId);
+    return db.runSync(`UPDATE words SET hskId = NULL WHERE id = ? AND hskId = ?`, wordId, hskId);
+};
+
+export const unlinkCharacterFromHSK = (characterId: number, hskId: number) => {
+    db.runSync(`DELETE FROM character_hsks WHERE characterId = ? AND hskId = ?`, characterId, hskId);
+    return db.runSync(`UPDATE characters SET hskId = NULL WHERE id = ? AND hskId = ?`, characterId, hskId);
+};
+
+export const unlinkRuleFromHSK = (ruleId: number, hskId: number) => {
+    db.runSync(`DELETE FROM rule_hsks WHERE ruleId = ? AND hskId = ?`, ruleId, hskId);
+    return db.runSync(`UPDATE rules SET hskId = NULL WHERE id = ? AND hskId = ?`, ruleId, hskId);
+};
+

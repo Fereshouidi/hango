@@ -180,7 +180,7 @@ export function Paywall({
         </TouchableOpacity>
 
         <Text style={styles.priceHint}>
-          From 3.2 DT / month • Pay with D17, Ooredoo, or Payeer
+          From 3.2 DT / month • Pay with D17, Ooredoo, Payeer, or USDT
         </Text>
       </View>
     </View>

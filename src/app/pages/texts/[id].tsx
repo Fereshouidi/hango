@@ -41,6 +41,7 @@ import {
   HeaderFilterButton,
 } from '@/components/common/CollapsibleControlBar';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { EmptyState } from '@/components/common/EmptyState';
 import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
 import { speakChineseText } from '@/utils/tts';
 
@@ -167,6 +168,8 @@ export default function TextsScreen() {
       setRefreshing(false);
     }, 400);
   }, [loadData]);
+
+  const wideSearchHighlightStyle = searchQuery.trim() ? { color: '#ef4444', fontWeight: '700' as const } : undefined;
 
   const q = searchQuery.toLowerCase().trim();
   const filteredTexts = texts.filter(
@@ -436,6 +439,7 @@ export default function TextsScreen() {
                   textObj={textItem}
                   index={index}
                   searchQuery={searchQuery}
+                  highlightStyle={wideSearchHighlightStyle}
                   showPinyin={showPinyin}
                   showMeaning={showMeaning}
                   cardBg={cardBg}
@@ -460,16 +464,13 @@ export default function TextsScreen() {
             />
           </>
         ) : (
-          <View style={styles.emptyContainer}>
-            <Lucide name="file-text" size={40} color="#cbd5e1" />
-            <ThemedText style={styles.emptyText}>
-              {searchQuery
-                ? 'No matching text passages found'
-                : activeFilterLabel
-                ? `No texts found for ${activeFilterLabel}`
-                : 'No reading texts available'}
-            </ThemedText>
-          </View>
+          <EmptyState
+            type="texts"
+            searchQuery={searchQuery}
+            onClearSearch={() => setSearchQuery('')}
+            filterLabel={activeFilterLabel || undefined}
+            onClearFilter={() => router.push('/pages/texts/0?scope=global' as any)}
+          />
         )}
       </ScrollView>
 

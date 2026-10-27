@@ -1,12 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
 import { HSKType, LessonType } from '@/types';
 import { FilterScope } from '../types';
 
 interface FilterBarProps {
-  filterScope: FilterScope;
-  onScopeChange: (scope: FilterScope) => void;
+  filterScope?: FilterScope;
+  onScopeChange?: (scope: FilterScope) => void;
   selectedHskId: number | null;
   onSelectHskId: (id: number | null) => void;
   selectedLessonId: number | null;
@@ -19,8 +19,6 @@ interface FilterBarProps {
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
-  filterScope,
-  onScopeChange,
   selectedHskId,
   onSelectHskId,
   selectedLessonId,
@@ -31,102 +29,153 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   hskCounts = {},
   lessonCounts = {},
 }) => {
+  const selectedHsk = useMemo(() => {
+    return allHsks.find((h) => h.id === selectedHskId) || null;
+  }, [allHsks, selectedHskId]);
+
+  const visibleLessons = useMemo(() => {
+    if (selectedHskId === null) return allLessons;
+    return allLessons.filter((l) => l.hskId === selectedHskId);
+  }, [allLessons, selectedHskId]);
+
+  const activeHskCount = useMemo(() => {
+    if (selectedHskId === null) return totalCharactersCount;
+    return hskCounts[selectedHskId] ?? 0;
+  }, [selectedHskId, totalCharactersCount, hskCounts]);
+
   return (
     <View style={styles.card}>
-      {/* Scope toggle */}
-      <View style={styles.scopeRow}>
-        <TouchableOpacity
-          style={[styles.scopeBtn, filterScope === 'hsk' && styles.scopeBtnActive]}
-          onPress={() => onScopeChange('hsk')}
-          activeOpacity={0.7}
-        >
-          <Lucide name="layers" size={12} color={filterScope === 'hsk' ? '#fff' : '#64748b'} />
-          <Text style={[styles.scopeBtnText, filterScope === 'hsk' && styles.scopeBtnTextActive]}>
-            HSK Level
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.scopeBtn, filterScope === 'lesson' && styles.scopeBtnActive]}
-          onPress={() => onScopeChange('lesson')}
-          activeOpacity={0.7}
-        >
-          <Lucide name="book-open" size={12} color={filterScope === 'lesson' ? '#fff' : '#64748b'} />
-          <Text style={[styles.scopeBtnText, filterScope === 'lesson' && styles.scopeBtnTextActive]}>
-            Lesson
-          </Text>
-        </TouchableOpacity>
+      {/* ── 1. HSK LEVEL SELECTOR ── */}
+      <View style={styles.headerRow}>
+        <View style={styles.headerTitleRow}>
+          <View style={[styles.iconCircle, { backgroundColor: '#f5f3ff' }]}>
+            <Lucide name="layers" size={13} color="#8b5cf6" />
+          </View>
+          <Text style={styles.headerTitle}>HSK Level</Text>
+        </View>
+        <Text style={styles.headerSubtitle}>
+          {selectedHsk ? `${selectedHsk.name} (${activeHskCount})` : `All Levels (${totalCharactersCount})`}
+        </Text>
       </View>
 
-      {/* Filter chips with clear character counts */}
-      {filterScope === 'hsk' ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsRow}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipsRow}
+      >
+        <TouchableOpacity
+          style={[styles.chip, selectedHskId === null && styles.chipActive]}
+          onPress={() => {
+            onSelectHskId(null);
+            onSelectLessonId(null);
+          }}
+          activeOpacity={0.7}
         >
-          <TouchableOpacity
-            style={[styles.chip, selectedHskId === null && styles.chipActive]}
-            onPress={() => onSelectHskId(null)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.chipText, selectedHskId === null && styles.chipTextActive]}>
-              All ({totalCharactersCount})
-            </Text>
-          </TouchableOpacity>
+          {selectedHskId === null && (
+            <Lucide name="check" size={11} color="#ffffff" style={{ marginRight: 3 }} />
+          )}
+          <Text style={[styles.chipText, selectedHskId === null && styles.chipTextActive]}>
+            All ({totalCharactersCount})
+          </Text>
+        </TouchableOpacity>
 
-          {allHsks.map((h) => {
-            const count = hskCounts[h.id] ?? 0;
-            return (
-              <TouchableOpacity
-                key={`hsk-${h.id}`}
-                style={[styles.chip, selectedHskId === h.id && styles.chipActive]}
-                onPress={() => onSelectHskId(selectedHskId === h.id ? null : h.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.chipText, selectedHskId === h.id && styles.chipTextActive]}>
-                  {h.name} ({count})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsRow}
+        {allHsks.map((h) => {
+          const count = hskCounts[h.id] ?? 0;
+          const isSelected = selectedHskId === h.id;
+          return (
+            <TouchableOpacity
+              key={`hsk-${h.id}`}
+              style={[styles.chip, isSelected && styles.chipActive]}
+              onPress={() => {
+                const nextId = isSelected ? null : h.id;
+                onSelectHskId(nextId);
+                onSelectLessonId(null);
+              }}
+              activeOpacity={0.7}
+            >
+              {isSelected && (
+                <Lucide name="check" size={11} color="#ffffff" style={{ marginRight: 3 }} />
+              )}
+              <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                {h.name} ({count})
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* ── 2. LESSONS SELECTOR (Filtered inside chosen HSK) ── */}
+      <View style={[styles.headerRow, { marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#f1f5f9' }]}>
+        <View style={styles.headerTitleRow}>
+          <View style={[styles.iconCircle, { backgroundColor: '#f0fdf4' }]}>
+            <Lucide name="book-open" size={13} color="#059669" />
+          </View>
+          <Text style={styles.headerTitle}>
+            {selectedHsk ? `${selectedHsk.name} Lessons` : 'Lessons'}
+          </Text>
+        </View>
+        <Text style={styles.headerSubtitle}>
+          {visibleLessons.length} {visibleLessons.length === 1 ? 'lesson' : 'lessons'}
+        </Text>
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipsRow}
+      >
+        <TouchableOpacity
+          style={[
+            styles.chip,
+            styles.lessonChip,
+            selectedLessonId === null && styles.lessonChipActive,
+          ]}
+          onPress={() => onSelectLessonId(null)}
+          activeOpacity={0.7}
         >
-          <TouchableOpacity
-            style={[styles.chip, selectedLessonId === null && styles.chipActive]}
-            onPress={() => onSelectLessonId(null)}
-            activeOpacity={0.7}
+          {selectedLessonId === null && (
+            <Lucide name="check" size={11} color="#ffffff" style={{ marginRight: 3 }} />
+          )}
+          <Text
+            style={[
+              styles.chipText,
+              selectedLessonId === null && styles.chipTextActive,
+            ]}
           >
-            <Text style={[styles.chipText, selectedLessonId === null && styles.chipTextActive]}>
-              All ({totalCharactersCount})
-            </Text>
-          </TouchableOpacity>
+            {selectedHsk ? `All ${selectedHsk.name} (${activeHskCount})` : `All Lessons (${totalCharactersCount})`}
+          </Text>
+        </TouchableOpacity>
 
-          {allLessons.map((l) => {
-            const count = lessonCounts[l.id] ?? 0;
-            return (
-              <TouchableOpacity
-                key={`lesson-${l.id}`}
-                style={[styles.chip, selectedLessonId === l.id && styles.chipActive]}
-                onPress={() => onSelectLessonId(selectedLessonId === l.id ? null : l.id)}
-                activeOpacity={0.7}
+        {visibleLessons.map((l) => {
+          const count = lessonCounts[l.id] ?? 0;
+          const isSelected = selectedLessonId === l.id;
+          return (
+            <TouchableOpacity
+              key={`lesson-${l.id}`}
+              style={[
+                styles.chip,
+                styles.lessonChip,
+                isSelected && styles.lessonChipActive,
+              ]}
+              onPress={() => onSelectLessonId(isSelected ? null : l.id)}
+              activeOpacity={0.7}
+            >
+              {isSelected && (
+                <Lucide name="check" size={11} color="#ffffff" style={{ marginRight: 3 }} />
+              )}
+              <Text
+                style={[
+                  styles.chipText,
+                  isSelected && styles.chipTextActive,
+                ]}
+                numberOfLines={1}
               >
-                <Text
-                  style={[styles.chipText, selectedLessonId === l.id && styles.chipTextActive]}
-                  numberOfLines={1}
-                >
-                  L{l.num}: {l.title} ({count})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
+                L{l.num}: {l.title} ({count})
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 };
@@ -138,46 +187,50 @@ const styles = StyleSheet.create({
     padding: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    gap: 8,
+    gap: 6,
     shadowColor: '#0f172a',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
   },
-  scopeRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  scopeBtn: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+    marginBottom: 2,
   },
-  scopeBtnActive: {
-    backgroundColor: '#8b5cf6',
-    borderColor: '#7c3aed',
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  scopeBtnText: {
-    fontSize: 12,
+  iconCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  headerSubtitle: {
+    fontSize: 11,
     fontWeight: '600',
     color: '#64748b',
-  },
-  scopeBtnTextActive: {
-    color: '#fff',
   },
   chipsRow: {
     gap: 6,
     paddingVertical: 2,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 4.5,
     borderRadius: 12,
     backgroundColor: '#f8fafc',
     borderWidth: 1,
@@ -186,6 +239,13 @@ const styles = StyleSheet.create({
   chipActive: {
     backgroundColor: '#8b5cf6',
     borderColor: '#7c3aed',
+  },
+  lessonChip: {
+    borderColor: '#e2e8f0',
+  },
+  lessonChipActive: {
+    backgroundColor: '#059669',
+    borderColor: '#047857',
   },
   chipText: {
     fontSize: 11,

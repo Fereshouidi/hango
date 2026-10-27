@@ -5,6 +5,7 @@ import { WordCard } from '@/components/cards/WordCard';
 import { CategoryTabType } from '@/components/common/CategoryTabs';
 import { DetailControlPanel } from '@/components/common/DetailControlPanel';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { OptionsMenuModal, OptionItem } from '@/components/common/OptionsMenuModal';
 import { ViewAllButton } from '@/components/common/ViewAllButton';
 import { CharacterDetailSection } from '@/components/details/CharacterDetailSection';
 import { CharacterHeroCard } from '@/components/details/CharacterHeroCard';
@@ -12,6 +13,10 @@ import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
 import { ThemedView } from '@/components/themed-view';
 import {
+  deleteRule,
+  deleteSentence,
+  deleteText,
+  deleteWord,
   getAllRules,
   getAllSentences,
   getAllTexts,
@@ -25,6 +30,10 @@ import {
   getSentencesByCharacterId,
   getTextsByCharacterId,
   getWordsByCharacterId,
+  unlinkRuleFromCharacter,
+  unlinkSentenceFromCharacter,
+  unlinkTextFromCharacter,
+  unlinkWordFromCharacter,
 } from '@/db/utils';
 import {
   CharacterType,
@@ -40,6 +49,7 @@ import Lucide from '@react-native-vector-icons/lucide';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -48,7 +58,7 @@ import {
   View,
 } from 'react-native';
 
-const ITEM_LIMIT = 4;
+const ITEM_LIMIT = 3;
 const PAGE_SIZE = 10;
 
 const toneColors: Record<string, string> = {
@@ -94,6 +104,113 @@ const CharacterDetails = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Options Menu state
+  const [activeItem, setActiveItem] = useState<{
+    type: 'text' | 'word' | 'sentence' | 'rule';
+    item: any;
+  } | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const handleOpenOptions = (
+    type: 'text' | 'word' | 'sentence' | 'rule',
+    item: any
+  ) => {
+    setActiveItem({ type, item });
+    setMenuVisible(true);
+  };
+
+  const buildMenuOptions = (): OptionItem[] => {
+    if (!activeItem || !activeItem.item) return [];
+    const { type, item } = activeItem;
+    const typeLabel =
+      type === 'text'
+        ? 'Text'
+        : type === 'word'
+        ? 'Word'
+        : type === 'sentence'
+        ? 'Sentence'
+        : 'Rule';
+
+    return [
+      {
+        id: 'view',
+        label: 'View Details',
+        iconName: 'external-link',
+        color: '#ec4899',
+        onPress: () => {
+          setMenuVisible(false);
+          setActiveItem(null);
+          if (type === 'text') router.push(`/pages/textDetails/${item.id}` as any);
+          else if (type === 'word') router.push(`/pages/wordDetails/${item.id}` as any);
+          else if (type === 'sentence') router.push(`/pages/sentenceDetails/${item.id}` as any);
+          else if (type === 'rule') router.push(`/pages/ruleDetails/${item.id}` as any);
+        },
+      },
+      {
+        id: 'remove',
+        label: `Remove from Character`,
+        iconName: 'minus-circle',
+        color: '#ef4444',
+        destructive: true,
+        onPress: () => {
+          Alert.alert(
+            'Remove from Character',
+            `Are you sure you want to remove this ${typeLabel.toLowerCase()} from "${character?.content || ''}"?`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Remove',
+                style: 'destructive',
+                onPress: () => {
+                  try {
+                    if (type === 'text') unlinkTextFromCharacter(item.id, characterId);
+                    else if (type === 'word') unlinkWordFromCharacter(item.id, characterId);
+                    else if (type === 'sentence') unlinkSentenceFromCharacter(item.id, characterId);
+                    else if (type === 'rule') unlinkRuleFromCharacter(item.id, characterId);
+                    loadData();
+                  } catch (e) {
+                    Alert.alert('Error', 'Failed to remove item from character.');
+                  }
+                },
+              },
+            ]
+          );
+        },
+      },
+      {
+        id: 'delete',
+        label: `Delete ${typeLabel} Permanently`,
+        iconName: 'trash-2',
+        color: '#dc2626',
+        destructive: true,
+        onPress: () => {
+          Alert.alert(
+            `Delete ${typeLabel}`,
+            `Are you sure you want to permanently delete this ${typeLabel.toLowerCase()}? This cannot be undone.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => {
+                  try {
+                    if (type === 'text') deleteText(item.id);
+                    else if (type === 'word') deleteWord(item.id);
+                    else if (type === 'sentence') deleteSentence(item.id);
+                    else if (type === 'rule') deleteRule(item.id);
+                    loadData();
+                  } catch (e) {
+                    Alert.alert('Error', `Failed to delete ${typeLabel.toLowerCase()}.`);
+                  }
+                },
+              },
+            ]
+          );
+        },
+      },
+    ];
+  };
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -183,6 +300,16 @@ const CharacterDetails = () => {
   const q = searchQuery.toLowerCase().trim();
   const toneColor = toneColors[character?.tone || '5'] || '#ec4899';
   const charSymbol = character?.content?.trim() || '';
+  const effectiveHighlight = searchQuery.trim() || charSymbol;
+  const wideSearchHighlightStyle = effectiveHighlight
+    ? {
+        backgroundColor: '#fee2e2',
+        color: '#ef4444',
+        fontWeight: '800' as const,
+        borderRadius: 4,
+        paddingHorizontal: 2,
+      }
+    : undefined;
 
   const matchesItem = (
     content: string = '',
@@ -253,7 +380,7 @@ const CharacterDetails = () => {
             activeOpacity={0.7}
             style={styles.headerIconBtn}
           >
-            <Lucide name="pencil-line" size={18} color="#64748b" />
+            <Lucide name="pencil-line" size={18} color="#1e293b" />
           </TouchableOpacity>,
           <TouchableOpacity
             key="edit"
@@ -261,7 +388,7 @@ const CharacterDetails = () => {
             activeOpacity={0.7}
             style={styles.headerIconBtn}
           >
-            <Lucide name="pencil" size={18} color="#64748b" />
+            <Lucide name="pencil" size={18} color="#1e293b" />
           </TouchableOpacity>,
           <TouchableOpacity
             key="add"
@@ -269,7 +396,7 @@ const CharacterDetails = () => {
             activeOpacity={0.7}
             style={styles.headerIconBtn}
           >
-            <Lucide name="plus" size={18} color="#64748b" />
+            <Lucide name="plus" size={18} color="#1e293b" />
           </TouchableOpacity>,
         ]}
       />
@@ -352,10 +479,12 @@ const CharacterDetails = () => {
                 showMeaning={showMeaning}
                 isPlaying={playingItemId === `text-${textObj.id}`}
                 onPlayAudio={(id, content) => playItemAudio(id, content, `text-${id}`)}
-                searchQuery={searchQuery}
+                searchQuery={effectiveHighlight}
+                highlightStyle={wideSearchHighlightStyle}
+                onOptionsPress={(item) => handleOpenOptions('text', item)}
               />
             ))}
-            {activeTab === 'all' && filteredTexts.length > ITEM_LIMIT && (
+            {activeTab === 'all' && filteredTexts.length > 0 && (
               <ViewAllButton
                 count={filteredTexts.length}
                 label="Reading Texts"
@@ -366,7 +495,7 @@ const CharacterDetails = () => {
                     params: {
                       characterId,
                       scope: searchScope,
-                      search: searchQuery,
+                      search: effectiveHighlight,
                     },
                   } as any)
                 }
@@ -397,20 +526,23 @@ const CharacterDetails = () => {
             emptyLabel="No vocabulary words linked yet"
           >
             <View style={styles.wordsGrid}>
-              {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((word, idx) => (
+              {filteredWords.slice(0, activeTab === 'all' ? ITEM_LIMIT + 1 : visibleCount).map((word, idx) => (
                 // <View key={word.id || idx} style={{ width: '48.5%' }}>
                 <WordCard
+                  key={word.id || idx}
                   word={word}
                   showPinyin={showPinyin}
                   showMeaning={showMeaning}
                   isPlaying={playingItemId === `word-${word.id}`}
                   onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
-                  searchQuery={searchQuery}
+                  searchQuery={effectiveHighlight}
+                  highlightStyle={wideSearchHighlightStyle}
+                  onOptionsPress={(item) => handleOpenOptions('word', item)}
                 />
                 // </View>
               ))}
             </View>
-            {activeTab === 'all' && filteredWords.length > ITEM_LIMIT && (
+            {activeTab === 'all' && filteredWords.length > 0 && (
               <ViewAllButton
                 count={filteredWords.length}
                 label="Vocabulary Words"
@@ -421,7 +553,7 @@ const CharacterDetails = () => {
                     params: {
                       characterId,
                       scope: searchScope,
-                      search: searchQuery,
+                      search: effectiveHighlight,
                     },
                   } as any)
                 }
@@ -460,10 +592,12 @@ const CharacterDetails = () => {
                 showMeaning={showMeaning}
                 isPlaying={playingItemId === `sentence-${sentence.id}`}
                 onPlayAudio={(id, content) => playItemAudio(id, content, `sentence-${id}`)}
-                searchQuery={searchQuery}
+                searchQuery={effectiveHighlight}
+                highlightStyle={wideSearchHighlightStyle}
+                onOptionsPress={(item) => handleOpenOptions('sentence', item)}
               />
             ))}
-            {activeTab === 'all' && filteredSentences.length > ITEM_LIMIT && (
+            {activeTab === 'all' && filteredSentences.length > 0 && (
               <ViewAllButton
                 count={filteredSentences.length}
                 label="Sentences"
@@ -474,7 +608,7 @@ const CharacterDetails = () => {
                     params: {
                       characterId,
                       scope: searchScope,
-                      search: searchQuery,
+                      search: effectiveHighlight,
                     },
                   } as any)
                 }
@@ -511,10 +645,12 @@ const CharacterDetails = () => {
                 index={idx}
                 isPlaying={playingItemId === `rule-${rule.id}`}
                 onPlayAudio={(id, content) => playItemAudio(id, content, `rule-${id}`)}
-                searchQuery={searchQuery}
+                searchQuery={effectiveHighlight}
+                highlightStyle={wideSearchHighlightStyle}
+                onOptionsPress={(item) => handleOpenOptions('rule', item)}
               />
             ))}
-            {activeTab === 'all' && filteredRules.length > ITEM_LIMIT && (
+            {activeTab === 'all' && filteredRules.length > 0 && (
               <ViewAllButton
                 count={filteredRules.length}
                 label="Grammar Points"
@@ -525,7 +661,7 @@ const CharacterDetails = () => {
                     params: {
                       characterId,
                       scope: searchScope,
-                      search: searchQuery,
+                      search: effectiveHighlight,
                     },
                   } as any)
                 }
@@ -559,6 +695,22 @@ const CharacterDetails = () => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <OptionsMenuModal
+        visible={menuVisible}
+        onClose={() => {
+          setMenuVisible(false);
+          setActiveItem(null);
+        }}
+        title={
+          activeItem?.item
+            ? activeItem.type === 'text'
+              ? activeItem.item.title || 'Text Options'
+              : `"${activeItem.item.content}" Options`
+            : 'Options'
+        }
+        options={buildMenuOptions()}
+      />
     </ThemedView>
   );
 };
@@ -572,14 +724,19 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#e8e8e8',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   headerIconBtnActive: {
     backgroundColor: '#fdf2f8',

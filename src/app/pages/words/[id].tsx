@@ -38,6 +38,7 @@ import {
   HeaderFilterButton,
 } from '@/components/common/CollapsibleControlBar';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { EmptyState } from '@/components/common/EmptyState';
 import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
 import { speakChineseText } from '@/utils/tts';
 
@@ -87,7 +88,7 @@ export default function WordsScreen() {
   // ── Pinch-to-zoom column control ──────────────────────────────────
   const MIN_COLS = 2;
   const MAX_COLS = 6;
-  const [numColumns, setNumColumns] = useState(4);
+  const [numColumns, setNumColumns] = useState(2);
   const numColumnsRef = useRef(numColumns);
   useEffect(() => {
     numColumnsRef.current = numColumns;
@@ -230,6 +231,8 @@ export default function WordsScreen() {
     }, 400);
   }, [loadData]);
 
+  const wideSearchHighlightStyle = searchQuery.trim() ? { color: '#ef4444', fontWeight: '700' as const } : undefined;
+
   const q = searchQuery.toLowerCase().trim();
   const filteredWords = words.filter(
     (w) =>
@@ -371,6 +374,7 @@ export default function WordsScreen() {
           index={index}
           numColumns={numColumns}
           searchQuery={searchQuery}
+          highlightStyle={wideSearchHighlightStyle}
           showPinyin={showPinyin}
           showMeaning={showMeaning}
           cardBg={cardBg}
@@ -387,6 +391,7 @@ export default function WordsScreen() {
     [
       numColumns,
       searchQuery,
+      wideSearchHighlightStyle,
       showPinyin,
       showMeaning,
       playingId,
@@ -664,16 +669,13 @@ export default function WordsScreen() {
             ) : null
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Lucide name="languages" size={40} color="#cbd5e1" />
-              <ThemedText style={styles.emptyText}>
-                {searchQuery
-                  ? 'No matching words found'
-                  : activeFilterLabel
-                  ? `No words found for ${activeFilterLabel}`
-                  : 'No vocabulary words available'}
-              </ThemedText>
-            </View>
+            <EmptyState
+              type="words"
+              searchQuery={searchQuery}
+              onClearSearch={() => setSearchQuery('')}
+              filterLabel={activeFilterLabel || undefined}
+              onClearFilter={() => router.push('/pages/words/0?scope=global' as any)}
+            />
           }
           initialNumToRender={20}
           maxToRenderPerBatch={20}

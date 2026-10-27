@@ -54,6 +54,14 @@ import {
 } from '@/components/add-lesson';
 import { usePagedSection } from '@/hooks/usePagedSection';
 import { SuccessBanner } from '@/components/banners';
+import { StudyTipCard } from '@/components/common/StudyTipCard';
+import { PinyinInputField } from '@/components/common/PinyinInputField';
+import { ScanOCRButton } from '@/components/common/ScanOCRButton';
+import { AutoTranslateButton } from '@/components/common/AutoTranslateButton';
+import { ScannedResult } from '@/services/ocrService';
+import { toPinyin } from '@/utils/pinyin';
+
+import { CollapsibleLinkingSection } from '@/components/common/CollapsibleLinkingSection';
 
 const SLIDER_PAGE_SIZE = 10;
 
@@ -73,6 +81,31 @@ const AddWord = () => {
   const [content, setContent] = useState('');
   const [pinyin, setPinyin] = useState('');
   const [meaning, setMeaning] = useState('');
+  const [isPinyinManual, setIsPinyinManual] = useState(false);
+  const [showOcrModal, setShowOcrModal] = useState(false);
+
+  const handleContentChange = (text: string) => {
+    setContent(text);
+    if (!isPinyinManual) {
+      setPinyin(toPinyin(text));
+    }
+  };
+
+  const handlePinyinChange = (text: string) => {
+    setPinyin(text);
+    setIsPinyinManual(true);
+  };
+
+  const handleApplyOcr = (result: ScannedResult) => {
+    setContent(result.text);
+    if (result.pinyin) {
+      setPinyin(result.pinyin);
+      setIsPinyinManual(true);
+    }
+    if (result.meaning) {
+      setMeaning(result.meaning);
+    }
+  };
 
   // All entities from DB
   const [hsks, setHsks] = useState<HSKType[]>([]);
@@ -109,12 +142,13 @@ const AddWord = () => {
   // Expanded sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     hsks: false,
-    lessons: true,
+    lessons: false,
     texts: false,
     sentences: false,
-    characters: true,
+    characters: false,
     rules: false,
   });
+  const [showOptionalLinks, setShowOptionalLinks] = useState(false);
 
   const [createdBannerInfo, setCreatedBannerInfo] = useState<{
     visible: boolean;
@@ -155,6 +189,7 @@ const AddWord = () => {
           if (wordData) {
             setContent(wordData.content || '');
             setPinyin(wordData.pinyin || '');
+            setIsPinyinManual(Boolean(wordData.pinyin));
             setMeaning(wordData.meaning || '');
 
             const wordHsks = (getHSKsByWordId(editWordId) as unknown as HSKType[]) || [];
@@ -218,7 +253,7 @@ const AddWord = () => {
       const q = searchLessons.toLowerCase().trim();
       const matches = !q || l.title.toLowerCase().includes(q) || `lesson ${l.num}`.includes(q);
       if (!matches) return false;
-      if (filterLessons === 'hsk' && selectedHskIds.size > 0 && !selectedHskIds.has(l.hskId)) return false;
+      if (filterLessons === 'hsk' && selectedHskIds.size > 0 && (!l.hskId || !selectedHskIds.has(l.hskId))) return false;
       return true;
     });
   }, [lessons, searchLessons, filterLessons, selectedHskIds]);
@@ -289,6 +324,7 @@ const AddWord = () => {
 
     try {
       const wordText = content.trim();
+      const finalPinyin = pinyin.trim() || toPinyin(wordText);
       const primaryHskId = selectedHskIds.size > 0 ? Array.from(selectedHskIds)[0] : null;
       const primaryLessonId = selectedLessonIds.size > 0 ? Array.from(selectedLessonIds)[0] : null;
       const primaryTextId = selectedTextIds.size > 0 ? Array.from(selectedTextIds)[0] : null;
@@ -297,7 +333,7 @@ const AddWord = () => {
       if (isEditing && editWordId) {
         updateWord(editWordId, {
           content: wordText,
-          pinyin: pinyin.trim(),
+          pinyin: finalPinyin,
           meaning: meaning.trim(),
           hskId: primaryHskId ?? undefined,
           lessonId: primaryLessonId ?? undefined,
@@ -324,7 +360,7 @@ const AddWord = () => {
       const result = db.runSync(
         `INSERT INTO words (content, pinyin, meaning, hskId, lessonId, textId, sentenceId) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         wordText,
-        pinyin.trim(),
+        finalPinyin,
         meaning.trim(),
         primaryHskId,
         primaryLessonId,
@@ -356,6 +392,7 @@ const AddWord = () => {
       // Clear form inputs
       setContent('');
       setPinyin('');
+      setIsPinyinManual(false);
       setMeaning('');
       setSelectedHskIds(new Set());
       setSelectedLessonIds(new Set());
@@ -423,35 +460,52 @@ const AddWord = () => {
               <Text style={styles.cardTitle}>Vocabulary Word Details</Text>
             </View>
 
+            <StudyTipCard
+              variant="optional"
+              description="Only the Chinese word is required! Pinyin, meaning, and links to characters or sentences are 100% optional."
+            />
+
             {/* Content Input (Required) */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>
-                Chinese Word <Text style={styles.requiredStar}>*</Text>
-              </Text>
+              <View style={styles.inputLabelRow}>
+                <Text style={styles.inputLabel}>
+                  Chinese Word <Text style={styles.requiredStar}>*</Text>
+                </Text>
+                <ScanOCRButton
+                  mode="word"
+                  onScanResult={handleApplyOcr}
+                  themeColor="#059669"
+                  label="Scan with Camera"
+                />
+              </View>
               <TextInput
                 style={styles.input}
                 placeholder="e.g., 学习 / 咖啡"
                 placeholderTextColor="#94a3b8"
                 value={content}
-                onChangeText={setContent}
+                onChangeText={handleContentChange}
               />
             </View>
 
-            {/* Pinyin Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Pinyin (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., xué xí"
-                placeholderTextColor="#94a3b8"
-                value={pinyin}
-                onChangeText={setPinyin}
-              />
-            </View>
+            {/* Pinyin Input with Auto-generation & Polyphonic readings */}
+            <PinyinInputField
+              value={pinyin}
+              onChangeText={handlePinyinChange}
+              chineseText={content}
+              placeholder="e.g., xué xí"
+              themeColor="#059669"
+            />
 
             {/* Meaning Input */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Meaning / English Translation</Text>
+              <View style={styles.inputLabelRow}>
+                <Text style={styles.inputLabel}>Meaning / English Translation</Text>
+                <AutoTranslateButton
+                  chineseText={content}
+                  onTranslated={setMeaning}
+                  themeColor="#059669"
+                />
+              </View>
               <TextInput
                 style={styles.input}
                 placeholder="e.g., to study, to learn"
@@ -461,6 +515,22 @@ const AddWord = () => {
               />
             </View>
           </View>
+
+          {/* ===== OPTIONAL LINKING SECTIONS ===== */}
+          <CollapsibleLinkingSection
+            title="Link to Lessons, Sentences, etc. (Optional)"
+            subtitle="Connect to HSK levels, lessons, texts, sentences, or rules"
+            icon="link-2"
+            accentColor="#059669"
+            selectedCount={totalSelectedCount}
+            isOpen={showOptionalLinks}
+            onToggle={() => setShowOptionalLinks((prev) => !prev)}
+            tip="Connecting items is completely optional! You can create this word now without selecting any items, or link what's relevant to you."
+          >
+            <StudyTipCard
+              variant="linking"
+              description="No need to link everything! Link only the key characters, sentences, or grammar rules you're actively learning."
+            />
 
           {/* ===== HSK LEVELS SECTION ===== */}
           <SliderSection
@@ -478,6 +548,7 @@ const AddWord = () => {
             filterMode={filterHsks}
             onFilterChange={setFilterHsks}
             hasHskSelected={selectedHskIds.size > 0}
+            hint="🏷️ Optional — link this word to the HSK level where you first encountered it. Totally fine to skip!"
           >
             {filteredHsks.length === 0 ? (
               <Text style={styles.emptyText}>No HSK levels found.</Text>
@@ -519,6 +590,7 @@ const AddWord = () => {
             filterMode={filterLessons}
             onFilterChange={setFilterLessons}
             hasHskSelected={selectedHskIds.size > 0}
+            hint="📖 Optional — link to the lesson where you learned this word. You can always come back and add it later!"
           >
             {filteredLessons.length === 0 ? (
               <Text style={styles.emptyText}>No lessons match the filter.</Text>
@@ -569,6 +641,7 @@ const AddWord = () => {
             filterMode={textsPage.filter}
             onFilterChange={(f) => textsPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={selectedHskIds.size > 0}
+            hint="📄 Optional — seen this word in a reading text? Link it here. It helps you remember the context, but it's not required."
           >
             {textsPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No reading texts match the filter.</Text>
@@ -634,6 +707,7 @@ const AddWord = () => {
             filterMode={sentencesPage.filter}
             onFilterChange={(f) => sentencesPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={selectedHskIds.size > 0}
+            hint="✨ Optional — link an example sentence that uses this word. Great for memory, but skip it if you're in a hurry!"
           >
             {sentencesPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No sentences match the filter.</Text>
@@ -699,6 +773,7 @@ const AddWord = () => {
             filterMode={charactersPage.filter}
             onFilterChange={(f) => charactersPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={selectedHskIds.size > 0}
+            hint="🔡 Optional — link individual characters that make up this word. Just the ones you're actively learning!"
           >
             {charactersPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No characters match the filter.</Text>
@@ -762,6 +837,7 @@ const AddWord = () => {
             filterMode={rulesPage.filter}
             onFilterChange={(f) => rulesPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={selectedHskIds.size > 0}
+            hint="📐 Optional — link a grammar rule this word relates to. Only if it's relevant to you!"
           >
             {rulesPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No grammar rules match the filter.</Text>
@@ -804,6 +880,7 @@ const AddWord = () => {
               </ScrollView>
             )}
           </SliderSection>
+          </CollapsibleLinkingSection>
 
           {/* ===== SAVE BUTTON ===== */}
           <TouchableOpacity
@@ -875,6 +952,27 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     gap: 6,
+  },
+  inputLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  scanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#05966940',
+    backgroundColor: '#05966912',
+  },
+  scanBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   inputLabel: {
     fontSize: 13,

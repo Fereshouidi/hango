@@ -181,6 +181,7 @@ export default function AccountPage() {
       setPassword('');
       setConfirmPassword('');
       loadStatus();
+      await refreshSubscription();
     } catch (err: any) {
       setAuthError(err.message || 'Could not sign in. Please check your info.');
       console.log(err)
@@ -199,6 +200,7 @@ export default function AccountPage() {
           await logoutAccount();
           setCurrentUser(null);
           setCloudStats(null);
+          await refreshSubscription();
         },
       },
     ]);
@@ -206,6 +208,21 @@ export default function AccountPage() {
 
   // Backup action
   const handleBackup = async () => {
+    if (!isSubscribed) {
+      Alert.alert(
+        'HanGo Pro Required',
+        'Cloud backup is a HanGo Pro feature. Please subscribe or activate your free trial to backup your study progress safely.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'View Plans',
+            onPress: () => router.push('/pages/payment'),
+          },
+        ]
+      );
+      return;
+    }
+
     setSyncType('backup');
     setSyncState('running');
     setSyncProgress(0);
@@ -248,6 +265,21 @@ export default function AccountPage() {
 
   // Restore action
   const handleRestore = () => {
+    if (!isSubscribed) {
+      Alert.alert(
+        'HanGo Pro Required',
+        'Restoring progress from the cloud is a HanGo Pro feature. Please subscribe or activate your free trial to restore your study data.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'View Plans',
+            onPress: () => router.push('/pages/payment'),
+          },
+        ]
+      );
+      return;
+    }
+
     Alert.alert(
       'Restore Saved Progress',
       'This will download your saved progress and update your app. Would you like to proceed?',
@@ -686,6 +718,10 @@ export default function AccountPage() {
                 {/* Unlocked / Premium Features summary */}
                 <View style={styles.subFeaturesRow}>
                   <View style={styles.subFeatureTag}>
+                    <Lucide name="cloud" size={12} color="#0284c7" />
+                    <Text style={styles.subFeatureTagText}>Cloud Sync</Text>
+                  </View>
+                  <View style={styles.subFeatureTag}>
                     <Lucide name="headphones" size={12} color="#059669" />
                     <Text style={styles.subFeatureTagText}>Listening Loop</Text>
                   </View>
@@ -788,13 +824,42 @@ export default function AccountPage() {
 
               {/* Primary Action Buttons Section */}
               <View style={styles.actionsSection}>
+                {/* Pro Lock Banner when user is not subscribed */}
+                {!isSubscribed && (
+                  <View style={styles.proLockBanner}>
+                    <View style={styles.proLockIconBox}>
+                      <Lucide name="lock" size={18} color="#d97706" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.proLockTitle}>HanGo Pro Cloud Sync</Text>
+                      <Text style={styles.proLockSubtitle}>
+                        Cloud backup and restore is a Pro feature. Subscribe or activate your free trial to sync data.
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.proLockBtn}
+                      onPress={() => router.push('/pages/payment')}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.proLockBtnText}>Unlock</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 {/* Backup Card */}
                 <View style={styles.actionCard}>
                   <View style={styles.actionIconBox}>
                     <Lucide name="cloud-upload" size={24} color="#4f46e5" />
                   </View>
                   <View style={styles.actionContent}>
-                    <Text style={styles.actionTitle}>Save My Progress</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.actionTitle}>Save My Progress</Text>
+                      {!isSubscribed && (
+                        <View style={styles.proMiniBadge}>
+                          <Text style={styles.proMiniBadgeText}>PRO</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={styles.actionDesc}>
                       Back up all your learned vocabulary, sentences, and notes safely.
                     </Text>
@@ -803,6 +868,7 @@ export default function AccountPage() {
                     style={[
                       styles.actionBtn,
                       styles.backupBtn,
+                      !isSubscribed && styles.btnProLocked,
                       syncState === 'running' && styles.btnDisabled,
                     ]}
                     onPress={handleBackup}
@@ -811,6 +877,11 @@ export default function AccountPage() {
                   >
                     {syncState === 'running' && syncType === 'backup' ? (
                       <ActivityIndicator size="small" color="#ffffff" />
+                    ) : !isSubscribed ? (
+                      <>
+                        <Lucide name="lock" size={15} color="#ffffff" />
+                        <Text style={styles.actionBtnText}>Save (Pro)</Text>
+                      </>
                     ) : (
                       <>
                         <Lucide name="upload-cloud" size={16} color="#ffffff" />
@@ -826,7 +897,14 @@ export default function AccountPage() {
                     <Lucide name="cloud-download" size={24} color="#059669" />
                   </View>
                   <View style={styles.actionContent}>
-                    <Text style={styles.actionTitle}>Restore My Progress</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.actionTitle}>Restore My Progress</Text>
+                      {!isSubscribed && (
+                        <View style={styles.proMiniBadge}>
+                          <Text style={styles.proMiniBadgeText}>PRO</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={styles.actionDesc}>
                       Download your saved study data back to this phone.
                     </Text>
@@ -835,6 +913,7 @@ export default function AccountPage() {
                     style={[
                       styles.actionBtn,
                       styles.restoreBtn,
+                      !isSubscribed && styles.btnProLocked,
                       syncState === 'running' && styles.btnDisabled,
                     ]}
                     onPress={handleRestore}
@@ -843,6 +922,11 @@ export default function AccountPage() {
                   >
                     {syncState === 'running' && syncType === 'restore' ? (
                       <ActivityIndicator size="small" color="#ffffff" />
+                    ) : !isSubscribed ? (
+                      <>
+                        <Lucide name="lock" size={15} color="#ffffff" />
+                        <Text style={styles.actionBtnText}>Restore (Pro)</Text>
+                      </>
                     ) : (
                       <>
                         <Lucide name="download-cloud" size={16} color="#ffffff" />
@@ -1677,5 +1761,63 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#475569',
+  },
+  proLockBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    marginBottom: 12,
+  },
+  proLockIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: '#fef3c7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proLockTitle: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#92400e',
+  },
+  proLockSubtitle: {
+    fontSize: 11.5,
+    color: '#b45309',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  proLockBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#d97706',
+  },
+  proLockBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  proMiniBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 5,
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  proMiniBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#d97706',
+    letterSpacing: 0.3,
+  },
+  btnProLocked: {
+    backgroundColor: '#d97706',
   },
 });

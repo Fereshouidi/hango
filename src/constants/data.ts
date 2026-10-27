@@ -33,7 +33,7 @@ export const homeScreenItems = [
     },
     {
         label: "Characters",
-        icon: "spell-check",
+        icon: "type",
         color: "#ec489ae8",
         target: "pages/characters",
     },
@@ -50,7 +50,7 @@ export const homeScreenItems = [
         target: "pages/characterWrite",
     },
     {
-        label: "Writing",
+        label: "Typing",
         icon: "keyboard",
         color: "#8b5cf6e8",
         target: "pages/writing",

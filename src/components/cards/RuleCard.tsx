@@ -18,8 +18,9 @@ interface RuleCardProps {
   isSelectionMode?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
-  onOptionsPress?: () => void;
+  onOptionsPress?: (rule: RuleType) => void;
   searchQuery?: string;
+  highlightStyle?: import('react-native').StyleProp<import('react-native').TextStyle>;
 }
 
 export const RuleCard: React.FC<RuleCardProps> = ({
@@ -35,6 +36,7 @@ export const RuleCard: React.FC<RuleCardProps> = ({
   onPress,
   onOptionsPress,
   searchQuery,
+  highlightStyle,
 }) => {
   const router = useRouter();
   const [localPlaying, setLocalPlaying] = React.useState(false);
@@ -110,7 +112,7 @@ export const RuleCard: React.FC<RuleCardProps> = ({
               styles.playBtn,
               cardBg ? styles.whitePlayBtnBg : { backgroundColor: accentColor + '20' },
             ]}
-            onPress={onOptionsPress || onLongPress}
+            onPress={onOptionsPress ? () => onOptionsPress(rule) : onLongPress}
             activeOpacity={0.7}
           >
             <Lucide
@@ -125,6 +127,7 @@ export const RuleCard: React.FC<RuleCardProps> = ({
       <HighlightedText
         text={rule.content}
         searchQuery={searchQuery}
+        highlightStyle={highlightStyle}
         style={[styles.ruleText, cardBg && styles.whiteText]}
         isCardBg={!!cardBg}
       />

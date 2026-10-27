@@ -1,6 +1,27 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { speakChineseWithRate, stopSpeaking } from '@/utils/tts';
 import { LoopInterval, LoopItem, LoopMode, LoopRepeatCount, LoopSpeed } from '../types';
+
+const STORAGE_KEY = 'loop_settings_v1';
+
+interface PersistedSettings {
+  loopMode: LoopMode;
+  repeatCount: LoopRepeatCount;
+  pauseInterval: LoopInterval;
+  speed: LoopSpeed;
+  showPinyin: boolean;
+  showMeaning: boolean;
+}
+
+const DEFAULTS: PersistedSettings = {
+  loopMode: 'repeat-all',
+  repeatCount: 2,
+  pauseInterval: 2,
+  speed: 0.85,
+  showPinyin: true,
+  showMeaning: true,
+};
 
 export function useListeningLoop(initialPlaylist: LoopItem[] = []) {
   const [playlist, setPlaylist] = useState<LoopItem[]>(initialPlaylist);
@@ -9,19 +30,77 @@ export function useListeningLoop(initialPlaylist: LoopItem[] = []) {
   // Playback states
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [spokenCharIndex, setSpokenCharIndex] = useState<number>(-1);
   const [isWaitingInterval, setIsWaitingInterval] = useState(false);
   const [intervalCountdown, setIntervalCountdown] = useState(0);
   const [repeatCounter, setRepeatCounter] = useState(1);
 
-  // Loop settings
-  const [loopMode, setLoopMode] = useState<LoopMode>('repeat-all');
-  const [repeatCount, setRepeatCount] = useState<LoopRepeatCount>(2); // Default: repeat each 2x
-  const [pauseInterval, setPauseInterval] = useState<LoopInterval>(2); // Default: 2s pause for shadowing
-  const [speed, setSpeed] = useState<LoopSpeed>(0.85); // Default: 0.85x learner friendly
+  // Loop settings — initialized from defaults; rehydrated from AsyncStorage on mount
+  const [loopMode, setLoopModeState] = useState<LoopMode>(DEFAULTS.loopMode);
+  const [repeatCount, setRepeatCountState] = useState<LoopRepeatCount>(DEFAULTS.repeatCount);
+  const [pauseInterval, setPauseIntervalState] = useState<LoopInterval>(DEFAULTS.pauseInterval);
+  const [speed, setSpeedState] = useState<LoopSpeed>(DEFAULTS.speed);
 
   // Visibility toggles
-  const [showPinyin, setShowPinyin] = useState(true);
-  const [showMeaning, setShowMeaning] = useState(true);
+  const [showPinyin, setShowPinyinState] = useState(DEFAULTS.showPinyin);
+  const [showMeaning, setShowMeaningState] = useState(DEFAULTS.showMeaning);
+
+  // ── Load persisted settings on mount ──────────────────────────────────────
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+      if (!raw) return;
+      try {
+        const saved: Partial<PersistedSettings> = JSON.parse(raw);
+        if (saved.loopMode) setLoopModeState(saved.loopMode);
+        if (saved.repeatCount !== undefined) setRepeatCountState(saved.repeatCount as LoopRepeatCount);
+        if (saved.pauseInterval !== undefined) setPauseIntervalState(saved.pauseInterval as LoopInterval);
+        if (saved.speed !== undefined) setSpeedState(saved.speed as LoopSpeed);
+        if (saved.showPinyin !== undefined) setShowPinyinState(saved.showPinyin);
+        if (saved.showMeaning !== undefined) setShowMeaningState(saved.showMeaning);
+      } catch {
+        // corrupted storage, ignore
+      }
+    });
+  }, []);
+
+  // ── Persist helper ─────────────────────────────────────────────────────────
+  const persist = useCallback((patch: Partial<PersistedSettings>) => {
+    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+      const current: PersistedSettings = raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ ...current, ...patch }));
+    });
+  }, []);
+
+  // ── Setting setters that also persist ─────────────────────────────────────
+  const setLoopMode = useCallback((v: LoopMode) => {
+    setLoopModeState(v);
+    persist({ loopMode: v });
+  }, [persist]);
+
+  const setRepeatCount = useCallback((v: LoopRepeatCount) => {
+    setRepeatCountState(v);
+    persist({ repeatCount: v });
+  }, [persist]);
+
+  const setPauseInterval = useCallback((v: LoopInterval) => {
+    setPauseIntervalState(v);
+    persist({ pauseInterval: v });
+  }, [persist]);
+
+  const setSpeed = useCallback((v: LoopSpeed) => {
+    setSpeedState(v);
+    persist({ speed: v });
+  }, [persist]);
+
+  const setShowPinyin = useCallback((v: boolean) => {
+    setShowPinyinState(v);
+    persist({ showPinyin: v });
+  }, [persist]);
+
+  const setShowMeaning = useCallback((v: boolean) => {
+    setShowMeaningState(v);
+    persist({ showMeaning: v });
+  }, [persist]);
 
   // Refs for async callbacks
   const isPlayingRef = useRef(isPlaying);
@@ -50,6 +129,7 @@ export function useListeningLoop(initialPlaylist: LoopItem[] = []) {
 
   const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const speechTickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Clear timers
   const clearTimers = useCallback(() => {
@@ -61,6 +141,11 @@ export function useListeningLoop(initialPlaylist: LoopItem[] = []) {
       globalThis.clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
+    if (speechTickerRef.current) {
+      globalThis.clearInterval(speechTickerRef.current);
+      speechTickerRef.current = null;
+    }
+    setSpokenCharIndex(-1);
     setIsWaitingInterval(false);
     setIntervalCountdown(0);
   }, []);
@@ -74,6 +159,7 @@ export function useListeningLoop(initialPlaylist: LoopItem[] = []) {
         stopSpeaking();
         setIsPlaying(false);
         setIsSpeaking(false);
+        setSpokenCharIndex(-1);
         setCurrentIndex(0);
         setRepeatCounter(1);
       }
@@ -125,12 +211,33 @@ export function useListeningLoop(initialPlaylist: LoopItem[] = []) {
       speedRef.current,
       () => {
         setIsSpeaking(true);
+        setSpokenCharIndex(0);
+        if (speechTickerRef.current) {
+          globalThis.clearInterval(speechTickerRef.current);
+        }
+        const textLen = item.content.length;
+        const tickMs = Math.max(120, Math.round(280 / (speedRef.current || 0.85)));
+        speechTickerRef.current = globalThis.setInterval(() => {
+          setSpokenCharIndex((prev) => {
+            if (prev < 0) return 0;
+            if (prev >= textLen - 1) return prev;
+            return prev + 1;
+          });
+        }, tickMs);
       },
       () => {
+        if (speechTickerRef.current) {
+          globalThis.clearInterval(speechTickerRef.current);
+          speechTickerRef.current = null;
+        }
         setIsSpeaking(false);
+        setSpokenCharIndex(-1);
         if (!isPlayingRef.current) return;
 
         handleItemFinished();
+      },
+      (charIndex: number) => {
+        setSpokenCharIndex(charIndex);
       }
     );
   }, [clearTimers]);
@@ -286,6 +393,7 @@ export function useListeningLoop(initialPlaylist: LoopItem[] = []) {
     currentItem: playlist[currentIndex] ?? null,
     isPlaying,
     isSpeaking,
+    spokenCharIndex,
     isWaitingInterval,
     intervalCountdown,
     repeatCounter,

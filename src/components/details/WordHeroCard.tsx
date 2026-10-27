@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 import { WordType, HSKType, LessonType } from '@/types';
 import { StudyToggleBar } from '../common/StudyToggleBar';
 
@@ -139,7 +140,7 @@ export const WordHeroCard: React.FC<WordHeroCardProps> = ({
           <Text style={styles.statText}>{sentenceCount} sentences</Text>
         </View>
         <View style={styles.statPill}>
-          <Lucide name="spell-check" size={12} color="#ec4899" />
+          <CharacterIcon size={12} color="#ec4899" />
           <Text style={styles.statText}>{characterCount} chars</Text>
         </View>
         <View style={styles.statPill}>

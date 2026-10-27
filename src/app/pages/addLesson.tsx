@@ -1,7 +1,6 @@
 import {
   Alert,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -10,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ThemedView } from '@/components/themed-view';
 import {
   getAllHSKs,
@@ -25,6 +24,14 @@ import {
   getWordsCount,
   getRulesPaged,
   getRulesCount,
+  getLessonById,
+  getTextsByLessonId,
+  getSentencesByLessonId,
+  getWordsByLessonId,
+  getCharactersByLessonId,
+  getRulesByLessonId,
+  updateLesson,
+  updateLessonRelations,
   db,
 } from '@/db/utils';
 import { usePagedSection } from '@/hooks/usePagedSection';
@@ -50,11 +57,16 @@ import {
   LessonSummary,
 } from '@/components/add-lesson';
 import { SuccessBanner } from '@/components/banners';
+import { CollapsibleLinkingSection } from '@/components/common/CollapsibleLinkingSection';
 
 const AddLesson = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const rawEditId = params.lessonId || params.id;
+  const editLessonId = rawEditId && !isNaN(Number(rawEditId)) ? Number(rawEditId) : null;
+  const isEditing = Boolean(editLessonId);
   const preselectedHskId = params.hskId ? Number(params.hskId) : null;
+  const loadedEditIdRef = useRef<number | null>(null);
 
   // Lesson fields
   const [title, setTitle] = useState('');
@@ -69,12 +81,14 @@ const AddLesson = () => {
     hskName: string;
     itemCount: number;
     details: string;
+    mode?: 'created' | 'updated';
   }>({
     visible: false,
     lessonTitle: '',
     hskName: '',
     itemCount: 0,
     details: '',
+    mode: 'created',
   });
 
   // Selected item IDs
@@ -84,20 +98,16 @@ const AddLesson = () => {
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<number>>(new Set());
   const [selectedRuleIds, setSelectedRuleIds] = useState<Set<number>>(new Set());
 
-  // Quick Add Word modal
-  const [showAddWordModal, setShowAddWordModal] = useState(false);
-  const [newWordContent, setNewWordContent] = useState('');
-  const [newWordPinyin, setNewWordPinyin] = useState('');
-  const [newWordMeaning, setNewWordMeaning] = useState('');
 
   // Expanded sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     characters: false,
     words: false,
-    sentences: true,
-    texts: true,
+    sentences: false,
+    texts: false,
     rules: false,
   });
+  const [showOptionalLinks, setShowOptionalLinks] = useState(false);
 
   // ── Paginated sections (DB-level, 10 at a time) ──────────────────────────
   const textsPage = usePagedSection<TextType>(getTextsPaged, getTextsCount);
@@ -112,7 +122,28 @@ const AddLesson = () => {
         setHsks(getAllHSKs() as unknown as HSKType[]);
         setLessons(getAllLessons() as unknown as LessonType[]);
 
-        if (preselectedHskId && !selectedHskId) {
+        if (editLessonId && loadedEditIdRef.current !== editLessonId) {
+          const lessonData = getLessonById(editLessonId);
+          if (lessonData) {
+            setTitle(lessonData.title || '');
+            setNum(String(lessonData.num ?? ''));
+            setSelectedHskId(lessonData.hskId ?? null);
+
+            const linkedTexts = (getTextsByLessonId(editLessonId) as unknown as TextType[]) || [];
+            const linkedSentences = (getSentencesByLessonId(editLessonId) as unknown as SentenceType[]) || [];
+            const linkedWords = (getWordsByLessonId(editLessonId) as unknown as WordType[]) || [];
+            const linkedChars = (getCharactersByLessonId(editLessonId) as unknown as CharacterType[]) || [];
+            const linkedRules = (getRulesByLessonId(editLessonId) as unknown as RuleType[]) || [];
+
+            setSelectedTextIds(new Set(linkedTexts.map((t) => t.id)));
+            setSelectedSentenceIds(new Set(linkedSentences.map((s) => s.id)));
+            setSelectedWordIds(new Set(linkedWords.map((w) => w.id)));
+            setSelectedCharacterIds(new Set(linkedChars.map((c) => c.id)));
+            setSelectedRuleIds(new Set(linkedRules.map((r) => r.id)));
+
+            loadedEditIdRef.current = editLessonId;
+          }
+        } else if (!isEditing && preselectedHskId && !selectedHskId) {
           setSelectedHskId(preselectedHskId);
         }
       } catch (e) {
@@ -125,7 +156,7 @@ const AddLesson = () => {
       wordsPage.initialize();
       charactersPage.initialize();
       rulesPage.initialize();
-    }, [])
+    }, [editLessonId, preselectedHskId, selectedHskId, isEditing])
   );
 
   // Map lessonId -> lesson label (e.g. "L1: Greetings")
@@ -137,8 +168,9 @@ const AddLesson = () => {
     return map;
   }, [lessons]);
 
-  const selectedHskName =
-    hsks.find((h) => h.id === selectedHskId)?.name ?? 'HSK';
+  const selectedHskName = selectedHskId
+    ? (hsks.find((h) => h.id === selectedHskId)?.name ?? 'HSK')
+    : 'None';
 
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -152,31 +184,6 @@ const AddLesson = () => {
     return next;
   }
 
-  const handleQuickAddWord = () => {
-    if (!newWordContent.trim()) {
-      Alert.alert('Validation', 'Please enter Chinese content for the word.');
-      return;
-    }
-    try {
-      const res = db.runSync(
-        `INSERT INTO words (content, pinyin, meaning, hskId) VALUES (?, ?, ?, ?)`,
-        newWordContent.trim(),
-        newWordPinyin.trim() || null,
-        newWordMeaning.trim() || null,
-        selectedHskId
-      );
-      const insertedId = res.lastInsertRowId;
-      wordsPage.initialize(); // refresh DB page
-      setSelectedWordIds((prev) => new Set(prev).add(insertedId));
-      setNewWordContent('');
-      setNewWordPinyin('');
-      setNewWordMeaning('');
-      setShowAddWordModal(false);
-    } catch (e) {
-      console.error('Failed to quick add word:', e);
-      Alert.alert('Database Error', 'Could not create new word.');
-    }
-  };
 
   // Total selection count
   const totalSelectedCount =
@@ -196,70 +203,66 @@ const AddLesson = () => {
       Alert.alert('Missing Field', 'Please enter a valid lesson number.');
       return;
     }
-    if (!selectedHskId) {
-      Alert.alert('Missing Field', 'Please select an HSK level.');
-      return;
-    }
 
     try {
-      // 1. Create the new lesson
+      const lessonTitle = title.trim();
+      const lessonNum = Number(num);
+
+      if (isEditing && editLessonId) {
+        updateLesson(editLessonId, {
+          title: lessonTitle,
+          num: lessonNum,
+          hskId: selectedHskId ?? null,
+        });
+
+        updateLessonRelations(editLessonId, {
+          hskId: selectedHskId ?? null,
+          textIds: Array.from(selectedTextIds),
+          sentenceIds: Array.from(selectedSentenceIds),
+          wordIds: Array.from(selectedWordIds),
+          characterIds: Array.from(selectedCharacterIds),
+          ruleIds: Array.from(selectedRuleIds),
+        });
+
+        const summaryDetails = [
+          selectedCharacterIds.size > 0 && `${selectedCharacterIds.size} characters`,
+          selectedWordIds.size > 0 && `${selectedWordIds.size} words`,
+          selectedSentenceIds.size > 0 && `${selectedSentenceIds.size} sentences`,
+          selectedTextIds.size > 0 && `${selectedTextIds.size} texts`,
+          selectedRuleIds.size > 0 && `${selectedRuleIds.size} rules`,
+        ]
+          .filter(Boolean)
+          .join(', ');
+
+        setCreatedBannerInfo({
+          visible: true,
+          lessonTitle: `Lesson ${lessonNum}: ${lessonTitle}`,
+          hskName: selectedHskName,
+          itemCount: totalSelectedCount,
+          details: summaryDetails,
+          mode: 'updated',
+        });
+        return;
+      }
+
+      // 1. Create the new lesson (hskId is optional)
       const result = db.runSync(
         `INSERT INTO lessons (num, title, hskId) VALUES (?, ?, ?)`,
-        Number(num),
-        title.trim(),
-        selectedHskId
+        lessonNum,
+        lessonTitle,
+        selectedHskId ?? null
       );
       const lessonId = result.lastInsertRowId;
 
-      // 2. Link selected texts
-      for (const id of selectedTextIds) {
-        db.runSync(
-          `UPDATE texts SET lessonId = ?, hskId = ? WHERE id = ?`,
-          lessonId,
-          selectedHskId,
-          id
-        );
-      }
-
-      // 3. Link selected sentences
-      for (const id of selectedSentenceIds) {
-        db.runSync(
-          `UPDATE sentences SET lessonId = ?, hskId = ? WHERE id = ?`,
-          lessonId,
-          selectedHskId,
-          id
-        );
-      }
-
-      // 4. Link selected words
-      for (const id of selectedWordIds) {
-        db.runSync(
-          `UPDATE words SET lessonId = ?, hskId = ? WHERE id = ?`,
-          lessonId,
-          selectedHskId,
-          id
-        );
-      }
-
-      // 5. Link selected characters
-      for (const id of selectedCharacterIds) {
-        db.runSync(
-          `UPDATE characters SET lessonId = ?, hskId = ? WHERE id = ?`,
-          lessonId,
-          selectedHskId,
-          id
-        );
-      }
-
-      // 6. Link selected rules
-      for (const id of selectedRuleIds) {
-        db.runSync(
-          `UPDATE rules SET lessonId = ?, hskId = ? WHERE id = ?`,
-          lessonId,
-          selectedHskId,
-          id
-        );
-      }
+      // 2. Link relations
+      updateLessonRelations(lessonId, {
+        hskId: selectedHskId ?? null,
+        textIds: Array.from(selectedTextIds),
+        sentenceIds: Array.from(selectedSentenceIds),
+        wordIds: Array.from(selectedWordIds),
+        characterIds: Array.from(selectedCharacterIds),
+        ruleIds: Array.from(selectedRuleIds),
+      });
 
       const summaryDetails = [
         selectedCharacterIds.size > 0 && `${selectedCharacterIds.size} characters`,
@@ -273,18 +276,19 @@ const AddLesson = () => {
 
       setCreatedBannerInfo({
         visible: true,
-        lessonTitle: `Lesson ${num}: ${title.trim()}`,
+        lessonTitle: `Lesson ${lessonNum}: ${lessonTitle}`,
         hskName: selectedHskName,
         itemCount: totalSelectedCount,
         details: summaryDetails,
+        mode: 'created',
       });
     } catch (error: any) {
-      console.error('Failed to create lesson:', error);
+      console.error('Failed to save lesson:', error);
       Alert.alert(
         'Error',
         error?.message?.includes('UNIQUE')
           ? 'A lesson with this title already exists. Please choose a different title.'
-          : 'Failed to create lesson. Please try again.'
+          : (isEditing ? 'Failed to update lesson. Please try again.' : 'Failed to create lesson. Please try again.')
       );
     }
   };
@@ -294,7 +298,7 @@ const AddLesson = () => {
       <Bg1 />
       <SuccessBanner
         visible={createdBannerInfo.visible}
-        title="Lesson Created Successfully! 🎉"
+        title={createdBannerInfo.mode === 'updated' ? "Lesson Updated Successfully! 🎉" : "Lesson Created Successfully! 🎉"}
         lessonTitle={createdBannerInfo.lessonTitle}
         hskName={createdBannerInfo.hskName}
         itemCount={createdBannerInfo.itemCount}
@@ -312,7 +316,7 @@ const AddLesson = () => {
       />
       <Header
         useBackArrow={true}
-        label="Add Lesson"
+        label={isEditing ? 'Edit Lesson' : 'Add Lesson'}
         items={[
           <TouchableOpacity
             key="save"
@@ -350,6 +354,17 @@ const AddLesson = () => {
             onToggleHskPicker={() => setShowHskPicker(!showHskPicker)}
           />
 
+          {/* ===== OPTIONAL LINKING SECTIONS ===== */}
+          <CollapsibleLinkingSection
+            title="Link Content to this Lesson (Optional)"
+            subtitle="Connect existing texts, sentences, words, characters, or rules"
+            icon="link-2"
+            accentColor="#2563eb"
+            selectedCount={totalSelectedCount}
+            isOpen={showOptionalLinks}
+            onToggle={() => setShowOptionalLinks((prev) => !prev)}
+            tip="Connecting content is completely optional! You can create this lesson now and add texts, words, or sentences to it later."
+          >
           {/* ===== SELECTION HELPER BANNER ===== */}
           <View style={styles.infoBanner}>
             <Lucide name="mouse-pointer-click" size={16} color="#2563eb" />
@@ -515,7 +530,13 @@ const AddLesson = () => {
             selectedCount={selectedWordIds.size}
             expanded={expandedSections.words}
             onToggle={() => toggleSection('words')}
-            onAddNew={() => setShowAddWordModal(true)}
+            onAddNew={() => {
+              const queryParts: string[] = [];
+              if (editLessonId) queryParts.push(`lessonId=${editLessonId}`);
+              if (selectedHskId) queryParts.push(`hskId=${selectedHskId}`);
+              const qs = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+              router.push(`/pages/addWord${qs}` as any);
+            }}
             addNewLabel="+ Word"
             onSelectAll={() =>
               setSelectedWordIds((prev) => {
@@ -717,6 +738,7 @@ const AddLesson = () => {
             textCount={selectedTextIds.size}
             ruleCount={selectedRuleIds.size}
           />
+          </CollapsibleLinkingSection>
 
           {/* ===== SAVE BUTTON ===== */}
           <TouchableOpacity
@@ -735,93 +757,6 @@ const AddLesson = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ===== QUICK ADD WORD MODAL ===== */}
-      <Modal
-        visible={showAddWordModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAddWordModal(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalHeaderLeft}>
-                <View style={[styles.modalIconBg, { backgroundColor: '#05966918' }]}>
-                  <Lucide name="languages" size={18} color="#059669" />
-                </View>
-                <Text style={styles.modalTitle}>Add New Word</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setShowAddWordModal(false)}
-                style={styles.modalCloseBtn}
-                activeOpacity={0.7}
-              >
-                <Lucide name="x" size={18} color="#64748b" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Chinese Word <Text style={styles.requiredStar}>*</Text>
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g., 咖啡 / 学习"
-                  placeholderTextColor="#94a3b8"
-                  value={newWordContent}
-                  onChangeText={setNewWordContent}
-                  autoFocus={true}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Pinyin (Optional)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g., kāfēi / xuéxí"
-                  placeholderTextColor="#94a3b8"
-                  value={newWordPinyin}
-                  onChangeText={setNewWordPinyin}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Meaning (Optional)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g., coffee / to study"
-                  placeholderTextColor="#94a3b8"
-                  value={newWordMeaning}
-                  onChangeText={setNewWordMeaning}
-                />
-              </View>
-
-              <View style={styles.modalActionsRow}>
-                <TouchableOpacity
-                  style={styles.modalCancelBtn}
-                  onPress={() => setShowAddWordModal(false)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.modalSaveBtn}
-                  onPress={handleQuickAddWord}
-                  activeOpacity={0.8}
-                >
-                  <Lucide name="plus" size={16} color="#ffffff" />
-                  <Text style={styles.modalSaveText}>Add Word</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </ThemedView>
   );
 };
@@ -905,111 +840,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
-  },
-
-  // ---- Modal Styles ----
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 400,
-    padding: 20,
-    gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    paddingBottom: 12,
-  },
-  modalHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  modalIconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  modalCloseBtn: {
-    padding: 4,
-  },
-  modalBody: {
-    gap: 12,
-  },
-  inputGroup: {
-    gap: 6,
-  },
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  requiredStar: {
-    color: '#ef4444',
-  },
-  input: {
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#0f172a',
-  },
-  modalActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 8,
-  },
-  modalCancelBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#f1f5f9',
-  },
-  modalCancelText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  modalSaveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#059669',
-  },
-  modalSaveText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#ffffff',
   },
 });

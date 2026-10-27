@@ -41,6 +41,7 @@ import {
   HeaderFilterButton,
 } from '@/components/common/CollapsibleControlBar';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { EmptyState } from '@/components/common/EmptyState';
 import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
 import { speakEnglishText } from '@/utils/tts';
 
@@ -168,6 +169,8 @@ export default function RulesScreen() {
       setRefreshing(false);
     }, 400);
   }, [loadData]);
+
+  const wideSearchHighlightStyle = searchQuery.trim() ? { color: '#ef4444', fontWeight: '700' as const } : undefined;
 
   const q = searchQuery.toLowerCase().trim();
   const filteredRules = rules.filter(
@@ -428,6 +431,7 @@ export default function RulesScreen() {
                   onPress={isSelectionMode ? () => toggleSelection(ruleId) : undefined}
                   onOptionsPress={() => { setActiveCardRule(rule); setMenuVisible(true); }}
                   searchQuery={searchQuery}
+                  highlightStyle={wideSearchHighlightStyle}
                 />
               );
             })}
@@ -442,16 +446,13 @@ export default function RulesScreen() {
             />
           </>
         ) : (
-          <View style={styles.emptyContainer}>
-            <Lucide name="book-open-check" size={40} color="#cbd5e1" />
-            <ThemedText style={styles.emptyText}>
-              {searchQuery
-                ? 'No matching grammar rules found'
-                : activeFilterLabel
-                ? `No grammar rules found for ${activeFilterLabel}`
-                : 'No grammar rules available'}
-            </ThemedText>
-          </View>
+          <EmptyState
+            type="rules"
+            searchQuery={searchQuery}
+            onClearSearch={() => setSearchQuery('')}
+            filterLabel={activeFilterLabel || undefined}
+            onClearFilter={() => router.push('/pages/rules/0?scope=global' as any)}
+          />
         )}
       </ScrollView>
 

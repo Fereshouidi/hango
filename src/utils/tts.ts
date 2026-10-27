@@ -18,7 +18,8 @@ export const speakText = async (
   language: string = 'zh-CN',
   onStart?: () => void,
   onDone?: () => void,
-  rate?: number
+  rate?: number,
+  onBoundary?: (charIndex: number) => void
 ) => {
   try {
     if (!text || text.trim().length === 0) return;
@@ -34,6 +35,13 @@ export const speakText = async (
 
       if (onStart) utterance.onstart = onStart;
       if (onDone) utterance.onend = onDone;
+      if (onBoundary) {
+        utterance.onboundary = (event) => {
+          if (typeof event.charIndex === 'number') {
+            onBoundary(event.charIndex);
+          }
+        };
+      }
       utterance.onerror = () => {
         if (onDone) onDone();
       };
@@ -63,6 +71,16 @@ export const speakText = async (
       onStopped: () => {
         if (onDone) onDone();
       },
+      ...(onBoundary
+        ? {
+            onBoundary: (ev: any) => {
+              const idx = ev?.charIndex ?? ev?.characterIndex;
+              if (typeof idx === 'number') {
+                onBoundary(idx);
+              }
+            },
+          }
+        : {}),
     });
   } catch (error) {
     console.error('Speech synthesis error:', error);
@@ -77,8 +95,9 @@ export const speakChineseWithRate = (
   text: string,
   rate: number = 0.85,
   onStart?: () => void,
-  onDone?: () => void
-) => speakText(text, 'zh-CN', onStart, onDone, rate);
+  onDone?: () => void,
+  onBoundary?: (charIndex: number) => void
+) => speakText(text, 'zh-CN', onStart, onDone, rate, onBoundary);
 
 export const speakEnglishText = (text: string, onStart?: () => void, onDone?: () => void) =>
   speakText(text, 'en-US', onStart, onDone);

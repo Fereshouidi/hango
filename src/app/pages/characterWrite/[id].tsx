@@ -54,6 +54,7 @@ import {
   getAllCharacters,
   getAllCharactersCount,
   getAllHSKs,
+  getAllLessons,
   getCharacterById,
   getCharactersByHSKId,
   getCharactersByLessonId,
@@ -137,6 +138,7 @@ export default function CharacterWriteScreen() {
   const [totalCharCount, setTotalCharCount] = useState<number>(0);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [allHsks, setAllHsks] = useState<HSKType[]>([]);
+  const [allLessons, setAllLessons] = useState<LessonType[]>([]);
   const [hsk, setHsk] = useState<HSKType | null>(null);
   const [lesson, setLesson] = useState<LessonType | null>(null);
   const userExplicitlySelectedAll = useRef<boolean>(false);
@@ -146,6 +148,17 @@ export default function CharacterWriteScreen() {
     }
     return null;
   });
+  const [selectedLessonId, setSelectedLessonId] = useState<number | null>(() => {
+    if (params.lessonId && !isNaN(Number(params.lessonId)) && Number(params.lessonId) > 0) {
+      return Number(params.lessonId);
+    }
+    return null;
+  });
+
+  const filteredLessons = useMemo(() => {
+    if (selectedHskId === null) return allLessons;
+    return allLessons.filter((l) => l.hskId === selectedHskId);
+  }, [allLessons, selectedHskId]);
 
   // Drawing state
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -182,12 +195,12 @@ export default function CharacterWriteScreen() {
 
   // Helper to fetch total count based on active filter
   const fetchTotalCount = useCallback(
-    (hskId: number | null): number => {
+    (hskId: number | null, lessonId: number | null): number => {
       try {
-        if (hskId !== null && hskId > 0) {
+        if (lessonId !== null && lessonId > 0) {
+          return getCharactersCountByLessonId(lessonId);
+        } else if (hskId !== null && hskId > 0) {
           return getCharactersCountByHSKId(hskId);
-        } else if (params.lessonId && !isNaN(Number(params.lessonId))) {
-          return getCharactersCountByLessonId(Number(params.lessonId));
         } else {
           return getAllCharactersCount();
         }
@@ -195,17 +208,17 @@ export default function CharacterWriteScreen() {
         return 0;
       }
     },
-    [params.lessonId]
+    []
   );
 
   // Helper to fetch a 10-item batch based on active filter
   const fetchCharactersBatch = useCallback(
-    (hskId: number | null, limit: number, offset: number): CharacterType[] => {
+    (hskId: number | null, lessonId: number | null, limit: number, offset: number): CharacterType[] => {
       try {
-        if (hskId !== null && hskId > 0) {
+        if (lessonId !== null && lessonId > 0) {
+          return (getCharactersByLessonId(lessonId, limit, offset) as CharacterType[]) || [];
+        } else if (hskId !== null && hskId > 0) {
           return (getCharactersByHSKId(hskId, limit, offset) as CharacterType[]) || [];
-        } else if (params.lessonId && !isNaN(Number(params.lessonId))) {
-          return (getCharactersByLessonId(Number(params.lessonId), limit, offset) as CharacterType[]) || [];
         } else {
           return (getAllCharacters(limit, offset) as CharacterType[]) || [];
         }
@@ -214,15 +227,17 @@ export default function CharacterWriteScreen() {
         return [];
       }
     },
-    [params.lessonId]
+    []
   );
 
   // Load character data (fetching first 10 items)
   const loadData = useCallback(() => {
     try {
-      // 1. Fetch available HSK levels
+      // 1. Fetch available HSK levels & lessons
       const hsks = (getAllHSKs() as HSKType[]) || [];
       setAllHsks(hsks);
+      const lessons = (getAllLessons() as LessonType[]) || [];
+      setAllLessons(lessons);
 
       // 2. Fetch current character
       const char = getCharacterById(currentId);
@@ -240,7 +255,7 @@ export default function CharacterWriteScreen() {
         setLesson(null);
       }
 
-      // 3. Determine active HSK filter
+      // 3. Determine active HSK & Lesson filters
       let activeHsk = selectedHskId;
       if (activeHsk === null && !userExplicitlySelectedAll.current) {
         if (params.hskId && !isNaN(Number(params.hskId)) && Number(params.hskId) > 0) {
@@ -252,19 +267,24 @@ export default function CharacterWriteScreen() {
         }
       }
 
+      let activeLesson = selectedLessonId;
+      if (activeLesson === null && params.lessonId && !isNaN(Number(params.lessonId)) && Number(params.lessonId) > 0) {
+        activeLesson = Number(params.lessonId);
+        setSelectedLessonId(activeLesson);
+      }
+
       // 4. Fetch total count & initial 10 characters
-      const total = fetchTotalCount(activeHsk);
+      const total = fetchTotalCount(activeHsk, activeLesson);
       setTotalCharCount(total);
 
-      const batch = fetchCharactersBatch(activeHsk, PAGE_SIZE, 0);
+      const batch = fetchCharactersBatch(activeHsk, activeLesson, PAGE_SIZE, 0);
 
       // Ensure the currently displayed character is in characterList
       let list = batch;
       if (char && !batch.some((c) => c.id === char.id)) {
-        const matchesFilter =
-          activeHsk === null ||
-          char.hskId === activeHsk;
-        if (matchesFilter) {
+        const matchesHsk = activeHsk === null || char.hskId === activeHsk;
+        const matchesLesson = activeLesson === null || char.lessonId === activeLesson;
+        if (matchesHsk && matchesLesson) {
           list = [char, ...batch];
         }
       }
@@ -273,7 +293,7 @@ export default function CharacterWriteScreen() {
     } catch (err) {
       console.error('Error loading write character data:', err);
     }
-  }, [currentId, params.hskId, selectedHskId, fetchTotalCount, fetchCharactersBatch]);
+  }, [currentId, params.hskId, params.lessonId, selectedHskId, selectedLessonId, fetchTotalCount, fetchCharactersBatch]);
 
   useFocusEffect(
     useCallback(() => {
@@ -312,14 +332,19 @@ export default function CharacterWriteScreen() {
       : null;
   const canGoNext = Boolean(nextChar || characterList.length < totalCharCount);
 
-  const navigateToChar = (charId: number, overrideHskId?: number | null) => {
+  const navigateToChar = (
+    charId: number,
+    overrideHskId?: number | null,
+    overrideLessonId?: number | null
+  ) => {
     const targetHsk = overrideHskId !== undefined ? overrideHskId : selectedHskId;
+    const targetLesson = overrideLessonId !== undefined ? overrideLessonId : selectedLessonId;
     router.replace({
       pathname: '/pages/characterWrite/[id]',
       params: {
         id: String(charId),
         hskId: targetHsk ? String(targetHsk) : '',
-        lessonId: params.lessonId || '',
+        lessonId: targetLesson ? String(targetLesson) : '',
       },
     });
   };
@@ -332,6 +357,7 @@ export default function CharacterWriteScreen() {
     try {
       const nextBatch = fetchCharactersBatch(
         selectedHskId,
+        selectedLessonId,
         PAGE_SIZE,
         characterList.length
       );
@@ -346,7 +372,7 @@ export default function CharacterWriteScreen() {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoadingMore, characterList, totalCharCount, selectedHskId, fetchCharactersBatch]);
+  }, [isLoadingMore, characterList, totalCharCount, selectedHskId, selectedLessonId, fetchCharactersBatch]);
 
   // Next button click handler: navigate to nextChar or fetch next 10 and advance
   const handleNext = () => {
@@ -357,6 +383,7 @@ export default function CharacterWriteScreen() {
       try {
         const nextBatch = fetchCharactersBatch(
           selectedHskId,
+          selectedLessonId,
           PAGE_SIZE,
           characterList.length
         );
@@ -381,18 +408,19 @@ export default function CharacterWriteScreen() {
       userExplicitlySelectedAll.current = false;
     }
     setSelectedHskId(hskId);
+    setSelectedLessonId(null);
 
     try {
-      const total = fetchTotalCount(hskId);
+      const total = fetchTotalCount(hskId, null);
       setTotalCharCount(total);
 
-      const batch = fetchCharactersBatch(hskId, PAGE_SIZE, 0);
+      const batch = fetchCharactersBatch(hskId, null, PAGE_SIZE, 0);
       setCharacterList(batch);
 
       const exists = batch.some((c) => c.id === currentId);
       if (!exists && batch.length > 0) {
         // Automatically switch to the first character of the selected HSK
-        navigateToChar(batch[0].id, hskId);
+        navigateToChar(batch[0].id, hskId, null);
       } else if (batch.length === 0) {
         setCharacter(null);
         setHsk(null);
@@ -401,10 +429,39 @@ export default function CharacterWriteScreen() {
       } else {
         router.setParams({
           hskId: hskId ? String(hskId) : '',
+          lessonId: '',
         });
       }
     } catch (err) {
       console.error('Error selecting HSK:', err);
+    }
+  };
+
+  const handleSelectLesson = (lessonId: number | null) => {
+    setSelectedLessonId(lessonId);
+
+    try {
+      const total = fetchTotalCount(selectedHskId, lessonId);
+      setTotalCharCount(total);
+
+      const batch = fetchCharactersBatch(selectedHskId, lessonId, PAGE_SIZE, 0);
+      setCharacterList(batch);
+
+      const exists = batch.some((c) => c.id === currentId);
+      if (!exists && batch.length > 0) {
+        navigateToChar(batch[0].id, selectedHskId, lessonId);
+      } else if (batch.length === 0) {
+        setCharacter(null);
+        setLesson(null);
+        handleClear();
+      } else {
+        router.setParams({
+          hskId: selectedHskId ? String(selectedHskId) : '',
+          lessonId: lessonId ? String(lessonId) : '',
+        });
+      }
+    } catch (err) {
+      console.error('Error selecting Lesson:', err);
     }
   };
 
@@ -413,6 +470,11 @@ export default function CharacterWriteScreen() {
     const found = allHsks.find((h) => h.id === selectedHskId);
     return found ? found.name : `HSK ${selectedHskId}`;
   }, [selectedHskId, allHsks]);
+
+  const selectedLessonObj = useMemo(() => {
+    if (selectedLessonId === null) return null;
+    return allLessons.find((l) => l.id === selectedLessonId) || null;
+  }, [selectedLessonId, allLessons]);
 
   // Canvas drawing via PanResponder
   const panResponder = useMemo(
@@ -657,6 +719,78 @@ export default function CharacterWriteScreen() {
               );
             })}
           </ScrollView>
+
+          {/* ── LESSON SELECTOR ROW (Filtered inside chosen HSK) ── */}
+          <View style={styles.lessonSelectorHeader}>
+            <View style={styles.hskSelectorTitleRow}>
+              <View style={[styles.hskIconBadge, { backgroundColor: '#e0f2fe' }]}>
+                <Lucide name="book-open" size={13} color="#0284c7" />
+              </View>
+              <Text style={styles.hskSelectorTitle}>
+                {selectedHskId !== null ? `${selectedHskName} Lessons` : 'Lessons'}
+              </Text>
+            </View>
+            <Text style={styles.lessonCountText}>
+              {filteredLessons.length} {filteredLessons.length === 1 ? 'lesson' : 'lessons'}
+            </Text>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.hskChipsScroll}
+          >
+            <TouchableOpacity
+              style={[
+                styles.hskChip,
+                styles.lessonChip,
+                selectedLessonId === null && styles.lessonChipActive,
+              ]}
+              onPress={() => handleSelectLesson(null)}
+              activeOpacity={0.7}
+            >
+              {selectedLessonId === null && (
+                <Lucide name="check" size={12} color="#ffffff" style={{ marginRight: 4 }} />
+              )}
+              <Text
+                style={[
+                  styles.hskChipText,
+                  selectedLessonId === null && styles.hskChipTextActive,
+                ]}
+              >
+                {selectedHskId !== null ? `All ${selectedHskName} Lessons` : 'All Lessons'}
+              </Text>
+            </TouchableOpacity>
+
+            {filteredLessons.map((l) => {
+              const isSelected = selectedLessonId === l.id;
+              return (
+                <TouchableOpacity
+                  key={`lesson-${l.id}`}
+                  style={[
+                    styles.hskChip,
+                    styles.lessonChip,
+                    isSelected && styles.lessonChipActive,
+                  ]}
+                  onPress={() => handleSelectLesson(isSelected ? null : l.id)}
+                  activeOpacity={0.7}
+                >
+                  {isSelected && (
+                    <Lucide name="check" size={12} color="#ffffff" style={{ marginRight: 4 }} />
+                  )}
+                  <Text
+                    style={[
+                      styles.hskChipText,
+                      isSelected && styles.hskChipTextActive,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    L{l.num}: {l.title}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
 
         {characterList.length === 0 ? (
@@ -664,13 +798,18 @@ export default function CharacterWriteScreen() {
             <View style={styles.emptyIconCircle}>
               <Lucide name="book-open" size={28} color="#8b5cf6" />
             </View>
-            <Text style={styles.emptyTitle}>No characters in this level</Text>
+            <Text style={styles.emptyTitle}>No characters found</Text>
             <Text style={styles.emptySubtitle}>
-              There are no characters assigned to {selectedHskName} yet.
+              {selectedLessonObj
+                ? `No characters assigned to Lesson ${selectedLessonObj.num} (${selectedLessonObj.title}).`
+                : `There are no characters assigned to ${selectedHskName} yet.`}
             </Text>
             <TouchableOpacity
               style={styles.emptyResetBtn}
-              onPress={() => handleSelectHsk(null)}
+              onPress={() => {
+                handleSelectHsk(null);
+                handleSelectLesson(null);
+              }}
               activeOpacity={0.7}
             >
               <Lucide name="rotate-ccw" size={14} color="#ffffff" />
@@ -1066,12 +1205,24 @@ export default function CharacterWriteScreen() {
             )}
 
             {lesson && (
-              <View style={styles.metaPill}>
+              <TouchableOpacity
+                style={[
+                  styles.metaPill,
+                  selectedLessonId === lesson.id && { backgroundColor: '#e0f2fe', borderColor: '#7dd3fc' },
+                ]}
+                onPress={() => {
+                  if (lesson.hskId && selectedHskId !== lesson.hskId) {
+                    setSelectedHskId(lesson.hskId);
+                  }
+                  handleSelectLesson(lesson.id);
+                }}
+                activeOpacity={0.7}
+              >
                 <Lucide name="book-open" size={12} color="#0284c7" />
                 <Text style={[styles.metaPillText, { color: '#0284c7' }]}>
                   Lesson {lesson.num}
                 </Text>
-              </View>
+              </TouchableOpacity>
             )}
           </View>
         </View>
@@ -1836,6 +1987,32 @@ const styles = StyleSheet.create({
   hskChipTextActive: {
     color: '#ffffff',
     fontWeight: '800',
+  },
+  lessonChip: {
+    borderColor: '#e2e8f0',
+  },
+  lessonChipActive: {
+    backgroundColor: '#0284c7',
+    borderColor: '#0369a1',
+    shadowColor: '#0284c7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  lessonSelectorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  lessonCountText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#0284c7',
   },
 
   /* Empty State */

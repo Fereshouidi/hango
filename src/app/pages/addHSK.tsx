@@ -43,6 +43,7 @@ import {
     WordType,
 } from '@/types';
 import Lucide from '@react-native-vector-icons/lucide';
+import { CollapsibleLinkingSection } from '@/components/common/CollapsibleLinkingSection';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -77,13 +78,14 @@ const AddHSK = () => {
 
     // Expanded sections
     const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-        lessons: true,
+        lessons: false,
         texts: false,
         sentences: false,
-        words: true,
+        words: false,
         characters: false,
         rules: false,
     });
+    const [showOptionalLinks, setShowOptionalLinks] = useState(false);
 
     const [createdBannerInfo, setCreatedBannerInfo] = useState<{
         visible: boolean;
@@ -301,6 +303,17 @@ const AddHSK = () => {
                         </View>
                     </View>
 
+                    {/* ===== OPTIONAL LINKING SECTIONS ===== */}
+                    <CollapsibleLinkingSection
+                        title="Link Content to this HSK Level (Optional)"
+                        subtitle="Connect lessons, texts, sentences, words, characters, or rules"
+                        icon="link-2"
+                        accentColor="#6366f1"
+                        selectedCount={totalSelectedCount}
+                        isOpen={showOptionalLinks}
+                        onToggle={() => setShowOptionalLinks((prev) => !prev)}
+                        tip="Connecting content is completely optional! You can create this HSK level now and add items to it anytime."
+                    >
                     {/* ===== LESSONS SECTION ===== */}
                     <SliderSection
                         title="Lessons"
@@ -679,6 +692,7 @@ const AddHSK = () => {
                             </ScrollView>
                         )}
                     </SliderSection>
+                    </CollapsibleLinkingSection>
 
                     {/* ===== SAVE BUTTON ===== */}
                     <TouchableOpacity

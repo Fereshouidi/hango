@@ -222,7 +222,9 @@ export default function ConfirmScreen() {
                 <TouchableOpacity
                   style={[S.copyButton, copiedKey === 'amount' && S.copyButtonActive]}
                   onPress={() => copyToClipboard(
-                    selectedMethod === 'payeer' ? `${plan.prices.payeer}` : `${plan.prices[selectedMethod]}`,
+                    (selectedMethod === 'payeer' || selectedMethod === 'usdt')
+                      ? `${plan.prices?.usdt ?? plan.prices.payeer}`
+                      : `${plan.prices[selectedMethod as 'd17' | 'ooredoo']}`,
                     'amount'
                   )}
                   activeOpacity={0.8}
@@ -272,6 +274,14 @@ export default function ConfirmScreen() {
                   <Text style={S.quickStepLine}>• Copy the Operation / Batch ID from your Payeer history.</Text>
                 </>
               )}
+              {selectedMethod === 'usdt' && (
+                <>
+                  <Text style={S.quickStepLine}>• Open your crypto wallet (Trust Wallet, Binance, etc.).</Text>
+                  <Text style={S.quickStepLine}>• Send exactly <Text style={{ fontWeight: '700' }}>{price} USDT</Text> to the wallet address above.</Text>
+                  <Text style={[S.quickStepLine, { color: '#dc2626', fontWeight: '600' }]}>⚠️ Use the correct network — check with support if unsure.</Text>
+                  <Text style={S.quickStepLine}>• Copy your <Text style={{ fontWeight: '700' }}>Transaction Hash (TXID)</Text> from your wallet history.</Text>
+                </>
+              )}
             </View>
           </View>
 
@@ -293,7 +303,7 @@ export default function ConfirmScreen() {
                 placeholder={meta.refPlaceholder}
                 placeholderTextColor="#94a3b8"
                 autoCapitalize="none"
-                keyboardType={selectedMethod === 'payeer' ? 'default' : 'phone-pad'}
+                keyboardType={selectedMethod === 'payeer' || selectedMethod === 'usdt' ? 'default' : 'phone-pad'}
               />
               <TouchableOpacity style={S.pasteInlineBtn} onPress={pasteFromClipboard} activeOpacity={0.7}>
                 <Lucide name="clipboard" size={13} color="#2563eb" />

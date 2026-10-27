@@ -10,6 +10,7 @@ interface TextCardProps {
   textObj: TextType;
   index?: number;
   searchQuery?: string;
+  highlightStyle?: import('react-native').StyleProp<import('react-native').TextStyle>;
   showPinyin?: boolean;
   showMeaning?: boolean;
   cardBg?: string;
@@ -20,13 +21,14 @@ interface TextCardProps {
   isSelectionMode?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
-  onOptionsPress?: () => void;
+  onOptionsPress?: (text: TextType) => void;
 }
 
 export const TextCard: React.FC<TextCardProps> = React.memo(({
   textObj,
   index,
   searchQuery,
+  highlightStyle,
   showPinyin = true,
   showMeaning = true,
   cardBg,
@@ -118,7 +120,7 @@ export const TextCard: React.FC<TextCardProps> = React.memo(({
               styles.playBtn,
               cardBg ? styles.whitePlayBtnBg : { backgroundColor: accentColor + '20' },
             ]}
-            onPress={onOptionsPress || onLongPress}
+            onPress={onOptionsPress ? () => onOptionsPress(textObj) : onLongPress}
             activeOpacity={0.7}
           >
             <Lucide
@@ -133,6 +135,7 @@ export const TextCard: React.FC<TextCardProps> = React.memo(({
       <HighlightedText
         text={searchQuery ? textObj.content : handleLongText(textObj.content, 20)}
         highlight={searchQuery}
+        highlightStyle={highlightStyle}
         isCardBg={Boolean(cardBg)}
         style={[styles.content, cardBg && styles.whiteText]}
         numberOfLines={3}
@@ -142,6 +145,7 @@ export const TextCard: React.FC<TextCardProps> = React.memo(({
         <HighlightedText
           text={searchQuery ? textObj.pinyin : handleLongText(textObj.pinyin, 40)}
           highlight={searchQuery}
+          highlightStyle={highlightStyle}
           isCardBg={Boolean(cardBg)}
           style={[styles.pinyin, cardBg ? styles.whiteSubtext : styles.darkSubtext]}
           numberOfLines={2}
@@ -152,6 +156,7 @@ export const TextCard: React.FC<TextCardProps> = React.memo(({
         <HighlightedText
           text={searchQuery ? textObj.meaning : handleLongText(textObj.meaning, 40)}
           highlight={searchQuery}
+          highlightStyle={highlightStyle}
           isCardBg={Boolean(cardBg)}
           style={[styles.meaning, cardBg ? styles.whiteSubtext : styles.darkMeaning]}
           numberOfLines={2}

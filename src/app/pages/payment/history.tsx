@@ -23,6 +23,7 @@ const METHOD_LABEL: Record<PaymentMethod, { name: string; color: string; bg: str
   d17:     { name: 'D17',     color: '#d97706', bg: '#fffbeb' },
   ooredoo: { name: 'Ooredoo', color: '#dc2626', bg: '#fef2f2' },
   payeer:  { name: 'Payeer',  color: '#2563eb', bg: '#eff6ff' },
+  usdt:    { name: 'USDT',    color: '#16a34a', bg: '#f0fdf4' },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {

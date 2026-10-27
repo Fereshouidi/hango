@@ -50,8 +50,8 @@ export default function PlanSelectionScreen() {
 
   const plansCarouselRef = useRef<ScrollView>(null);
   const { width: windowWidth } = useWindowDimensions();
-  const CARD_WIDTH = Math.min(Math.round(windowWidth * 0.82), 335);
-  const CARD_GAP = 14;
+  const CARD_WIDTH = Math.min(Math.round(windowWidth * 0.82), 400); 
+  const CARD_GAP = 10;
   const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
   // Side inset so the first (and last) card sits centred in the full-width scroll view
   const SIDE_INSET = (windowWidth - CARD_WIDTH) / 2;
@@ -130,6 +130,8 @@ export default function PlanSelectionScreen() {
   }
 
   // ── Already subscribed ─────────────────────────────────────────
+  const isFreeTrial = subscriptionPlan === '1_month_free_trial';
+
   if (isSubscribed && !isRenewing) {
     return (
       <ThemedView style={S.container}>
@@ -139,8 +141,8 @@ export default function PlanSelectionScreen() {
             <Lucide name="arrow-left" size={20} color="#0f172a" />
           </TouchableOpacity>
           <View style={S.headerCenter}>
-            <Text style={S.headerTitle}>Subscription Status</Text>
-            <Text style={S.headerSub}>HanGo Pro Member</Text>
+            <Text style={S.headerTitle}>{isFreeTrial ? 'Free Trial Active' : 'Subscription Status'}</Text>
+            <Text style={S.headerSub}>{isFreeTrial ? '🎁 Welcome gift — 1 month on us!' : 'HanGo Pro Member'}</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/pages/payment/history')} style={S.helpBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Lucide name="receipt" size={18} color="#2563eb" />
@@ -148,11 +150,41 @@ export default function PlanSelectionScreen() {
         </View>
         <ScrollView contentContainerStyle={[S.scrollContent, { paddingBottom: Math.max(insets.bottom + 24, 36) }]} showsVerticalScrollIndicator={false}>
           <View style={S.activeCard}>
+            {/* Free Trial banner */}
+            {isFreeTrial && (
+              <View style={{
+                backgroundColor: '#fef3c7',
+                borderColor: '#f59e0b',
+                borderWidth: 1.5,
+                borderRadius: 14,
+                paddingVertical: 10,
+                paddingHorizontal: 16,
+                marginBottom: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+              }}>
+                <Lucide name="gift" size={20} color="#d97706" />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#92400e' }}>
+                    You're on a Free Trial!
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#78350f', marginTop: 2 }}>
+                    Enjoy full Pro access for 30 days, on us. Subscribe before it expires to keep access.
+                  </Text>
+                </View>
+              </View>
+            )}
+
             <View style={S.activeIconOuter}>
-              <Lucide name="badge-check" size={54} color="#10b981" />
+              <Lucide name={isFreeTrial ? 'gift' : 'badge-check'} size={54} color={isFreeTrial ? '#d97706' : '#10b981'} />
             </View>
-            <Text style={S.activeTitle}>HanGo Pro is Active!</Text>
-            <Text style={S.activeSubtitle}>You have full unlimited access to all features.</Text>
+            <Text style={S.activeTitle}>{isFreeTrial ? 'Free Trial is Active!' : 'HanGo Pro is Active!'}</Text>
+            <Text style={S.activeSubtitle}>
+              {isFreeTrial
+                ? 'You have full unlimited access to all features during your trial.'
+                : 'You have full unlimited access to all features.'}
+            </Text>
             <View style={S.activeDetailsBox}>
               <View style={S.activeDetailRow}>
                 <Text style={S.activeDetailLabel}>Current Plan</Text>
@@ -160,7 +192,11 @@ export default function PlanSelectionScreen() {
               </View>
               <View style={S.activeDetailRow}>
                 <Text style={S.activeDetailLabel}>Status</Text>
-                <View style={S.activeBadge}><Text style={S.activeBadgeText}>ACTIVE</Text></View>
+                <View style={[S.activeBadge, isFreeTrial && { backgroundColor: '#fef3c7' }]}>
+                  <Text style={[S.activeBadgeText, isFreeTrial && { color: '#d97706' }]}>
+                    {isFreeTrial ? 'FREE TRIAL' : 'ACTIVE'}
+                  </Text>
+                </View>
               </View>
               {subscriptionExpiresAt && (
                 <View style={S.activeDetailRow}>
@@ -172,7 +208,9 @@ export default function PlanSelectionScreen() {
               )}
               <View style={S.activeDetailRow}>
                 <Text style={S.activeDetailLabel}>Days Left</Text>
-                <Text style={[S.activeDetailValue, { color: '#059669' }]}>{daysRemaining} days remaining</Text>
+                <Text style={[S.activeDetailValue, { color: daysRemaining <= 7 ? '#ef4444' : '#059669' }]}>
+                  {daysRemaining} days remaining
+                </Text>
               </View>
             </View>
             <View style={S.unlockedFeaturesBox}>
@@ -189,13 +227,26 @@ export default function PlanSelectionScreen() {
                 </View>
               ))}
             </View>
-            <View style={S.renewNoteBox}>
-              <Lucide name="sparkles" size={16} color="#2563eb" />
-              <Text style={S.renewNoteText}>Want to add more time? Renewing now adds days right on top of your existing period!</Text>
-            </View>
-            <TouchableOpacity style={S.primaryActionBtn} onPress={() => setIsRenewing(true)} activeOpacity={0.85}>
-              <Lucide name="refresh-cw" size={17} color="#ffffff" />
-              <Text style={S.primaryActionBtnText}>Renew or Extend Plan</Text>
+            {isFreeTrial ? (
+              <View style={S.renewNoteBox}>
+                <Lucide name="clock" size={16} color="#d97706" />
+                <Text style={[S.renewNoteText, { color: '#92400e' }]}>
+                  Your free trial ends in {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}. Subscribe now to keep uninterrupted access!
+                </Text>
+              </View>
+            ) : (
+              <View style={S.renewNoteBox}>
+                <Lucide name="sparkles" size={16} color="#2563eb" />
+                <Text style={S.renewNoteText}>Want to add more time? Renewing now adds days right on top of your existing period!</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={[S.primaryActionBtn, isFreeTrial && { backgroundColor: '#d97706' }]}
+              onPress={() => setIsRenewing(true)}
+              activeOpacity={0.85}
+            >
+              <Lucide name={isFreeTrial ? 'star' : 'refresh-cw'} size={17} color="#ffffff" />
+              <Text style={S.primaryActionBtnText}>{isFreeTrial ? 'Subscribe to Keep Access' : 'Renew or Extend Plan'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={S.ghostBtn} onPress={() => router.push('/pages/payment/history')} activeOpacity={0.8}>
               <Lucide name="receipt" size={15} color="#64748b" />
@@ -209,6 +260,7 @@ export default function PlanSelectionScreen() {
       </ThemedView>
     );
   }
+
 
   // ── Plan selection ─────────────────────────────────────────────
   return (
@@ -287,10 +339,10 @@ export default function PlanSelectionScreen() {
           </Text>
         </View>
 
-        <View style={{...ls.plansContainer}}>
+        <View style={ls.plansContainer}>
           {/* Section Header */}
-          <Text style={[S.sectionHeaderTitle, { marginTop: 4 }]}>Choose Your Access Duration</Text>
-          <Text style={S.sectionHeaderSubtitle}>Swipe to explore each plan — all features included</Text>
+          <Text style={[S.sectionHeaderTitle, { marginTop: 4, paddingHorizontal: 16 }]}>Choose Your Access Duration</Text>
+          <Text style={[S.sectionHeaderSubtitle, { paddingHorizontal: 16 }]}>Swipe to explore each plan — all features included</Text>
 
           {/* Carousel */}
           <ScrollView
@@ -300,9 +352,10 @@ export default function PlanSelectionScreen() {
             snapToInterval={SNAP_INTERVAL}
             snapToAlignment="start"
             decelerationRate="fast"
+            disableIntervalMomentum={true}
+            style={{ width: windowWidth }}
             contentContainerStyle={{
               paddingHorizontal: SIDE_INSET,
-              gap: CARD_GAP,
               paddingVertical: 8,
             }}
             onMomentumScrollEnd={(e) => {
@@ -321,7 +374,15 @@ export default function PlanSelectionScreen() {
               return (
                 <TouchableOpacity
                   key={plan.id}
-                  style={[ls.swipePlanCard, { width: CARD_WIDTH }, isSelected && ls.swipePlanCardSelected, isBestValue && ls.swipePlanCardBest]}
+                  style={[
+                    ls.swipePlanCard,
+                    {
+                      width: CARD_WIDTH,
+                      marginRight: idx < plans.length - 1 ? CARD_GAP : 0,
+                    },
+                    isSelected && ls.swipePlanCardSelected,
+                    isBestValue && ls.swipePlanCardBest,
+                  ]}
                   onPress={() => handleSwitchPlan(plan, idx)}
                   activeOpacity={0.92}
                 >
@@ -476,7 +537,7 @@ const ls = StyleSheet.create({
   swipePlanCard: {
     backgroundColor: '#ffffffe6',
     overflow: "hidden",
-    borderRadius: 22,
+    borderRadius: 20,
     padding: 18,
     borderWidth: 1.5,
     borderColor: '#e2e8f0',
@@ -502,7 +563,13 @@ const ls = StyleSheet.create({
   planRibbonStandard: { backgroundColor: '#059669' },
   planRibbonText: { fontSize: 10, fontWeight: '800', color: '#ffffff', letterSpacing: 0.3 },
 
-  plansContainer: {backgroundColor: "#ffffffe6", padding: 10, borderRadius: 20},
+  plansContainer: {
+    backgroundColor: '#ffffffe6',
+    marginHorizontal: -5,
+    paddingVertical: 14,
+    paddingHorizontal: 0,
+    borderRadius: 20,
+  },
   planTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   radioCircle: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#cbd5e1', alignItems: 'center', justifyContent: 'center' },
   radioCircleSelected: { borderColor: '#2563eb', backgroundColor: '#ffffff' },
@@ -530,14 +597,13 @@ const ls = StyleSheet.create({
 
   cardConfirmBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 13, paddingHorizontal: 16, borderRadius: 14,
-    backgroundColor: '#eff6ff', borderWidth: 1.5, borderColor: '#2563eb', marginTop: 4,
+    paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12,
+    backgroundColor: '#eff6ff', marginTop: 8,
   },
   cardConfirmBtnSelected: {
-    backgroundColor: '#2563eb', borderColor: '#1d4ed8',
-    shadowColor: '#2563eb', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 5,
+    backgroundColor: '#2563eb',
   },
-  cardConfirmBtnText: { fontSize: 13.5, fontWeight: '700', color: '#2563eb', flexShrink: 1 },
+  cardConfirmBtnText: { fontSize: 12, fontWeight: '700', color: '#2563eb', flexShrink: 1 },
   cardConfirmBtnTextSelected: { color: '#ffffff' },
 
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#cbd5e1' },

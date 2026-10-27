@@ -5,6 +5,7 @@ import { TextCard } from '@/components/cards/TextCard';
 import { CategoryTabType } from '@/components/common/CategoryTabs';
 import { DetailControlPanel } from '@/components/common/DetailControlPanel';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
+import { OptionsMenuModal, OptionItem } from '@/components/common/OptionsMenuModal';
 import { ViewAllButton } from '@/components/common/ViewAllButton';
 import { CharacterDetailSection } from '@/components/details/CharacterDetailSection';
 import { WordHeroCard } from '@/components/details/WordHeroCard';
@@ -12,6 +13,10 @@ import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
 import { ThemedView } from '@/components/themed-view';
 import {
+  deleteCharacter,
+  deleteRule,
+  deleteSentence,
+  deleteText,
   getAllCharacters,
   getAllRules,
   getAllSentences,
@@ -25,6 +30,10 @@ import {
   getSentencesByWordId,
   getTextsByWordId,
   getWordById,
+  unlinkCharacterFromWord,
+  unlinkRuleFromWord,
+  unlinkSentenceFromWord,
+  unlinkTextFromWord,
 } from '@/db/utils';
 import {
   CharacterType,
@@ -40,6 +49,7 @@ import Lucide from '@react-native-vector-icons/lucide';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -48,7 +58,7 @@ import {
   View,
 } from 'react-native';
 
-const ITEM_LIMIT = 4;
+const ITEM_LIMIT = 3;
 const PAGE_SIZE = 10;
 
 const WordDetails = () => {
@@ -86,6 +96,113 @@ const WordDetails = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Options Menu state
+  const [activeItem, setActiveItem] = useState<{
+    type: 'text' | 'sentence' | 'character' | 'rule';
+    item: any;
+  } | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const handleOpenOptions = (
+    type: 'text' | 'sentence' | 'character' | 'rule',
+    item: any
+  ) => {
+    setActiveItem({ type, item });
+    setMenuVisible(true);
+  };
+
+  const buildMenuOptions = (): OptionItem[] => {
+    if (!activeItem || !activeItem.item) return [];
+    const { type, item } = activeItem;
+    const typeLabel =
+      type === 'text'
+        ? 'Text'
+        : type === 'sentence'
+        ? 'Sentence'
+        : type === 'character'
+        ? 'Character'
+        : 'Rule';
+
+    return [
+      {
+        id: 'view',
+        label: 'View Details',
+        iconName: 'external-link',
+        color: '#059669',
+        onPress: () => {
+          setMenuVisible(false);
+          setActiveItem(null);
+          if (type === 'text') router.push(`/pages/textDetails/${item.id}` as any);
+          else if (type === 'sentence') router.push(`/pages/sentenceDetails/${item.id}` as any);
+          else if (type === 'character') router.push(`/pages/characterDetails/${item.id}` as any);
+          else if (type === 'rule') router.push(`/pages/ruleDetails/${item.id}` as any);
+        },
+      },
+      {
+        id: 'remove',
+        label: `Remove from Word`,
+        iconName: 'minus-circle',
+        color: '#ef4444',
+        destructive: true,
+        onPress: () => {
+          Alert.alert(
+            'Remove from Word',
+            `Are you sure you want to remove this ${typeLabel.toLowerCase()} from "${word?.content || ''}"?`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Remove',
+                style: 'destructive',
+                onPress: () => {
+                  try {
+                    if (type === 'text') unlinkTextFromWord(item.id, wordId);
+                    else if (type === 'sentence') unlinkSentenceFromWord(item.id, wordId);
+                    else if (type === 'character') unlinkCharacterFromWord(item.id, wordId);
+                    else if (type === 'rule') unlinkRuleFromWord(item.id, wordId);
+                    loadData();
+                  } catch (e) {
+                    Alert.alert('Error', 'Failed to remove item from word.');
+                  }
+                },
+              },
+            ]
+          );
+        },
+      },
+      {
+        id: 'delete',
+        label: `Delete ${typeLabel} Permanently`,
+        iconName: 'trash-2',
+        color: '#dc2626',
+        destructive: true,
+        onPress: () => {
+          Alert.alert(
+            `Delete ${typeLabel}`,
+            `Are you sure you want to permanently delete this ${typeLabel.toLowerCase()}? This cannot be undone.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => {
+                  try {
+                    if (type === 'text') deleteText(item.id);
+                    else if (type === 'sentence') deleteSentence(item.id);
+                    else if (type === 'character') deleteCharacter(item.id);
+                    else if (type === 'rule') deleteRule(item.id);
+                    loadData();
+                  } catch (e) {
+                    Alert.alert('Error', `Failed to delete ${typeLabel.toLowerCase()}.`);
+                  }
+                },
+              },
+            ]
+          );
+        },
+      },
+    ];
+  };
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -174,6 +291,16 @@ const WordDetails = () => {
   // ── Search & Filter Logic ──
   const q = searchQuery.toLowerCase().trim();
   const wordSymbol = word?.content?.trim() || '';
+  const effectiveHighlight = searchQuery.trim() || wordSymbol;
+  const wideSearchHighlightStyle = effectiveHighlight
+    ? {
+        backgroundColor: '#fee2e2',
+        color: '#ef4444',
+        fontWeight: '800' as const,
+        borderRadius: 4,
+        paddingHorizontal: 2,
+      }
+    : undefined;
 
   const matchesItem = (
     content: string = '',
@@ -243,7 +370,7 @@ const WordDetails = () => {
             activeOpacity={0.7}
             style={styles.headerIconBtn}
           >
-            <Lucide name="pencil" size={18} color="#64748b" />
+            <Lucide name="pencil" size={18} color="#1e293b" />
           </TouchableOpacity>,
           <TouchableOpacity
             key="add"
@@ -251,7 +378,7 @@ const WordDetails = () => {
             activeOpacity={0.7}
             style={styles.headerIconBtn}
           >
-            <Lucide name="plus" size={18} color="#64748b" />
+            <Lucide name="plus" size={18} color="#1e293b" />
           </TouchableOpacity>,
         ]}
       />
@@ -334,10 +461,12 @@ const WordDetails = () => {
                 showMeaning={showMeaning}
                 isPlaying={playingItemId === `text-${textObj.id}`}
                 onPlayAudio={(id, content) => playItemAudio(id, content, `text-${id}`)}
-                searchQuery={searchQuery}
+                searchQuery={effectiveHighlight}
+                highlightStyle={wideSearchHighlightStyle}
+                onOptionsPress={(item) => handleOpenOptions('text', item)}
               />
             ))}
-            {activeTab === 'all' && filteredTexts.length > ITEM_LIMIT && (
+            {activeTab === 'all' && filteredTexts.length > 0 && (
               <ViewAllButton
                 count={filteredTexts.length}
                 label="Reading Texts"
@@ -348,7 +477,7 @@ const WordDetails = () => {
                     params: {
                       wordId,
                       scope: searchScope,
-                      search: searchQuery,
+                      search: effectiveHighlight,
                     },
                   } as any)
                 }
@@ -387,10 +516,12 @@ const WordDetails = () => {
                 showMeaning={showMeaning}
                 isPlaying={playingItemId === `sentence-${sentence.id}`}
                 onPlayAudio={(id, content) => playItemAudio(id, content, `sentence-${id}`)}
-                searchQuery={searchQuery}
+                searchQuery={effectiveHighlight}
+                highlightStyle={wideSearchHighlightStyle}
+                onOptionsPress={(item) => handleOpenOptions('sentence', item)}
               />
             ))}
-            {activeTab === 'all' && filteredSentences.length > ITEM_LIMIT && (
+            {activeTab === 'all' && filteredSentences.length > 0 && (
               <ViewAllButton
                 count={filteredSentences.length}
                 label="Sentences"
@@ -401,7 +532,7 @@ const WordDetails = () => {
                     params: {
                       wordId,
                       scope: searchScope,
-                      search: searchQuery,
+                      search: effectiveHighlight,
                     },
                   } as any)
                 }
@@ -424,7 +555,7 @@ const WordDetails = () => {
         {(activeTab === 'all' || activeTab === 'characters') && (
           <CharacterDetailSection
             title="Characters"
-            iconName="spell-check"
+            iconName="character"
             badgeColor="#ec4899"
             count={filteredCharacters.length}
             addBtnText="add character"
@@ -432,8 +563,8 @@ const WordDetails = () => {
             emptyLabel="No characters linked yet"
           >
             <View style={styles.charsGrid}>
-              {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((charObj, idx) => (
-                <View key={charObj.id || idx} style={{ width: '48.5%' }}>
+              {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT + 1 : visibleCount).map((charObj, idx) => (
+                <View key={charObj.id || idx} style={{ width: '48.5%', marginBottom: 8 }}>
                   {charObj && (
                     <CharacterCard
                       character={charObj as unknown as CharacterType}
@@ -441,13 +572,15 @@ const WordDetails = () => {
                       showMeaning={showMeaning}
                       isPlaying={playingItemId === `char-${charObj.id}`}
                       onPlayAudio={(id, content) => playItemAudio(id, content, `char-${id}`)}
-                      searchQuery={searchQuery}
+                      searchQuery={effectiveHighlight}
+                      highlightStyle={wideSearchHighlightStyle}
+                      onOptionsPress={(item) => handleOpenOptions('character', item)}
                     />
                   )}
                 </View>
               ))}
             </View>
-            {activeTab === 'all' && filteredCharacters.length > ITEM_LIMIT && (
+            {activeTab === 'all' && filteredCharacters.length > 0 && (
               <ViewAllButton
                 count={filteredCharacters.length}
                 label="Characters"
@@ -458,7 +591,7 @@ const WordDetails = () => {
                     params: {
                       wordId,
                       scope: searchScope,
-                      search: searchQuery,
+                      search: effectiveHighlight,
                     },
                   } as any)
                 }
@@ -495,10 +628,12 @@ const WordDetails = () => {
                 index={idx}
                 isPlaying={playingItemId === `rule-${rule.id}`}
                 onPlayAudio={(id, content) => playItemAudio(id, content, `rule-${id}`)}
-                searchQuery={searchQuery}
+                searchQuery={effectiveHighlight}
+                highlightStyle={wideSearchHighlightStyle}
+                onOptionsPress={(item) => handleOpenOptions('rule', item)}
               />
             ))}
-            {activeTab === 'all' && filteredRules.length > ITEM_LIMIT && (
+            {activeTab === 'all' && filteredRules.length > 0 && (
               <ViewAllButton
                 count={filteredRules.length}
                 label="Grammar Points"
@@ -509,7 +644,7 @@ const WordDetails = () => {
                     params: {
                       wordId,
                       scope: searchScope,
-                      search: searchQuery,
+                      search: effectiveHighlight,
                     },
                   } as any)
                 }
@@ -543,6 +678,22 @@ const WordDetails = () => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <OptionsMenuModal
+        visible={menuVisible}
+        onClose={() => {
+          setMenuVisible(false);
+          setActiveItem(null);
+        }}
+        title={
+          activeItem?.item
+            ? activeItem.type === 'text'
+              ? activeItem.item.title || 'Text Options'
+              : `"${activeItem.item.content}" Options`
+            : 'Options'
+        }
+        options={buildMenuOptions()}
+      />
     </ThemedView>
   );
 };
@@ -556,14 +707,19 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#e8e8e8',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   headerIconBtnActive: {
     backgroundColor: '#ecfdf5',

@@ -1,7 +1,8 @@
-import React, { memo, useCallback, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
-  Platform,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -24,6 +25,7 @@ export type MultiPickerProps<T extends { id: number }> = {
 };
 
 const ITEM_HEIGHT = 44;
+const PAGE_SIZE = 40;
 
 interface OptionRowProps {
   id: number;
@@ -75,6 +77,7 @@ export function MultiPicker<T extends { id: number }>({
   onToggleOpen,
 }: MultiPickerProps<T>) {
   const [search, setSearch] = useState('');
+  const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
 
   // Selected items memoized
   const selectedItems = useMemo(
@@ -92,32 +95,27 @@ export function MultiPicker<T extends { id: number }>({
     });
   }, [items, search, getLabel]);
 
-  const renderItem = useCallback(
-    ({ item }: { item: T }) => {
-      const isSel = selectedIds.has(item.id);
-      return (
-        <OptionRow
-          id={item.id}
-          label={getLabel(item)}
-          isSelected={isSel}
-          onToggle={onToggle}
-          accentColor={iconColor}
-        />
-      );
+  // Reset pagination limit when search or open state changes
+  useEffect(() => {
+    setVisibleLimit(PAGE_SIZE);
+  }, [search, open]);
+
+  const visibleItems = useMemo(
+    () => filteredItems.slice(0, visibleLimit),
+    [filteredItems, visibleLimit]
+  );
+
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+      const isCloseToBottom =
+        layoutMeasurement.height + contentOffset.y >= contentSize.height - 80;
+      if (isCloseToBottom && visibleLimit < filteredItems.length) {
+        setVisibleLimit((prev) => Math.min(prev + PAGE_SIZE, filteredItems.length));
+      }
     },
-    [selectedIds, onToggle, getLabel, iconColor]
+    [visibleLimit, filteredItems.length]
   );
-
-  const getItemLayout = useCallback(
-    (_: any, index: number) => ({
-      length: ITEM_HEIGHT,
-      offset: ITEM_HEIGHT * index,
-      index,
-    }),
-    []
-  );
-
-  const keyExtractor = useCallback((item: T) => String(item.id), []);
 
   return (
     <View style={styles.pickerCol}>
@@ -187,34 +185,61 @@ export function MultiPicker<T extends { id: number }>({
                 clearButtonMode="while-editing"
               />
               {Boolean(search) && (
-                <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setSearch('')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
                   <Lucide name="x" size={14} color="#94a3b8" />
                 </TouchableOpacity>
               )}
             </View>
           )}
 
-          {/* Virtualized high-performance list */}
-          <FlatList
-            data={filteredItems}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            getItemLayout={getItemLayout}
-            initialNumToRender={12}
-            maxToRenderPerBatch={12}
-            windowSize={5}
-            removeClippedSubviews={Platform.OS === 'android'}
-            nestedScrollEnabled={true}
-            style={styles.dropdownFlatList}
+          {/* High-performance scrollable list without VirtualizedList nesting */}
+          <ScrollView
+            nestedScrollEnabled
             keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={
+            onScroll={handleScroll}
+            scrollEventThrottle={32}
+            style={styles.dropdownScrollView}
+          >
+            {filteredItems.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>
                   {search ? 'No matches found' : 'No items available'}
                 </Text>
               </View>
-            }
-          />
+            ) : (
+              <>
+                {visibleItems.map((item) => (
+                  <OptionRow
+                    key={item.id}
+                    id={item.id}
+                    label={getLabel(item)}
+                    isSelected={selectedIds.has(item.id)}
+                    onToggle={onToggle}
+                    accentColor={iconColor}
+                  />
+                ))}
+
+                {visibleLimit < filteredItems.length && (
+                  <TouchableOpacity
+                    style={styles.loadMoreBtn}
+                    onPress={() =>
+                      setVisibleLimit((prev) =>
+                        Math.min(prev + PAGE_SIZE, filteredItems.length)
+                      )
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.loadMoreText, { color: iconColor }]}>
+                      Showing {visibleLimit} of {filteredItems.length} • Tap for more
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </ScrollView>
         </View>
       )}
     </View>
@@ -304,7 +329,7 @@ const styles = StyleSheet.create({
     color: '#1e293b',
     paddingVertical: 2,
   },
-  dropdownFlatList: {
+  dropdownScrollView: {
     maxHeight: 200,
   },
   dropdownOption: {
@@ -334,5 +359,17 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 13,
     color: '#94a3b8',
+  },
+  loadMoreBtn: {
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8fafc',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  loadMoreText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

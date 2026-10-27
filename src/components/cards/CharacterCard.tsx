@@ -20,6 +20,7 @@ interface CharacterCardProps {
   index?: number;
   numColumns?: number;
   searchQuery?: string;
+  highlightStyle?: import('react-native').StyleProp<import('react-native').TextStyle>;
   style?: any;
   showPinyin?: boolean;
   showMeaning?: boolean;
@@ -39,6 +40,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = React.memo(({
   index,
   numColumns,
   searchQuery,
+  highlightStyle,
   style,
   showPinyin = true,
   showMeaning = true,
@@ -64,6 +66,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = React.memo(({
   const isCompact = hasExplicitCols && colCount >= 4;
   const isVeryCompact = hasExplicitCols && colCount >= 5;
   const cardPadding = isVeryCompact ? 5 : isCompact ? 7 : 12;
+  const cardMinHeight = !hasExplicitCols || colCount <= 2 ? 120 : colCount === 3 ? 100 : colCount === 4 ? 82 : 68;
 
   const charFontSize = hasExplicitCols
     ? colCount <= 2 ? 30 : colCount === 3 ? 24 : colCount === 4 ? 20 : colCount === 5 ? 16 : 14
@@ -127,9 +130,10 @@ export const CharacterCard: React.FC<CharacterCardProps> = React.memo(({
           width: cardWidth as any,
           padding: cardPadding,
           margin: hasExplicitCols ? '0.5%' : 0,
+          minHeight: cardMinHeight,
         },
         cardBg ? { backgroundColor: cardBg } : [styles.defaultBg, { borderColor: '#ec4899' + '40' }],
-        isSelected && { borderColor: '#0f172a', borderWidth: 3.5 },
+        isSelected && { borderColor: '#0f172a', borderWidth: 2 },
         isSelectionMode && !isSelected && { opacity: 0.85 },
         style,
       ]}
@@ -231,6 +235,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = React.memo(({
       <HighlightedText
         text={item.content || '？'}
         highlight={searchQuery}
+        highlightStyle={highlightStyle}
         isCardBg={Boolean(cardBg)}
         style={[
           styles.charSymbol,
@@ -243,6 +248,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = React.memo(({
         <HighlightedText
           text={item.pinyin}
           highlight={searchQuery}
+          highlightStyle={highlightStyle}
           isCardBg={Boolean(cardBg)}
           style={[
             styles.pinyinText,
@@ -257,13 +263,14 @@ export const CharacterCard: React.FC<CharacterCardProps> = React.memo(({
         <HighlightedText
           text={item.meaning}
           highlight={searchQuery}
+          highlightStyle={highlightStyle}
           isCardBg={Boolean(cardBg)}
           style={[
             styles.meaningText,
-            { fontSize: meaningFontSize },
+            { fontSize: meaningFontSize, minHeight: meaningFontSize * 2.2 },
             cardBg ? styles.whiteSubtext : styles.darkMeaning,
           ]}
-          numberOfLines={1}
+          numberOfLines={2}
         />
       ) : null}
     </TouchableOpacity>
@@ -278,6 +285,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
+    justifyContent: 'space-between',
   },
   defaultBg: {
     borderWidth: 1,

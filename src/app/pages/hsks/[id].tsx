@@ -1,4 +1,5 @@
 import { OptionsMenuModal } from '@/components/common/OptionsMenuModal';
+import { EmptyState } from '@/components/common/EmptyState';
 import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
 import { ThemedText } from '@/components/themed-text';
@@ -313,9 +314,9 @@ const HSKs = () => {
             );
           })
         ) : (
-          <ThemedText style={{ padding: 40, textAlign: 'center', width: '100%', color: '#94a3b8' }}>
-            No HSKs found
-          </ThemedText>
+          <EmptyState
+            type="hsks"
+          />
         )}
       </ScrollView>
 

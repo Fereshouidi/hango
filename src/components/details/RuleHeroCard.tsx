@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 import { useRouter } from 'expo-router';
 import { HSKType, LessonType, RuleType } from '@/types';
 import { StudyToggleBar } from '../common/StudyToggleBar';
@@ -116,7 +117,7 @@ export const RuleHeroCard: React.FC<RuleHeroCardProps> = ({
         </View>
 
         <View style={styles.statChip}>
-          <Lucide name="spell-check" size={12} color="#ec489a" />
+          <CharacterIcon size={12} color="#ec489a" />
           <Text style={styles.statChipText}>{characterCount} hanzi</Text>
         </View>
       </View>

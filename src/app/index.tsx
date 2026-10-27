@@ -3,7 +3,6 @@ import * as Device from 'expo-device';
 import { Platform, ScrollView, StyleSheet, Text, Image, useColorScheme, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
 import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -11,6 +10,7 @@ import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { homeScreenItems } from '@/constants/data';
 import { Lucide } from '@react-native-vector-icons/lucide';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 import Header from '@/components/main/header';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Bg1 } from '@/components/sub/bg1';
@@ -34,7 +34,6 @@ export default function HomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.safeArea}>
-
         
         <ThemedView
           style={{
@@ -66,16 +65,21 @@ export default function HomeScreen() {
             <TouchableOpacity
               onPress={openSidebar}
               style={{
-                position: 'absolute',
-                left: 10,
-                width: 40,
-                height: 40,
-                borderRadius: 50,
-                backgroundColor: "#e8e8e8ff",
+                position: "absolute",
+                left: 12,
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                backgroundColor: '#f8fafc',
                 borderWidth: 1,
-                borderColor: "#414040ff",
-                alignItems: "center",
-                justifyContent: "center",
+                borderColor: '#e2e8f0',
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.03,
+                shadowRadius: 2,
+                elevation: 1,
               }}
               activeOpacity={0.7}
             >
@@ -115,15 +119,20 @@ export default function HomeScreen() {
               onPress={() => router.push('/pages/sync' as any)}
               style={{
                 position: 'absolute',
-                right: 10,
-                width: 40,
-                height: 40,
-                borderRadius: 50,
-                backgroundColor: "#e8e8e8ff",
+                right: 12,
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                backgroundColor: '#f8fafc',
                 borderWidth: 1,
-                borderColor: "#414040ff",
-                alignItems: "center",
-                justifyContent: "center",
+                borderColor: '#e2e8f0',
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.03,
+                shadowRadius: 2,
+                elevation: 1,
               }}
               activeOpacity={0.7}
             >
@@ -186,11 +195,15 @@ export default function HomeScreen() {
                   opacity: 1
                 }}
               >
-                <Lucide
-                  name={item.icon as any}
-                  size={52}
-                  color="#FFF"
-                />
+                {item.label === 'Characters' || item.icon === 'chinese-character' ? (
+                  <CharacterIcon size={52} color="#FFF" />
+                ) : (
+                  <Lucide
+                    name={item.icon as any}
+                    size={52}
+                    color="#FFF"
+                  />
+                )}
                 <ThemedText
                   style={{
                     fontSize: 15,

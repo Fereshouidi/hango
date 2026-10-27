@@ -19,10 +19,10 @@ export function useDictation(selectedHskId: number | null, selectedLessonId: num
     (hskId: number | null, lessonId: number | null) => {
       try {
         let rows: SentenceType[];
-        if (hskId !== null) {
-          rows = (getSentencesByHSKId(hskId) as SentenceType[]) || [];
-        } else if (lessonId !== null) {
+        if (lessonId !== null) {
           rows = (getSentencesByLessonId(lessonId) as SentenceType[]) || [];
+        } else if (hskId !== null) {
+          rows = (getSentencesByHSKId(hskId) as SentenceType[]) || [];
         } else {
           rows = (getAllSentences() as SentenceType[]) || [];
         }

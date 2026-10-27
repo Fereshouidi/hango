@@ -7,6 +7,8 @@ interface StudyToggleBarProps {
   setShowPinyin: (val: boolean) => void;
   showMeaning: boolean;
   setShowMeaning: (val: boolean) => void;
+  showRubyPinyin?: boolean;
+  setShowRubyPinyin?: (val: boolean) => void;
   accentColor?: string;
 }
 
@@ -15,6 +17,8 @@ export const StudyToggleBar: React.FC<StudyToggleBarProps> = ({
   setShowPinyin,
   showMeaning,
   setShowMeaning,
+  showRubyPinyin,
+  setShowRubyPinyin,
   accentColor = '#0284c7',
 }) => {
   return (
@@ -44,6 +48,24 @@ export const StudyToggleBar: React.FC<StudyToggleBarProps> = ({
         />
         <Text style={[styles.chipText, showMeaning && { color: accentColor }]}>Translation</Text>
       </TouchableOpacity>
+
+      {setShowRubyPinyin !== undefined && (
+        <TouchableOpacity
+          style={[
+            styles.chip,
+            showRubyPinyin && { backgroundColor: '#7c3aed40', borderColor: '#7c3aed40' },
+          ]}
+          onPress={() => setShowRubyPinyin(!showRubyPinyin)}
+          activeOpacity={0.7}
+        >
+          <Lucide
+            name="captions"
+            size={14}
+            color={showRubyPinyin ? '#7c3aed' : '#64748b'}
+          />
+          <Text style={[styles.chipText, showRubyPinyin && { color: '#7c3aed' }]}>Under Text</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -51,6 +73,7 @@ export const StudyToggleBar: React.FC<StudyToggleBarProps> = ({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   chip: {

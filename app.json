@@ -8,18 +8,33 @@
     "scheme": "hango",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/logo/smallScale.jpg"
+      "icon": "./assets/images/logo/smallScale.jpg",
+      "infoPlist": {
+        "NSCameraUsageDescription": "The app accesses your camera to scan and translate Chinese text.",
+        "NSPhotoLibraryUsageDescription": "The app accesses your photos to scan and translate Chinese text."
+      }
+    },
+    "splash": {
+      "image": "./assets/images/logo/normalScale.jpg",
+      "resizeMode": "contain",
+      "backgroundColor": "red"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/images/logo/smallScale.jpg",
         "backgroundImage": "./assets/images/logo/smallScale.jpg",
         "monochromeImage": "./assets/images/logo/smallScale.jpg"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.fareshouidi.HanGo",
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "output": "static",
@@ -27,7 +42,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to scan and translate Chinese text.",
+          "cameraPermission": "The app accesses your camera to scan and translate Chinese text."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

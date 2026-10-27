@@ -3,7 +3,7 @@ import { getServerUrl, getStoredToken, logoutAccount } from './authSyncService';
 // ─────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────
-export type PaymentMethod = 'd17' | 'ooredoo' | 'payeer';
+export type PaymentMethod = 'd17' | 'ooredoo' | 'payeer' | 'usdt';
 
 export interface MethodInfo {
   accountNumber: string;
@@ -21,6 +21,7 @@ export interface Plan {
     d17: number;
     ooredoo: number;
     payeer: number;
+    usdt?: number;
   };
 }
 
@@ -29,6 +30,7 @@ export interface PlansAndMethodsResponse {
     d17: MethodInfo;
     ooredoo: MethodInfo;
     payeer: MethodInfo;
+    usdt?: MethodInfo;
   };
   plans: Plan[];
   updatedAt?: string;

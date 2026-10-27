@@ -66,7 +66,18 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const refresh = useCallback(async () => {
     try {
       const token = await getStoredToken();
-      if (!token) return; // not logged in yet
+      if (!token) {
+        setStatus({
+          isSubscribed: false,
+          subscriptionStatus: 'none',
+          daysRemaining: 0,
+          hasPendingPayment: false,
+          pendingPayment: null,
+          latestRejectedPayment: null,
+        });
+        await AsyncStorage.removeItem(KEY_SUBSCRIPTION_CACHE);
+        return;
+      }
 
       setLoading(true);
       const data = await fetchSubscriptionStatus();

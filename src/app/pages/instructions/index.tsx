@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Lucide from '@react-native-vector-icons/lucide';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import Header from '@/components/main/header';
@@ -42,8 +43,8 @@ const FEATURE_GUIDES: FeatureGuide[] = [
     summary: 'Continuous spoken Mandarin player with loop repeats, speed tuning, and sequential lesson progression.',
     instructions: [
       'Dual Study Modes: Switch between practicing Sentences in conversational context or single Vocabulary Words.',
-      'Natural Curriculum Order: Sentences and words play in sequential order matching your textbook and lessons.',
-      'Targeted Filters: Filter audio by your target HSK level and choose a specific lesson to focus your session.',
+      'Natural Sequence Order: Sentences and words play in sequential order matching your notebook lessons.',
+      'Targeted Filters: Filter audio by your target level folder and choose a specific lesson to focus your session.',
       'Custom Shadowing Settings: Adjust repeat count (1x, 3x, 5x, or infinite ∞) and speech playback speed (0.5x to 1.5x) to practice repeating aloud after native Mandarin audio.',
       'Quick Launcher: Tap the pink headphones icon in the top header of Words or Sentences to jump straight into the loop with that filter applied.',
     ],
@@ -60,7 +61,7 @@ const FEATURE_GUIDES: FeatureGuide[] = [
     summary: 'Safely back up your learning progress to the cloud database and restore it onto any device anytime.',
     instructions: [
       'Simple Account Sign In: Create an account or log in with just your email and password.',
-      'One-Tap Cloud Backup: Tap "Back Up to Cloud" to securely save all your custom HSKs, lessons, texts, words, rules, and writings to the cloud.',
+      'One-Tap Cloud Backup: Tap "Back Up to Cloud" to securely save all your custom levels, lessons, texts, words, rules, and writings to the cloud.',
       'Restore on Any Device: Switching phones or reinstalling? Log into your account and tap "Restore from Cloud" to retrieve all your data instantly.',
       'Cloud Status Dot: Check the profile icon in the top header on the Home dashboard — a green dot confirms your active connection.',
       'Works 100% Offline: HanGo saves everything locally on your device first, so you can study without internet and sync whenever you connect.',
@@ -69,35 +70,36 @@ const FEATURE_GUIDES: FeatureGuide[] = [
   },
   {
     id: 'hsks',
-    title: 'HSKs (Proficiency Levels)',
-    chineseTitle: '汉语水平考试 (HSK 1-6)',
+    title: 'Levels & Folders',
+    chineseTitle: '分类与级别 (自定义笔记)',
     icon: 'book-marked',
     color: '#ef4444',
-    badge: 'Curriculum',
+    badge: 'Notebook Folders',
     route: '/pages/hsks/1',
-    summary: 'Standard Chinese proficiency system organizing curriculum into structured levels from beginner to advanced.',
+    summary: 'Organize your personal notes into level folders or HSK categories. Starter data is provided as an example.',
     instructions: [
-      'Choose your target proficiency level (HSK 1 for beginners up to HSK 6 for advanced learners).',
-      'Explore all structured lessons, grammar rules, and vocabulary assigned to each level.',
-      'Track your learning journey step-by-step as you complete units.',
+      'Digital Notebook Concept: HanGo is a personal notebook to record what you learn, not a rigid course that forces you from level to level.',
+      'Flexible Level Categories: Group your vocabulary, characters, and sentences by custom levels or standard HSK tags.',
+      'Starter Example Content: The included HSK levels and lessons are sample examples to show how features connect — you can delete them anytime and start fresh.',
+      'Create Your Own: Add custom levels, lessons, words, and sentences anytime to match your personal textbooks or study goals.',
     ],
-    helpTip: 'New to Chinese? Start with HSK 1 to master basic pronunciation, greetings, numbers, and fundamental sentence structures.',
+    helpTip: 'Want to start from a clean slate? You can freely delete or edit any sample HSK, lesson, or word and build your own notebook.',
   },
   {
     id: 'lessons',
-    title: 'Lessons (Structured Units)',
-    chineseTitle: '课程单元',
+    title: 'Lessons (Notebook Units)',
+    chineseTitle: '课程与学习单元',
     icon: 'book-open',
     color: '#f59e0b',
-    badge: 'Curriculum',
+    badge: 'Study Units',
     route: '/pages/lessons/1',
-    summary: 'Cohesive lesson units connecting reading dialogues, vocabulary, key sentences, and grammar formulas.',
+    summary: 'Group related dialogues, words, sentences, and grammar formulas into organized notebook units.',
     instructions: [
-      'Each lesson brings together dialogues and the new vocabulary introduced in that context.',
-      'Tap any lesson card to see its full reading passages, sentences, grammar rules, and audio.',
-      'Use the top filter to switch between different HSK levels easily.',
+      'Keep your notes structured by creating lesson units for different chapters, tutors, or study topics.',
+      'Tap any lesson card to see all the reading passages, sentences, grammar rules, and audio linked to it.',
+      'Use the top filter to switch between different level folders easily.',
     ],
-    helpTip: 'Can’t find a lesson? Make sure the HSK level dropdown at the top is set to the tier containing your desired lesson.',
+    helpTip: 'You can create as many lessons as you need for your school or self-study chapters.',
   },
   {
     id: 'texts',
@@ -181,13 +183,13 @@ const FEATURE_GUIDES: FeatureGuide[] = [
   },
   {
     id: 'writing',
-    title: 'Writing Studio',
-    chineseTitle: '中文写作与拼音',
+    title: 'Typing Studio',
+    chineseTitle: '中文打字与拼音',
     icon: 'keyboard',
     color: '#8b5cf6',
     badge: 'Practice',
     route: '/pages/writing/1',
-    summary: 'Type and compose compositions in Chinese with pinyin assistance and instant export.',
+    summary: 'Type and compose in Chinese with custom character keyboard, pinyin assistance, and audio dictation.',
     instructions: [
       'Compose personal notes, homework essays, or daily journal entries in Chinese.',
       'Review tone marks and character conversions as you type.',
@@ -216,9 +218,9 @@ const FEATURE_GUIDES: FeatureGuide[] = [
 const STUDY_STEPS = [
   {
     step: '1',
-    title: 'Select HSK & Lesson',
-    chinese: '选定级别与课程',
-    desc: 'Pick your level (e.g. HSK 1 for basics) and open a structured lesson to explore reading dialogues.',
+    title: 'Organize in Levels & Lessons',
+    chinese: '分类与整理笔记',
+    desc: 'Create or choose a level folder and lesson unit to group the words, sentences, and texts you are studying.',
     color: '#ef4444',
     icon: 'book-open',
   },
@@ -257,6 +259,20 @@ const STUDY_STEPS = [
 ];
 
 const FAQS = [
+  {
+    question: 'Is HanGo a course app or a digital notebook?',
+    chinese: 'HanGo 是课程软件还是学习笔记本？',
+    icon: 'notebook-pen',
+    answer:
+      'HanGo is a personal digital notebook! It is not an app designed to teach Chinese from one fixed HSK level to another. Instead, it gives you tools to record, organize, and practice the new words, characters, sentences, and grammar rules you learn from your classes, tutors, or textbooks. The default HSK levels and lessons are just starter examples to help you see how the app works.',
+  },
+  {
+    question: 'Can I delete the default starter data and start fresh?',
+    chinese: '我可以删除默认数据从头开始吗？',
+    icon: 'trash-2',
+    answer:
+      'Yes! You have full control. You can edit or delete any default HSK level, lesson, text, sentence, or word at any time, or clear them to start with a fresh, empty digital notebook tailored entirely to your own curriculum.',
+  },
   {
     question: 'Audio or speech is not playing?',
     chinese: '声音无法播放？',
@@ -356,15 +372,15 @@ export default function InstructionsScreen() {
               </View>
               <Text style={styles.heroSubtitle}>学中文 · 练汉字 · 听力突破 · 云端同步</Text>
               <Text style={styles.heroTagline}>
-                Your complete Mandarin learning companion with offline storage, Listening Loop shadowing, and Cloud Backup.
+                Your personal digital Chinese notebook to record, organize, and practice the words, characters, and rules you learn.
               </Text>
             </View>
           </View>
 
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>6</Text>
-              <Text style={styles.statLabel}>HSK Tiers</Text>
+              <Text style={[styles.statNumber, { color: '#ef4444' }]}>Notes</Text>
+              <Text style={styles.statLabel}>Notebook</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
@@ -381,6 +397,33 @@ export default function InstructionsScreen() {
               <Text style={[styles.statNumber, { color: '#10b981' }]}>100%</Text>
               <Text style={styles.statLabel}>Offline</Text>
             </View>
+          </View>
+        </View>
+
+        {/* Digital Notebook & Starter Content Banner */}
+        <View style={styles.notebookNoticeCard}>
+          <View style={styles.notebookNoticeHeader}>
+            <View style={styles.notebookNoticeIconBox}>
+              <Lucide name="notebook-pen" size={20} color="#059669" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={styles.notebookNoticeTitle}>
+                Personal Digital Notebook
+              </ThemedText>
+              <Text style={styles.notebookNoticeSub}>
+                Built for your own notes · Not a rigid course
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.notebookNoticeText}>
+            HanGo is designed as your digital study notebook to record the new characters, vocabulary, sentences, and grammar rules you learn from your classes, tutors, or textbooks.
+          </Text>
+          <View style={styles.starterDataPill}>
+            <Lucide name="info" size={14} color="#0284c7" />
+            <Text style={styles.starterDataText}>
+              <Text style={{ fontWeight: '700' }}>Starter Example Data: </Text>
+              The pre-loaded HSK levels, texts, and sentences are examples to show you how features connect. You can freely edit or delete them and start completely fresh!
+            </Text>
           </View>
         </View>
 
@@ -666,7 +709,11 @@ export default function InstructionsScreen() {
                           { backgroundColor: `${guide.color}18` },
                         ]}
                       >
-                        <Lucide name={guide.icon as any} size={20} color={guide.color} />
+                        {guide.icon === 'spell-check' || guide.icon === 'chinese-character' ? (
+                          <CharacterIcon size={20} color={guide.color} />
+                        ) : (
+                          <Lucide name={guide.icon as any} size={20} color={guide.color} />
+                        )}
                       </View>
 
                       <View style={styles.moduleHeaderInfo}>
@@ -975,6 +1022,68 @@ const styles = StyleSheet.create({
     width: 1,
     height: 22,
     backgroundColor: '#e2e8f0e7',
+  },
+
+  /* Digital Notebook Notice Card */
+  notebookNoticeCard: {
+    backgroundColor: '#f0fdf4e8',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    gap: 10,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+  },
+  notebookNoticeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  notebookNoticeIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: '#dcfce7',
+    borderWidth: 1,
+    borderColor: '#86efac',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notebookNoticeTitle: {
+    fontSize: 15.5,
+    fontWeight: '800',
+    color: '#065f46',
+  },
+  notebookNoticeSub: {
+    fontSize: 11.5,
+    color: '#059669',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  notebookNoticeText: {
+    fontSize: 12.5,
+    color: '#166534',
+    lineHeight: 18,
+  },
+  starterDataPill: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#f0f9ff',
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 2,
+  },
+  starterDataText: {
+    fontSize: 11.5,
+    color: '#0369a1',
+    lineHeight: 16.5,
+    flex: 1,
   },
 
   /* Creator Banner Card */

@@ -12,6 +12,19 @@ export const ModeSwitcher: React.FC<ModeSwitcherProps> = ({ mode, onSelectMode }
   return (
     <View style={styles.container}>
       <TouchableOpacity
+        style={[
+          styles.switchBtn,
+          mode === 'dictation' && [styles.switchBtnActive, { backgroundColor: '#d97706' }],
+        ]}
+        onPress={() => onSelectMode('dictation')}
+        activeOpacity={0.7}
+      >
+        <Lucide name="pen" size={13} color={mode === 'dictation' ? '#fff' : '#64748b'} />
+        <Text style={[styles.switchText, mode === 'dictation' && styles.switchTextActive]}>
+          Dictation
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
         style={[styles.switchBtn, mode === 'keyboard' && styles.switchBtnActive]}
         onPress={() => onSelectMode('keyboard')}
         activeOpacity={0.7}
@@ -22,19 +35,6 @@ export const ModeSwitcher: React.FC<ModeSwitcherProps> = ({ mode, onSelectMode }
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[
-          styles.switchBtn,
-          mode === 'dictation' && [styles.switchBtnActive, { backgroundColor: '#d97706' }],
-        ]}
-        onPress={() => onSelectMode('dictation')}
-        activeOpacity={0.7}
-      >
-        <Lucide name="mic" size={13} color={mode === 'dictation' ? '#fff' : '#64748b'} />
-        <Text style={[styles.switchText, mode === 'dictation' && styles.switchTextActive]}>
-          Dictation
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 };

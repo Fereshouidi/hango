@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 
 export type CategoryTabType = 'all' | 'lessons' | 'texts' | 'sentences' | 'words' | 'characters' | 'rules';
 
@@ -88,7 +89,7 @@ export const CategoryTabs: React.FC<CategoryTabsProps> = ({
           style={[styles.tabBtn, activeTab === 'characters' && styles.tabBtnActive]}
           onPress={() => onSelectTab('characters')}
         >
-          <Lucide name="spell-check" size={14} color={activeTab === 'characters' ? '#ec4899' : '#64748b'} />
+          <CharacterIcon size={14} color={activeTab === 'characters' ? '#ec4899' : '#64748b'} />
           <Text style={[styles.tabText, activeTab === 'characters' && styles.tabTextActive]}>
             Hanzi ({counts.characters})
           </Text>

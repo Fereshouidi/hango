@@ -219,7 +219,7 @@ export async function restoreFromMongoDB(
     for (const row of (fetched.lessons || []) as LessonType[]) {
       db.runSync(
         'INSERT OR REPLACE INTO lessons (id, num, title, hskId) VALUES (?, ?, ?, ?)',
-        row.id, row.num, row.title, row.hskId
+        row.id, row.num, row.title, row.hskId ?? null
       );
     }
 

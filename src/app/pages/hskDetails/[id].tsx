@@ -8,11 +8,19 @@ import { CategoryTabType } from '@/components/common/CategoryTabs';
 import { DetailControlPanel } from '@/components/common/DetailControlPanel';
 import { LoadMoreFooter } from '@/components/common/LoadMoreFooter';
 import { ViewAllButton } from '@/components/common/ViewAllButton';
+import { OptionsMenuModal, OptionItem } from '@/components/common/OptionsMenuModal';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
 import { HskHeroCard } from '@/components/details/HskHeroCard';
 import Header from '@/components/main/header';
 import { Bg1 } from '@/components/sub/bg1';
 import { ThemedView } from '@/components/themed-view';
 import {
+  deleteCharacter,
+  deleteLesson,
+  deleteRule,
+  deleteSentence,
+  deleteText,
+  deleteWord,
   getAllCharacters,
   getAllLessons,
   getAllRules,
@@ -26,6 +34,12 @@ import {
   getSentencesByHSKId,
   getTextsByHSKId,
   getWordsByHSKId,
+  unlinkCharacterFromHSK,
+  unlinkLessonFromHSK,
+  unlinkRuleFromHSK,
+  unlinkSentenceFromHSK,
+  unlinkTextFromHSK,
+  unlinkWordFromHSK,
 } from '@/db/utils';
 import {
   CharacterType,
@@ -41,6 +55,7 @@ import Lucide from '@react-native-vector-icons/lucide';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -83,6 +98,123 @@ const HSKDetails = () => {
   const [allRules, setAllRules] = useState<RuleType[]>([]);
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Options Menu state
+  const [activeItem, setActiveItem] = useState<{
+    type: 'lesson' | 'text' | 'word' | 'sentence' | 'character' | 'rule';
+    item: any;
+  } | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const handleOpenOptions = (
+    type: 'lesson' | 'text' | 'word' | 'sentence' | 'character' | 'rule',
+    item: any
+  ) => {
+    setActiveItem({ type, item });
+    setMenuVisible(true);
+  };
+
+  const buildMenuOptions = (): OptionItem[] => {
+    if (!activeItem || !activeItem.item) return [];
+    const { type, item } = activeItem;
+    const typeLabel =
+      type === 'lesson'
+        ? 'Lesson'
+        : type === 'text'
+        ? 'Text'
+        : type === 'word'
+        ? 'Word'
+        : type === 'sentence'
+        ? 'Sentence'
+        : type === 'character'
+        ? 'Character'
+        : 'Rule';
+
+    return [
+      {
+        id: 'view',
+        label: 'View Details',
+        iconName: 'external-link',
+        color: '#2563eb',
+        onPress: () => {
+          setMenuVisible(false);
+          setActiveItem(null);
+          if (type === 'lesson') router.push(`/pages/lessonDetails/${item.id}` as any);
+          else if (type === 'text') router.push(`/pages/textDetails/${item.id}` as any);
+          else if (type === 'word') router.push(`/pages/wordDetails/${item.id}` as any);
+          else if (type === 'sentence') router.push(`/pages/sentenceDetails/${item.id}` as any);
+          else if (type === 'character') router.push(`/pages/characterDetails/${item.id}` as any);
+          else if (type === 'rule') router.push(`/pages/ruleDetails/${item.id}` as any);
+        },
+      },
+      {
+        id: 'remove',
+        label: `Remove from HSK`,
+        iconName: 'minus-circle',
+        color: '#ef4444',
+        destructive: true,
+        onPress: () => {
+          Alert.alert(
+            'Remove from HSK',
+            `Are you sure you want to remove this ${typeLabel.toLowerCase()} from "${hsk?.name || 'HSK'}"?`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Remove',
+                style: 'destructive',
+                onPress: () => {
+                  try {
+                    if (type === 'lesson') unlinkLessonFromHSK(item.id, hskId);
+                    else if (type === 'text') unlinkTextFromHSK(item.id, hskId);
+                    else if (type === 'word') unlinkWordFromHSK(item.id, hskId);
+                    else if (type === 'sentence') unlinkSentenceFromHSK(item.id, hskId);
+                    else if (type === 'character') unlinkCharacterFromHSK(item.id, hskId);
+                    else if (type === 'rule') unlinkRuleFromHSK(item.id, hskId);
+                    loadHskData();
+                  } catch (e) {
+                    Alert.alert('Error', 'Failed to remove item from HSK.');
+                  }
+                },
+              },
+            ]
+          );
+        },
+      },
+      {
+        id: 'delete',
+        label: `Delete ${typeLabel} Permanently`,
+        iconName: 'trash-2',
+        color: '#dc2626',
+        destructive: true,
+        onPress: () => {
+          Alert.alert(
+            `Delete ${typeLabel}`,
+            `Are you sure you want to permanently delete this ${typeLabel.toLowerCase()}? This cannot be undone.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => {
+                  try {
+                    if (type === 'lesson') deleteLesson(item.id);
+                    else if (type === 'text') deleteText(item.id);
+                    else if (type === 'word') deleteWord(item.id);
+                    else if (type === 'sentence') deleteSentence(item.id);
+                    else if (type === 'character') deleteCharacter(item.id);
+                    else if (type === 'rule') deleteRule(item.id);
+                    loadHskData();
+                  } catch (e) {
+                    Alert.alert('Error', `Failed to delete ${typeLabel.toLowerCase()}.`);
+                  }
+                },
+              },
+            ]
+          );
+        },
+      },
+    ];
+  };
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -235,7 +367,7 @@ const HSKDetails = () => {
             <Lucide
               name="type"
               size={18}
-              color={showPinyin ? '#6366f1' : '#64748b'}
+              color={showPinyin ? '#6366f1' : '#1e293b'}
             />
           </TouchableOpacity>,
           <TouchableOpacity
@@ -247,7 +379,7 @@ const HSKDetails = () => {
             <Lucide
               name={showMeaning ? 'eye' : 'eye-off'}
               size={18}
-              color={showMeaning ? '#6366f1' : '#64748b'}
+              color={showMeaning ? '#6366f1' : '#1e293b'}
             />
           </TouchableOpacity>,
           <TouchableOpacity
@@ -256,7 +388,7 @@ const HSKDetails = () => {
             activeOpacity={0.7}
             style={styles.headerIconBtn}
           >
-            <Lucide name="edit-3" size={18} color="#6366f1" />
+            <Lucide name="edit-3" size={18} color="#1e293b" />
           </TouchableOpacity>,
         ]}
       />
@@ -342,7 +474,7 @@ const HSKDetails = () => {
               <Text style={styles.emptySectionText}>No lessons linked to this HSK level.</Text>
             ) : (
               <>
-                {filteredLessons.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((lesson, idx) => (
+                {filteredLessons.slice(0, activeTab === 'all' ? 3 : visibleCount).map((lesson, idx) => (
                   <LessonCard
                     key={lesson.id || idx}
                     lesson={lesson}
@@ -350,9 +482,10 @@ const HSKDetails = () => {
                     accentColor="#2563eb"
                     isPlaying={playingItemId === `lesson-${lesson.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `lesson-${id}`)}
+                    onOptionsPress={(item) => handleOpenOptions('lesson', item)}
                   />
                 ))}
-                {activeTab === 'all' && filteredLessons.length > ITEM_LIMIT && (
+                {activeTab === 'all' && filteredLessons.length > 0 && (
                   <ViewAllButton
                     count={filteredLessons.length}
                     label="Lessons"
@@ -411,7 +544,7 @@ const HSKDetails = () => {
               <Text style={styles.emptySectionText}>No reading texts linked to this HSK level.</Text>
             ) : (
               <>
-                {filteredTexts.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((text, idx) => (
+                {filteredTexts.slice(0, activeTab === 'all' ? 3 : visibleCount).map((text, idx) => (
                   <TextCard
                     key={text.id || idx}
                     textObj={text}
@@ -421,9 +554,10 @@ const HSKDetails = () => {
                     isPlaying={playingItemId === `text-${text.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `text-${id}`)}
                     searchQuery={searchQuery}
+                    onOptionsPress={(item) => handleOpenOptions('text', item)}
                   />
                 ))}
-                {activeTab === 'all' && filteredTexts.length > ITEM_LIMIT && (
+                {activeTab === 'all' && filteredTexts.length > 0 && (
                   <ViewAllButton
                     count={filteredTexts.length}
                     label="Reading Texts"
@@ -481,7 +615,7 @@ const HSKDetails = () => {
               <Text style={styles.emptySectionText}>No sentences linked to this HSK level.</Text>
             ) : (
               <>
-                {filteredSentences.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((sentence, idx) => (
+                {filteredSentences.slice(0, activeTab === 'all' ? 3 : visibleCount).map((sentence, idx) => (
                   <SentenceCard
                     key={sentence.id || idx}
                     sentence={sentence}
@@ -491,9 +625,10 @@ const HSKDetails = () => {
                     isPlaying={playingItemId === `sentence-${sentence.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `sentence-${id}`)}
                     searchQuery={searchQuery}
+                    onOptionsPress={(item) => handleOpenOptions('sentence', item)}
                   />
                 ))}
-                {activeTab === 'all' && filteredSentences.length > ITEM_LIMIT && (
+                {activeTab === 'all' && filteredSentences.length > 0 && (
                   <ViewAllButton
                     count={filteredSentences.length}
                     label="Sentences"
@@ -562,11 +697,12 @@ const HSKDetails = () => {
                       isPlaying={playingItemId === `word-${word.id}`}
                       onPlayAudio={(id, content) => playItemAudio(id, content, `word-${id}`)}
                       searchQuery={searchQuery}
+                      onOptionsPress={(item) => handleOpenOptions('word', item)}
                     />
                     // </View>
                   ))}
                 </View>
-                {activeTab === 'all' && filteredWords.length > ITEM_LIMIT && (
+                {activeTab === 'all' && filteredWords.length > 0 && (
                   <ViewAllButton
                     count={filteredWords.length}
                     label="Vocabulary Words"
@@ -603,7 +739,7 @@ const HSKDetails = () => {
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIconBadge, { backgroundColor: '#ec489a' }]}>
-                <Lucide name="spell-check" size={15} color="#ffffff" />
+                <CharacterIcon size={15} color="#ffffff" />
               </View>
               <View style={styles.sectionHeaderCenter}>
                 <Text style={styles.sectionHeading}>Characters (Hanzi)</Text>
@@ -626,7 +762,7 @@ const HSKDetails = () => {
               <>
                 <View style={styles.charsGrid}>
                   {filteredCharacters.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((char, idx) => (
-                    <View key={char.id || idx} style={{ width: '48.5%' }}>
+                    <View key={char.id || idx} style={{ width: '48.5%', marginBottom: 8 }}>
                       <CharacterCard
                         char={char}
                         showPinyin={showPinyin}
@@ -634,11 +770,12 @@ const HSKDetails = () => {
                         isPlaying={playingItemId === `char-${char.id}`}
                         onPlayAudio={(id, content) => playItemAudio(id, content, `char-${id}`)}
                         searchQuery={searchQuery}
+                        onOptionsPress={(item) => handleOpenOptions('character', item)}
                       />
                     </View>
                   ))}
                 </View>
-                {activeTab === 'all' && filteredCharacters.length > ITEM_LIMIT && (
+                {activeTab === 'all' && filteredCharacters.length > 0 && (
                   <ViewAllButton
                     count={filteredCharacters.length}
                     label="Characters"
@@ -696,7 +833,7 @@ const HSKDetails = () => {
               <Text style={styles.emptySectionText}>No grammar points linked to this HSK level.</Text>
             ) : (
               <>
-                {filteredRules.slice(0, activeTab === 'all' ? ITEM_LIMIT : visibleCount).map((rule, idx) => (
+                {filteredRules.slice(0, activeTab === 'all' ? 3 : visibleCount).map((rule, idx) => (
                   <RuleCard
                     key={rule.id || idx}
                     rule={rule}
@@ -704,9 +841,10 @@ const HSKDetails = () => {
                     isPlaying={playingItemId === `rule-${rule.id}`}
                     onPlayAudio={(id, content) => playItemAudio(id, content, `rule-${id}`, true)}
                     searchQuery={searchQuery}
+                    onOptionsPress={(item) => handleOpenOptions('rule', item)}
                   />
                 ))}
-                {activeTab === 'all' && filteredRules.length > ITEM_LIMIT && (
+                {activeTab === 'all' && filteredRules.length > 0 && (
                   <ViewAllButton
                     count={filteredRules.length}
                     label="Grammar Points"
@@ -751,6 +889,20 @@ const HSKDetails = () => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <OptionsMenuModal
+        visible={menuVisible}
+        onClose={() => {
+          setMenuVisible(false);
+          setActiveItem(null);
+        }}
+        title={
+          activeItem
+            ? `${activeItem.type.charAt(0).toUpperCase() + activeItem.type.slice(1)} Options`
+            : 'Options'
+        }
+        options={buildMenuOptions()}
+      />
     </ThemedView>
   );
 };
@@ -764,14 +916,19 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#e8e8e8ff',
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#414040ff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   headerIconBtnActive: {
     backgroundColor: '#eef2ff',

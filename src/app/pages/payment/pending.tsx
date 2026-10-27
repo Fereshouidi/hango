@@ -125,7 +125,7 @@ export default function PendingScreen() {
               {[
                 { icon: 'refresh-cw', text: 'Double-check your transfer reference and resubmit' },
                 { icon: 'message-circle', text: 'Send your payment screenshot on WhatsApp for faster help' },
-                { icon: 'credit-card', text: 'Try a different payment method (D17, Ooredoo, or Payeer)' },
+                { icon: 'credit-card', text: 'Try a different payment method (D17, Ooredoo, Payeer, or USDT)' },
               ].map((item) => (
                 <View key={item.text} style={ls.nextStepRow}>
                   <View style={ls.nextStepIconBox}>

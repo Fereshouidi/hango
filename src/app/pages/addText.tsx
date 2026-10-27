@@ -1,7 +1,6 @@
 import {
   Alert,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -10,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ThemedView } from '@/components/themed-view';
 import {
   getAllHSKs,
@@ -48,6 +47,13 @@ import {
 import { usePagedSection } from '@/hooks/usePagedSection';
 import { SuccessBanner } from '@/components/banners';
 import { TextToSentencesConstructions } from '@/components/sub/textToSentencesConstructions';
+import { PinyinInputField } from '@/components/common/PinyinInputField';
+import { ScanOCRButton } from '@/components/common/ScanOCRButton';
+import { AutoTranslateButton } from '@/components/common/AutoTranslateButton';
+import { ScannedResult } from '@/services/ocrService';
+import { toPinyin } from '@/utils/pinyin';
+
+import { CollapsibleLinkingSection } from '@/components/common/CollapsibleLinkingSection';
 
 const SLIDER_PAGE_SIZE = 10;
 
@@ -67,12 +73,41 @@ const AddText = () => {
 
   const preselectedHskId = params.hskId ? Number(params.hskId) : null;
   const preselectedLessonId = params.lessonId ? Number(params.lessonId) : null;
+  const loadedEditTextIdRef = useRef<number | null>(null);
 
   // Text Form fields
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [pinyin, setPinyin] = useState('');
   const [meaning, setMeaning] = useState('');
+  const [isPinyinManual, setIsPinyinManual] = useState(false);
+  const [showOcrModal, setShowOcrModal] = useState(false);
+
+  const handleContentChange = (text: string) => {
+    setContent(text);
+    if (!isPinyinManual) {
+      setPinyin(toPinyin(text));
+    }
+  };
+
+  const handlePinyinChange = (text: string) => {
+    setPinyin(text);
+    setIsPinyinManual(true);
+  };
+
+  const handleApplyOcr = (result: ScannedResult) => {
+    setContent(result.text);
+    if (!title.trim()) {
+      setTitle(result.text.substring(0, 15) + (result.text.length > 15 ? '...' : ''));
+    }
+    if (result.pinyin) {
+      setPinyin(result.pinyin);
+      setIsPinyinManual(true);
+    }
+    if (result.meaning) {
+      setMeaning(result.meaning);
+    }
+  };
 
   const [hsks, setHsks] = useState<HSKType[]>([]);
   const [lessons, setLessons] = useState<LessonType[]>([]);
@@ -82,11 +117,6 @@ const AddText = () => {
   const [showHskPicker, setShowHskPicker] = useState(false);
   const [showLessonPicker, setShowLessonPicker] = useState(false);
 
-  // Quick Add Word Modal State
-  const [showAddWordModal, setShowAddWordModal] = useState(false);
-  const [newWordContent, setNewWordContent] = useState('');
-  const [newWordPinyin, setNewWordPinyin] = useState('');
-  const [newWordMeaning, setNewWordMeaning] = useState('');
 
   // Extracted Sentences from the text typed by the user
   const [extractedSentences, setExtractedSentences] = useState<ExtractedSentence[]>([]);
@@ -120,11 +150,12 @@ const AddText = () => {
 
   // Expanded sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    sentences: true,
+    sentences: false,
     words: false,
     characters: false,
     rules: false,
   });
+  const [showOptionalLinks, setShowOptionalLinks] = useState(false);
 
   // Paginated sections (DB-level, 10 at a time)
   const wordsPage = usePagedSection<WordType>(getWordsPaged, getWordsCount);
@@ -147,12 +178,13 @@ const AddText = () => {
         const lessonData = getAllLessons() as unknown as LessonType[];
         setLessons(lessonData || []);
 
-        if (editTextId) {
+        if (editTextId && loadedEditTextIdRef.current !== editTextId) {
           const existing = getTextById(editTextId);
           if (existing) {
             setTitle(existing.title || '');
             setContent(existing.content || '');
             setPinyin(existing.pinyin || '');
+            setIsPinyinManual(Boolean(existing.pinyin));
             setMeaning(existing.meaning || '');
             setSelectedHskId(existing.hskId || null);
             setSelectedLessonId(existing.lessonId || null);
@@ -163,6 +195,7 @@ const AddText = () => {
           setSelectedWordIds(new Set(linkedWords.map((w: any) => w.id)));
           setSelectedCharacterIds(new Set(linkedChars.map((c: any) => c.id)));
           setSelectedRuleIds(new Set(linkedRules.map((r: any) => r.id)));
+          loadedEditTextIdRef.current = editTextId;
         }
       } catch (e) {
         console.error('Failed to load DB items for addText:', e);
@@ -202,13 +235,21 @@ const AddText = () => {
     const list: ExtractedSentence[] = rawSentences.map((sentenceText, idx) => ({
       id: idx,
       content: sentenceText,
-      pinyin: rawPinyins[idx] || '',
+      pinyin: rawPinyins[idx] || toPinyin(sentenceText),
       meaning: rawMeanings[idx] || '',
     }));
 
     setExtractedSentences(list);
-    // Select all extracted sentences by default
-    setSelectedSentenceIndices(new Set(list.map((s) => s.id)));
+    // Do not select all by default; preserve any sentences the user explicitly selected
+    setSelectedSentenceIndices((prev) => {
+      if (prev.size === 0) return prev;
+      const validIds = new Set(list.map((s) => s.id));
+      const next = new Set<number>();
+      prev.forEach((id) => {
+        if (validIds.has(id)) next.add(id);
+      });
+      return next;
+    });
   }, [content, pinyin, meaning]);
 
   const selectedHskObj = useMemo(
@@ -275,38 +316,6 @@ const AddText = () => {
     });
   };
 
-  const handleQuickAddWord = () => {
-    if (!newWordContent.trim()) {
-      Alert.alert('Missing Word', 'Please enter Chinese word content.');
-      return;
-    }
-
-    try {
-      const result = db.runSync(
-        `INSERT INTO words (content, pinyin, meaning, hskId, lessonId) VALUES (?, ?, ?, ?, ?)`,
-        newWordContent.trim(),
-        newWordPinyin.trim(),
-        newWordMeaning.trim(),
-        selectedHskId,
-        selectedLessonId
-      );
-
-      const newId = Number(result.lastInsertRowId);
-
-      // Refresh words page and select newly created word
-      wordsPage.initialize();
-      setSelectedWordIds((prev) => new Set(prev).add(newId));
-
-      // Reset and close
-      setNewWordContent('');
-      setNewWordPinyin('');
-      setNewWordMeaning('');
-      setShowAddWordModal(false);
-    } catch (e) {
-      console.error('Failed to quick add word:', e);
-      Alert.alert('Error', 'Could not save the new word.');
-    }
-  };
 
   const totalSelectedCount =
     selectedSentenceIndices.size +
@@ -323,12 +332,13 @@ const AddText = () => {
 
     try {
       const textTitle = title.trim() || content.trim().substring(0, 15) + '...';
+      const finalPinyin = pinyin.trim() || toPinyin(content.trim());
 
       if (isEditing && editTextId) {
         updateText(editTextId, {
           title: textTitle,
           content: content.trim(),
-          pinyin: pinyin.trim(),
+          pinyin: finalPinyin,
           meaning: meaning.trim(),
           hskId: selectedHskId ?? undefined,
           lessonId: selectedLessonId ?? undefined,
@@ -375,7 +385,7 @@ const AddText = () => {
         `INSERT INTO texts (title, content, pinyin, meaning, hskId, lessonId) VALUES (?, ?, ?, ?, ?, ?)`,
         textTitle,
         content.trim(),
-        pinyin.trim(),
+        finalPinyin,
         meaning.trim(),
         selectedHskId,
         selectedLessonId
@@ -387,10 +397,11 @@ const AddText = () => {
       let createdSentCount = 0;
       for (const item of extractedSentences) {
         if (selectedSentenceIndices.has(item.id) && item.content.trim()) {
+          const sentPinyin = item.pinyin.trim() || toPinyin(item.content.trim());
           db.runSync(
             `INSERT INTO sentences (content, pinyin, meaning, textId, lessonId, hskId) VALUES (?, ?, ?, ?, ?, ?)`,
             item.content.trim(),
-            item.pinyin.trim(),
+            sentPinyin,
             item.meaning.trim(),
             textId,
             selectedLessonId,
@@ -443,6 +454,7 @@ const AddText = () => {
       setTitle('');
       setContent('');
       setPinyin('');
+      setIsPinyinManual(false);
       setMeaning('');
       setExtractedSentences([]);
       setSelectedSentenceIndices(new Set());
@@ -523,37 +535,49 @@ const AddText = () => {
 
             {/* Content Input (Required) */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>
-                Chinese Content <Text style={styles.requiredStar}>*</Text>
-              </Text>
+              <View style={styles.inputLabelRow}>
+                <Text style={styles.inputLabel}>
+                  Chinese Content <Text style={styles.requiredStar}>*</Text>
+                </Text>
+                <ScanOCRButton
+                  mode="text"
+                  onScanResult={handleApplyOcr}
+                  themeColor="#0284c7"
+                  label="Scan with Camera"
+                />
+              </View>
               <TextInput
                 style={[styles.input, styles.multilineInput]}
                 placeholder="Enter Chinese passage content... (Sentences will be generated in the slider below)"
                 placeholderTextColor="#94a3b8"
                 value={content}
-                onChangeText={setContent}
+                onChangeText={handleContentChange}
                 multiline
                 numberOfLines={4}
               />
             </View>
 
-            {/* Pinyin Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Pinyin (Optional)</Text>
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                placeholder="Enter Pinyin transcription..."
-                placeholderTextColor="#94a3b8"
-                value={pinyin}
-                onChangeText={setPinyin}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
+            {/* Pinyin Input with Auto-generation */}
+            <PinyinInputField
+              value={pinyin}
+              onChangeText={handlePinyinChange}
+              chineseText={content}
+              placeholder="Enter Pinyin transcription..."
+              multiline
+              numberOfLines={3}
+              themeColor="#8b5cf6"
+            />
 
             {/* Meaning Input */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Meaning / English Translation</Text>
+              <View style={styles.inputLabelRow}>
+                <Text style={styles.inputLabel}>Meaning / English Translation</Text>
+                <AutoTranslateButton
+                  chineseText={content}
+                  onTranslated={setMeaning}
+                  themeColor="#0284c7"
+                />
+              </View>
               <TextInput
                 style={[styles.input, styles.multilineInput]}
                 placeholder="Enter English translation..."
@@ -571,7 +595,7 @@ const AddText = () => {
             <View style={styles.pickersRow}>
               {/* HSK Picker */}
               <View style={styles.pickerCol}>
-                <Text style={styles.inputLabel}>HSK Level</Text>
+                <Text style={styles.inputLabel}>HSK Level (optional)</Text>
                 <TouchableOpacity
                   style={styles.pickerBtn}
                   onPress={() => setShowHskPicker(!showHskPicker)}
@@ -629,7 +653,7 @@ const AddText = () => {
 
               {/* Lesson Picker */}
               <View style={styles.pickerCol}>
-                <Text style={styles.inputLabel}>Associated Lesson</Text>
+                <Text style={styles.inputLabel}>Associated Lesson (optional)</Text>
                 <TouchableOpacity
                   style={styles.pickerBtn}
                   onPress={() => setShowLessonPicker(!showLessonPicker)}
@@ -687,6 +711,17 @@ const AddText = () => {
             </View>
           </View>
 
+          {/* ===== OPTIONAL LINKING SECTIONS ===== */}
+          <CollapsibleLinkingSection
+            title="Link to Sentences, Words, etc. (Optional)"
+            subtitle="Connect to sentences, vocabulary words, characters, or grammar rules"
+            icon="link-2"
+            accentColor="#0284c7"
+            selectedCount={totalSelectedCount}
+            isOpen={showOptionalLinks}
+            onToggle={() => setShowOptionalLinks((prev) => !prev)}
+            tip="Connecting items is completely optional! You can create this reading text now without selecting any items, or link what's relevant to you."
+          >
           {/* ===== SENTENCES SLIDER SECTION (Generated from User's Text) ===== */}
           <SliderSection
             title="Sentences"
@@ -711,6 +746,7 @@ const AddText = () => {
             filterMode={filterSentences}
             onFilterChange={setFilterSentences}
             hasHskSelected={!!selectedHskId}
+            hint="✨ Key sentences from this text — tap the ones that stood out or that you want to remember. No need to pick them all!"
           >
             {filteredExtractedSentences.length === 0 ? (
               <Text style={styles.emptyText}>
@@ -769,7 +805,14 @@ const AddText = () => {
             selectedCount={selectedWordIds.size}
             expanded={expandedSections.words}
             onToggle={() => toggleSection('words')}
-            onAddNew={() => router.push(`/pages/addWord`)}
+            onAddNew={() => {
+              const queryParts: string[] = [];
+              if (editTextId) queryParts.push(`textId=${editTextId}`);
+              if (selectedLessonId) queryParts.push(`lessonId=${selectedLessonId}`);
+              if (selectedHskId) queryParts.push(`hskId=${selectedHskId}`);
+              const qs = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+              router.push(`/pages/addWord${qs}` as any);
+            }}
             addNewLabel="+ Word"
             onSelectAll={handleSelectAllWords}
             onClearAll={() => setSelectedWordIds(new Set())}
@@ -778,6 +821,7 @@ const AddText = () => {
             filterMode={wordsPage.filter}
             onFilterChange={(f) => wordsPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
+            hint="📖 New words — link only the words you just learned or found important in this text. You don't need to add every single word!"
           >
             {wordsPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No words match the filter.</Text>
@@ -845,6 +889,7 @@ const AddText = () => {
             filterMode={charactersPage.filter}
             onFilterChange={(f) => charactersPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
+            hint="🔡 New characters — pick only the characters you're actively learning from this text. A few key ones is perfectly fine!"
           >
             {charactersPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No characters match the filter.</Text>
@@ -900,6 +945,7 @@ const AddText = () => {
             filterMode={rulesPage.filter}
             onFilterChange={(f) => rulesPage.setFilter(f as 'all' | 'unassigned')}
             hasHskSelected={!!selectedHskId}
+            hint="📐 Grammar rules — link any grammar pattern this text demonstrates. Only add what's relevant to you!"
           >
             {rulesPage.items.length === 0 ? (
               <Text style={styles.emptyText}>No grammar rules match the filter.</Text>
@@ -942,6 +988,7 @@ const AddText = () => {
               </ScrollView>
             )}
           </SliderSection>
+          </CollapsibleLinkingSection>
 
           {/* ===== SAVE BUTTON ===== */}
           <TouchableOpacity
@@ -960,93 +1007,6 @@ const AddText = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ===== QUICK ADD WORD MODAL ===== */}
-      <Modal
-        visible={showAddWordModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAddWordModal(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalHeaderLeft}>
-                <View style={[styles.modalIconBg, { backgroundColor: '#05966918' }]}>
-                  <Lucide name="languages" size={18} color="#059669" />
-                </View>
-                <Text style={styles.modalTitle}>Add New Word</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setShowAddWordModal(false)}
-                style={styles.modalCloseBtn}
-                activeOpacity={0.7}
-              >
-                <Lucide name="x" size={18} color="#64748b" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>
-                  Chinese Word <Text style={styles.requiredStar}>*</Text>
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g., 咖啡 / 学习"
-                  placeholderTextColor="#94a3b8"
-                  value={newWordContent}
-                  onChangeText={setNewWordContent}
-                  autoFocus={true}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Pinyin (Optional)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g., kāfēi / xuéxí"
-                  placeholderTextColor="#94a3b8"
-                  value={newWordPinyin}
-                  onChangeText={setNewWordPinyin}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Meaning (Optional)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g., coffee / to study"
-                  placeholderTextColor="#94a3b8"
-                  value={newWordMeaning}
-                  onChangeText={setNewWordMeaning}
-                />
-              </View>
-
-              <View style={styles.modalActionsRow}>
-                <TouchableOpacity
-                  style={styles.modalCancelBtn}
-                  onPress={() => setShowAddWordModal(false)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.modalSaveBtn}
-                  onPress={handleQuickAddWord}
-                  activeOpacity={0.8}
-                >
-                  <Lucide name="plus" size={16} color="#ffffff" />
-                  <Text style={styles.modalSaveText}>Add Word</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </ThemedView>
   );
 };
@@ -1102,8 +1062,29 @@ const styles = StyleSheet.create({
   inputGroup: {
     gap: 6,
   },
+  inputLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  scanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#0284c740',
+    backgroundColor: '#0284c712',
+  },
+  scanBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
   inputLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#475569',
   },
@@ -1216,88 +1197,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    width: '100%',
-    maxWidth: 400,
-    padding: 20,
-    gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    paddingBottom: 12,
-  },
-  modalHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  modalIconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  modalCloseBtn: {
-    padding: 4,
-  },
-  modalBody: {
-    gap: 12,
-  },
-  modalActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 8,
-  },
-  modalCancelBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#f1f5f9',
-  },
-  modalCancelText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  modalSaveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#059669',
-  },
-  modalSaveText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#ffffff',
   },
 });

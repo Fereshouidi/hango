@@ -17,7 +17,7 @@ interface LessonCardProps {
   isSelectionMode?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
-  onOptionsPress?: () => void;
+  onOptionsPress?: (lesson: LessonType) => void;
 }
 
 export const LessonCard: React.FC<LessonCardProps> = ({
@@ -78,7 +78,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
       style={[
         styles.card,
         cardBg ? { backgroundColor: cardBg } : styles.defaultBg,
-        isSelected && { borderColor: '#0f172a', borderWidth: 3.5 },
+        isSelected && { borderColor: '#0f172a', borderWidth: 2 },
         isSelectionMode && !isSelected && { opacity: 0.85 },
       ]}
       onPress={handlePressCard}
@@ -93,7 +93,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
               styles.selectBadge,
               isSelected
                 ? { backgroundColor: '#0f172a' }
-                : { borderColor: '#ffffff', borderWidth: 1.5, backgroundColor: 'rgba(0,0,0,0.2)' },
+                : { borderColor: '#ffffff', borderWidth: 1, backgroundColor: 'rgba(0,0,0,0.2)' },
             ]}
           >
             {isSelected && <Lucide name="check" size={12} color="#ffffff" />}
@@ -143,7 +143,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
               styles.actionBtn,
               cardBg ? styles.whiteBtnBg : { backgroundColor: accentColor + '20' },
             ]}
-            onPress={onOptionsPress || onLongPress}
+            onPress={onOptionsPress ? () => onOptionsPress(lesson) : onLongPress}
             activeOpacity={0.7}
           >
             <Lucide

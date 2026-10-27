@@ -49,6 +49,14 @@ import {
 import { SuccessBanner } from '@/components/banners';
 
 import { MultiPicker } from '@/components/common/MultiPicker';
+import { StudyTipCard } from '@/components/common/StudyTipCard';
+import { PinyinInputField } from '@/components/common/PinyinInputField';
+import { ScanOCRButton } from '@/components/common/ScanOCRButton';
+import { AutoTranslateButton } from '@/components/common/AutoTranslateButton';
+import { CharacterIcon } from '@/components/common/CharacterIcon';
+import { CollapsibleLinkingSection } from '@/components/common/CollapsibleLinkingSection';
+import { ScannedResult } from '@/services/ocrService';
+import { toPinyin, getPinyinTone } from '@/utils/pinyin';
 
 const toneOptions = [
   { id: '1', label: '1st (ˉ)', color: '#b548ece8' },
@@ -79,6 +87,38 @@ const AddCharacter = () => {
   const [pinyin, setPinyin] = useState('');
   const [tone, setTone] = useState<string>('1');
   const [meaning, setMeaning] = useState('');
+  const [isPinyinManual, setIsPinyinManual] = useState(false);
+  const [showOcrModal, setShowOcrModal] = useState(false);
+
+  const handleContentChange = (text: string) => {
+    setContent(text);
+    if (!isPinyinManual) {
+      const generated = toPinyin(text);
+      setPinyin(generated);
+      if (text.trim().length > 0) {
+        setTone(getPinyinTone(text));
+      }
+    }
+  };
+
+  const handlePinyinChange = (text: string) => {
+    setPinyin(text);
+    setIsPinyinManual(true);
+  };
+
+  const handleApplyOcr = (result: ScannedResult) => {
+    setContent(result.text);
+    if (result.pinyin) {
+      setPinyin(result.pinyin);
+      setIsPinyinManual(true);
+    }
+    if (result.tone) {
+      setTone(result.tone);
+    }
+    if (result.meaning) {
+      setMeaning(result.meaning);
+    }
+  };
 
   // DB data
   const [hsks, setHsks] = useState<HSKType[]>([]);
@@ -115,6 +155,7 @@ const AddCharacter = () => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     rules: true,
   });
+  const [showOptionalLinks, setShowOptionalLinks] = useState(false);
   const toggleSection = (section: string) =>
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
 
@@ -146,6 +187,7 @@ const AddCharacter = () => {
           if (charData) {
             setContent(charData.content || '');
             setPinyin(charData.pinyin || '');
+            setIsPinyinManual(Boolean(charData.pinyin));
             setTone(charData.tone || '1');
             setMeaning(charData.meaning || '');
 
@@ -259,6 +301,8 @@ const AddCharacter = () => {
 
     try {
       const charText = content.trim();
+      const finalPinyin = pinyin.trim() || toPinyin(charText);
+      const finalTone = tone || getPinyinTone(charText);
 
       // Insert core character record (keep first selected ids as denormalised fallback)
       const firstHskId = selectedHskIds.size > 0 ? [...selectedHskIds][0] : null;
@@ -270,8 +314,8 @@ const AddCharacter = () => {
       if (isEditing && editCharacterId) {
         updateCharacter(editCharacterId, {
           content: charText,
-          pinyin: pinyin.trim(),
-          tone,
+          pinyin: finalPinyin,
+          tone: finalTone,
           meaning: meaning.trim(),
           hskId: firstHskId ?? undefined,
           lessonId: firstLessonId ?? undefined,
@@ -297,8 +341,8 @@ const AddCharacter = () => {
       const result = db.runSync(
         `INSERT INTO characters (content, pinyin, tone, meaning, hskId, lessonId, textId, sentenceId, wordId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         charText,
-        pinyin.trim(),
-        tone,
+        finalPinyin,
+        finalTone,
         meaning.trim(),
         firstHskId,
         firstLessonId,
@@ -337,6 +381,7 @@ const AddCharacter = () => {
       // Reset form
       setContent('');
       setPinyin('');
+      setIsPinyinManual(false);
       setMeaning('');
       setTone('1');
       setSelectedHskIds(new Set());
@@ -401,28 +446,41 @@ const AddCharacter = () => {
           {/* ───── CHARACTER DETAILS CARD ───── */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Lucide name="spell-check" size={20} color="#ec489a" />
+              <CharacterIcon size={20} color="#ec489a" />
               <Text style={styles.cardTitle}>Chinese Character Details</Text>
             </View>
 
+            <StudyTipCard
+              variant="optional"
+              description="Only the Chinese character is required! Tone, pinyin, meaning, and associations are completely optional."
+            />
+
             {/* Content (Required) */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>
-                Chinese Character <Text style={styles.requiredStar}>*</Text>
-              </Text>
+              <View style={styles.inputLabelRow}>
+                <Text style={styles.inputLabel}>
+                  Chinese Character <Text style={styles.requiredStar}>*</Text>
+                </Text>
+                <ScanOCRButton
+                  mode="character"
+                  onScanResult={handleApplyOcr}
+                  themeColor="#ec489a"
+                  label="Scan with Camera"
+                />
+              </View>
               <TextInput
                 style={[styles.input, styles.charInput]}
                 placeholder="e.g. 爱"
                 placeholderTextColor="#94a3b8"
                 value={content}
-                onChangeText={setContent}
+                onChangeText={handleContentChange}
                 maxLength={4}
               />
             </View>
 
             {/* Tone Selector */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Pinyin Tone</Text>
+              <Text style={styles.inputLabel}>Pinyin Tone (optional)</Text>
               <View style={styles.tonePillsRow}>
                 {toneOptions.map((item) => (
                   <TouchableOpacity
@@ -447,21 +505,26 @@ const AddCharacter = () => {
               </View>
             </View>
 
-            {/* Pinyin Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Pinyin (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., ài"
-                placeholderTextColor="#94a3b8"
-                value={pinyin}
-                onChangeText={setPinyin}
-              />
-            </View>
+            {/* Pinyin Input with Auto-generation & Polyphonic readings */}
+            <PinyinInputField
+              value={pinyin}
+              onChangeText={handlePinyinChange}
+              chineseText={content}
+              placeholder="e.g., ài"
+              themeColor="#ec489a"
+              onToneChange={setTone}
+            />
 
             {/* Meaning Input */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Meaning / Definition</Text>
+              <View style={styles.inputLabelRow}>
+                <Text style={styles.inputLabel}>Meaning / Definition (optional)</Text>
+                <AutoTranslateButton
+                  chineseText={content}
+                  onTranslated={setMeaning}
+                  themeColor="#ec489a"
+                />
+              </View>
               <TextInput
                 style={styles.input}
                 placeholder="e.g., to love, affection"
@@ -472,6 +535,17 @@ const AddCharacter = () => {
             </View>
           </View>
 
+          {/* ===== OPTIONAL LINKING SECTIONS ===== */}
+          <CollapsibleLinkingSection
+            title="Link to Words, Sentences, etc. (Optional)"
+            subtitle="Connect to HSK levels, lessons, texts, sentences, words, or rules"
+            icon="link-2"
+            accentColor="#ec489a"
+            selectedCount={totalSelectedCount}
+            isOpen={showOptionalLinks}
+            onToggle={() => setShowOptionalLinks((prev) => !prev)}
+            tip="Connecting items is completely optional! You can create this character now without selecting any items, or link what's relevant to you."
+          >
           {/* ───── ASSOCIATIONS CARD ───── */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -480,9 +554,14 @@ const AddCharacter = () => {
               <Text style={styles.cardSubtitle}>Select multiple per category</Text>
             </View>
 
+            <StudyTipCard
+              variant="linking"
+              description="Only link the words, sentences, or lessons where you want to practice this character — you don't need to link everything!"
+            />
+
             {/* HSK Multi-Picker */}
             <MultiPicker
-              label="HSK Levels"
+              label="HSK Levels (optional)"
               icon="layers"
               iconColor="#ec489a"
               items={hsks}
@@ -496,56 +575,56 @@ const AddCharacter = () => {
 
             {/* Lesson Multi-Picker */}
             <MultiPicker
-              label="Lessons"
+              label="Lessons (Optional)"
               icon="book-open"
               iconColor="#ec489a"
               items={lessons}
               selectedIds={selectedLessonIds}
               onToggle={handleToggleLesson}
               getLabel={getLessonLabel}
-              placeholder="Select lessons…"
+              placeholder="Link the lesson where you learned this character…"
               open={openPicker === 'lesson'}
               onToggleOpen={() => togglePicker('lesson')}
             />
 
             {/* Text Multi-Picker */}
             <MultiPicker
-              label="Reading Texts"
+              label="Reading Texts (Optional)"
               icon="file-text"
               iconColor="#ec489a"
               items={texts}
               selectedIds={selectedTextIds}
               onToggle={handleToggleText}
               getLabel={getTextLabel}
-              placeholder="Select reading texts…"
+              placeholder="Seen this character in a text? Link it here…"
               open={openPicker === 'text'}
               onToggleOpen={() => togglePicker('text')}
             />
 
             {/* Sentence Multi-Picker */}
             <MultiPicker
-              label="Sentences"
+              label="Sentences (Optional)"
               icon="message-square-text"
               iconColor="#ec489a"
               items={sentences}
               selectedIds={selectedSentenceIds}
               onToggle={handleToggleSentence}
               getLabel={getSentenceLabel}
-              placeholder="Select sentences…"
+              placeholder="Link an example sentence using this character…"
               open={openPicker === 'sentence'}
               onToggleOpen={() => togglePicker('sentence')}
             />
 
             {/* Word Multi-Picker */}
             <MultiPicker
-              label="Vocabulary Words"
+              label="Vocabulary Words (Optional)"
               icon="languages"
               iconColor="#ec489a"
               items={words}
               selectedIds={selectedWordIds}
               onToggle={handleToggleWord}
               getLabel={getWordLabel}
-              placeholder="Select vocabulary words…"
+              placeholder="Link words that use this character…"
               open={openPicker === 'word'}
               onToggleOpen={() => togglePicker('word')}
             />
@@ -572,6 +651,7 @@ const AddCharacter = () => {
             filterMode={filterRules}
             onFilterChange={setFilterRules}
             hasHskSelected={selectedHskIds.size > 0}
+            hint="📐 Optional — link a grammar rule that involves this character. Only add what's relevant to you!"
           >
             {filteredRules.length === 0 ? (
               <Text style={styles.emptyText}>No grammar rules match the filter.</Text>
@@ -598,6 +678,7 @@ const AddCharacter = () => {
               </ScrollView>
             )}
           </SliderSection>
+          </CollapsibleLinkingSection>
 
           {/* ───── SAVE BUTTON ───── */}
           <TouchableOpacity
@@ -674,6 +755,27 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     gap: 6,
+  },
+  inputLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  scanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ec489a40',
+    backgroundColor: '#ec489a12',
+  },
+  scanBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   inputLabel: {
     fontSize: 13,

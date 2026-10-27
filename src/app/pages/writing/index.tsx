@@ -19,7 +19,7 @@ import { Paywall } from '@/components/paywall';
 
 export default function WritingScreen() {
   // ── Mode ──────────────────────────────────────────────────────────────────
-  const [mode, setMode] = useState<WritingMode>('keyboard');
+  const [mode, setMode] = useState<WritingMode>('dictation');
 
   // ── Text & Composition State ──────────────────────────────────────────────
   const [text, setText] = useState('');
@@ -171,7 +171,7 @@ export default function WritingScreen() {
   const handleShare = async () => {
     if (!text.trim()) return;
     try {
-      await Share.share({ message: text, title: 'HanGo Chinese Writing' });
+      await Share.share({ message: text, title: 'HanGo Chinese Typing' });
     } catch (e) {
       console.error('Share error:', e);
     }
@@ -219,7 +219,7 @@ export default function WritingScreen() {
 
   return (
     <Paywall
-      featureName="Writing Studio"
+      featureName="Typing Studio"
       featureIcon="keyboard"
       featureDescription="Master sentence construction, interactive pinyin rubies, and audio dictation with custom Chinese keyboard."
     >

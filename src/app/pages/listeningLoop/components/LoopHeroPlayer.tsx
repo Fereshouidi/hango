@@ -40,6 +40,8 @@ interface LoopHeroPlayerProps {
   onToggleMeaning: () => void;
   onToggleWords?: () => void;
   onOpenSettings: () => void;
+  onOpenFullscreen?: () => void;
+  spokenCharIndex?: number;
 }
 
 export const LoopHeroPlayer: React.FC<LoopHeroPlayerProps> = ({
@@ -71,6 +73,8 @@ export const LoopHeroPlayer: React.FC<LoopHeroPlayerProps> = ({
   onToggleMeaning,
   onToggleWords,
   onOpenSettings,
+  onOpenFullscreen,
+  spokenCharIndex,
 }) => {
   const [playingWordId, setPlayingWordId] = React.useState<number | null>(null);
 
@@ -291,7 +295,17 @@ export const LoopHeroPlayer: React.FC<LoopHeroPlayerProps> = ({
 
         {/* Hanzi */}
         <Text style={styles.hanziText} selectable={true}>
-          {currentItem.content}
+          {isSpeaking && typeof spokenCharIndex === 'number' && spokenCharIndex >= 0 && spokenCharIndex < currentItem.content.length ? (
+            <>
+              <Text>{currentItem.content.slice(0, spokenCharIndex)}</Text>
+              <Text style={styles.activeHanziChar}>
+                {currentItem.content.slice(spokenCharIndex, spokenCharIndex + 1)}
+              </Text>
+              <Text>{currentItem.content.slice(spokenCharIndex + 1)}</Text>
+            </>
+          ) : (
+            currentItem.content
+          )}
         </Text>
 
         {/* English Meaning */}
@@ -307,6 +321,19 @@ export const LoopHeroPlayer: React.FC<LoopHeroPlayerProps> = ({
             <Text style={styles.sourceTagText}>{currentItem.title}</Text>
           </View>
         )}
+
+        {/* Fullscreen expand button — only for texts */}
+        {onOpenFullscreen &&
+          (currentItem.type === 'text' || currentItem.type === 'text-sentence') && (
+            <TouchableOpacity
+              style={styles.fullscreenBtn}
+              onPress={onOpenFullscreen}
+              activeOpacity={0.7}
+            >
+              <Lucide name="expand" size={12} color="#8b5cf6" />
+              <Text style={styles.fullscreenBtnText}>Full Screen</Text>
+            </TouchableOpacity>
+          )}
 
         {/* Words in this sentence */}
         {showWords && currentItem.type !== 'word' && sortedWords.length > 0 && (
@@ -657,6 +684,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 32,
   },
+  activeHanziChar: {
+    color: '#ef4444',
+    fontWeight: '800',
+  },
   meaningText: {
     fontSize: 13,
     color: '#475569',
@@ -678,6 +709,23 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#64748b',
     fontWeight: '500',
+  },
+  fullscreenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#f5f3ff',
+    borderWidth: 1,
+    borderColor: '#ddd6fe',
+  },
+  fullscreenBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7c3aed',
   },
   transportRow: {
     flexDirection: 'row',

@@ -7,7 +7,7 @@ export type LessonType = {
     id: number;
     num: number;
     title: string;
-    hskId: number;
+    hskId?: number | null;
 };
 
 export type TextType = {

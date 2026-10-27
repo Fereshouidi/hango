@@ -3,8 +3,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
 import { HSKType, TextType } from '@/types';
 import { StudyToggleBar } from '../common/StudyToggleBar';
-
 import { HighlightedText } from '../common/HighlightedText';
+import { RubyPinyinText } from '../common/RubyPinyinText';
 
 interface PassageHeroCardProps {
   textObj: TextType | null;
@@ -18,6 +18,8 @@ interface PassageHeroCardProps {
   setShowPinyin: (val: boolean) => void;
   showMeaning: boolean;
   setShowMeaning: (val: boolean) => void;
+  showRubyPinyin: boolean;
+  setShowRubyPinyin: (val: boolean) => void;
 }
 
 export const PassageHeroCard: React.FC<PassageHeroCardProps> = ({
@@ -32,6 +34,8 @@ export const PassageHeroCard: React.FC<PassageHeroCardProps> = ({
   setShowPinyin,
   showMeaning,
   setShowMeaning,
+  showRubyPinyin,
+  setShowRubyPinyin,
 }) => {
   return (
     <View style={styles.passageCard}>
@@ -70,11 +74,18 @@ export const PassageHeroCard: React.FC<PassageHeroCardProps> = ({
 
       {/* Passage Chinese Content */}
       <View style={styles.chineseContentBox}>
-        <HighlightedText
-          text={textObj?.content || 'Loading text passage...'}
-          highlight={searchQuery}
-          style={styles.chineseText}
-        />
+        {showRubyPinyin && textObj?.pinyin ? (
+          <RubyPinyinText
+            chineseText={textObj.content || ''}
+            pinyinText={textObj.pinyin}
+          />
+        ) : (
+          <HighlightedText
+            text={textObj?.content || 'Loading text passage...'}
+            highlight={searchQuery}
+            style={styles.chineseText}
+          />
+        )}
       </View>
 
       {/* Toggles Row */}
@@ -83,11 +94,13 @@ export const PassageHeroCard: React.FC<PassageHeroCardProps> = ({
         setShowPinyin={setShowPinyin}
         showMeaning={showMeaning}
         setShowMeaning={setShowMeaning}
+        showRubyPinyin={showRubyPinyin}
+        setShowRubyPinyin={setShowRubyPinyin}
         accentColor="#0284c7"
       />
 
-      {/* Optional Pinyin Display */}
-      {showPinyin && textObj?.pinyin ? (
+      {/* Optional Pinyin Transcript (only shown when ruby is OFF) */}
+      {!showRubyPinyin && showPinyin && textObj?.pinyin ? (
         <View style={styles.pinyinBox}>
           <Text style={styles.pinyinLabel}>Pinyin Transcript:</Text>
           <HighlightedText

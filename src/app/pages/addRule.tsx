@@ -59,6 +59,8 @@ import {
   SliderSection,
 } from '@/components/add-lesson';
 import { SuccessBanner } from '@/components/banners';
+import { ScanOCRButton } from '@/components/common/ScanOCRButton';
+import { CollapsibleLinkingSection } from '@/components/common/CollapsibleLinkingSection';
 
 const AddRule = () => {
   const router = useRouter();
@@ -155,13 +157,14 @@ const AddRule = () => {
 
   // Expanded sections
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    hsks: true,
-    lessons: true,
+    hsks: false,
+    lessons: false,
     texts: false,
     sentences: false,
     words: false,
     characters: false,
   });
+  const [showOptionalLinks, setShowOptionalLinks] = useState(false);
 
   const [createdBannerInfo, setCreatedBannerInfo] = useState<{
     visible: boolean;
@@ -580,7 +583,7 @@ const AddRule = () => {
       const q = searchLessons.toLowerCase().trim();
       const matches = !q || l.title.toLowerCase().includes(q) || `lesson ${l.num}`.includes(q);
       if (!matches) return false;
-      if (filterLessons === 'hsk' && selectedHskIds.size > 0 && !selectedHskIds.has(l.hskId)) return false;
+      if (filterLessons === 'hsk' && selectedHskIds.size > 0 && (!l.hskId || !selectedHskIds.has(l.hskId))) return false;
       return true;
     });
   }, [lessons, searchLessons, filterLessons, selectedHskIds]);
@@ -835,9 +838,20 @@ const AddRule = () => {
 
             {/* Content Input (Required) */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>
-                Rule Explanation / Pattern <Text style={styles.requiredStar}>*</Text>
-              </Text>
+              <View style={styles.inputLabelRow}>
+                <Text style={styles.inputLabel}>
+                  Rule Explanation / Pattern <Text style={styles.requiredStar}>*</Text>
+                </Text>
+                <ScanOCRButton
+                  mode="rule"
+                  onScanResult={(res) => {
+                    const scanned = res.text ? (res.meaning ? `${res.text} (${res.meaning})` : res.text) : res.meaning;
+                    setContent((prev) => (prev ? `${prev}\n${scanned}` : scanned));
+                  }}
+                  themeColor="#d97706"
+                  label="Scan Notes"
+                />
+              </View>
               <TextInput
                 style={[styles.input, styles.multilineInput]}
                 placeholder="e.g., Subject + 是 + Noun (indicates identity or equivalence)"
@@ -850,6 +864,17 @@ const AddRule = () => {
             </View>
           </View>
 
+          {/* ===== OPTIONAL LINKING SECTIONS ===== */}
+          <CollapsibleLinkingSection
+            title="Link to Lessons, Words, etc. (Optional)"
+            subtitle="Connect to HSK levels, lessons, texts, sentences, words, or characters"
+            icon="link-2"
+            accentColor="#d97706"
+            selectedCount={totalSelectedCount}
+            isOpen={showOptionalLinks}
+            onToggle={() => setShowOptionalLinks((prev) => !prev)}
+            tip="Connecting items is completely optional! You can create this grammar rule now without selecting any items, or link what's relevant to you."
+          >
           {/* ===== HSK LEVELS SECTION ===== */}
           <SliderSection
             title="HSK Levels"
@@ -1279,6 +1304,7 @@ const AddRule = () => {
               </ScrollView>
             )}
           </SliderSection>
+          </CollapsibleLinkingSection>
 
           {/* ===== SAVE BUTTON ===== */}
           <TouchableOpacity
@@ -1349,6 +1375,11 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     gap: 6,
+  },
+  inputLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   inputLabel: {
     fontSize: 13,
